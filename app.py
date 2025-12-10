@@ -325,78 +325,131 @@ if st.session_state.current_view == 'map':
     map_col1, map_col2 = st.columns([2, 1])
     
     with map_col1:
-        # Display a simple schematic
-        st.markdown("""
-        <div style="background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px;">
-            <svg width="100%" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
-                <!-- Title -->
-                <text x="300" y="25" text-anchor="middle" font-size="18" font-weight="bold">RIVERSIDE VILLAGE</text>
-                
-                <!-- Health Center -->
-                <rect x="250" y="50" width="100" height="60" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
-                <text x="300" y="85" text-anchor="middle" font-size="14">🏥 Clinic</text>
-                
-                <!-- Neighborhood A (left side - affected) -->
-                <rect x="50" y="150" width="250" height="230" fill="#FFEBEE" stroke="#D32F2F" stroke-width="2" stroke-dasharray="5,5"/>
-                <text x="175" y="170" text-anchor="middle" font-weight="bold">NEIGHBORHOOD A</text>
-                <text x="175" y="190" text-anchor="middle" font-size="12">(Well #1 users)</text>
-                
-                <!-- Cases in Neighborhood A -->
-                <circle cx="100" cy="220" r="8" fill="#D32F2F"/>
-                <circle cx="130" cy="220" r="8" fill="#D32F2F"/>
-                <circle cx="160" cy="220" r="8" fill="#D32F2F"/>
-                <circle cx="190" cy="220" r="8" fill="#D32F2F"/>
-                <circle cx="220" cy="220" r="8" fill="#D32F2F"/>
-                
-                <circle cx="100" cy="250" r="8" fill="#D32F2F"/>
-                <circle cx="130" cy="250" r="8" fill="#D32F2F"/>
-                <circle cx="160" cy="250" r="8" fill="#D32F2F"/>
-                <circle cx="190" cy="250" r="8" fill="#D32F2F"/>
-                <circle cx="220" cy="250" r="8" fill="#D32F2F"/>
-                
-                <circle cx="100" cy="280" r="8" fill="#D32F2F"/>
-                <circle cx="130" cy="280" r="8" fill="#D32F2F"/>
-                <circle cx="160" cy="280" r="8" fill="#D32F2F"/>
-                <circle cx="190" cy="280" r="8" fill="#D32F2F"/>
-                <circle cx="220" cy="280" r="8" fill="#D32F2F"/>
-                
-                <text x="175" y="310" text-anchor="middle" font-size="12" fill="#D32F2F">🔴 15 Cases</text>
-                
-                <!-- Well #1 -->
-                <circle cx="175" cy="340" r="20" fill="#90CAF9" stroke="#1976D2" stroke-width="2"/>
-                <text x="175" y="347" text-anchor="middle" font-size="14">💧</text>
-                <text x="175" y="365" text-anchor="middle" font-size="11">Well #1 (Open)</text>
-                
-                <!-- Latrine near Well #1 -->
-                <rect x="130" y="305" width="30" height="25" fill="#A1887F" stroke="#5D4037" stroke-width="1"/>
-                <text x="145" y="295" text-anchor="middle" font-size="11">🚽 Latrine</text>
-                
-                <!-- Arrow showing uphill -->
-                <line x1="145" y1="335" x2="175" y2="355" stroke="#5D4037" stroke-width="2" marker-end="url(#arrowhead)"/>
-                <text x="155" y="348" font-size="9">30m</text>
-                
-                <!-- Neighborhood B (right side - unaffected) -->
-                <rect x="320" y="150" width="250" height="230" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2" stroke-dasharray="5,5"/>
-                <text x="445" y="170" text-anchor="middle" font-weight="bold">NEIGHBORHOOD B</text>
-                <text x="445" y="190" text-anchor="middle" font-size="12">(Well #2 users)</text>
-                
-                <text x="445" y="250" text-anchor="middle" font-size="14" fill="#4CAF50">✓ No Cases</text>
-                
-                <!-- Well #2 -->
-                <circle cx="445" cy="340" r="20" fill="#81C784" stroke="#388E3C" stroke-width="2"/>
-                <text x="445" y="347" text-anchor="middle" font-size="14">💧</text>
-                <text x="445" y="365" text-anchor="middle" font-size="11">Well #2 (Covered)</text>
-                
-                <!-- Legend -->
-                <rect x="20" y="20" width="120" height="70" fill="white" stroke="#999" stroke-width="1"/>
-                <text x="30" y="40" font-size="12" font-weight="bold">Legend:</text>
-                <circle cx="35" cy="55" r="5" fill="#D32F2F"/>
-                <text x="50" y="60" font-size="11">Case location</text>
-                <circle cx="35" cy="75" r="8" fill="#90CAF9" stroke="#1976D2" stroke-width="1"/>
-                <text x="50" y="80" font-size="11">Water source</text>
-            </svg>
-        </div>
-        """, unsafe_allow_html=True)
+        import plotly.graph_objects as go
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Add neighborhood boundaries
+        # Neighborhood A (affected)
+        fig.add_shape(type="rect",
+            x0=0, y0=0, x1=250, y1=300,
+            line=dict(color="red", width=2, dash="dash"),
+            fillcolor="rgba(255,235,238,0.3)",
+            layer="below"
+        )
+        
+        # Neighborhood B (unaffected)  
+        fig.add_shape(type="rect",
+            x0=320, y0=0, x1=570, y1=300,
+            line=dict(color="green", width=2, dash="dash"),
+            fillcolor="rgba(232,245,233,0.3)",
+            layer="below"
+        )
+        
+        # Health Center at top
+        fig.add_trace(go.Scatter(
+            x=[285], y=[350],
+            mode='markers+text',
+            marker=dict(size=25, color='lightblue', symbol='square', line=dict(color='blue', width=2)),
+            text=['🏥 Clinic'],
+            textposition='bottom center',
+            textfont=dict(size=12),
+            showlegend=False,
+            hoverinfo='text',
+            hovertext='Health Center'
+        ))
+        
+        # Cases in Neighborhood A (clustered around Well #1)
+        case_x = [80, 110, 140, 170, 200,
+                  80, 110, 140, 170, 200,
+                  80, 110, 140, 170, 200]
+        case_y = [180, 180, 180, 180, 180,
+                  150, 150, 150, 150, 150,
+                  120, 120, 120, 120, 120]
+        
+        fig.add_trace(go.Scatter(
+            x=case_x[:15], y=case_y[:15],
+            mode='markers',
+            marker=dict(size=12, color='red', symbol='circle'),
+            name='Cases',
+            hoverinfo='text',
+            hovertext=['Case ' + str(i+1) for i in range(15)]
+        ))
+        
+        # Well #1 (contaminated)
+        fig.add_trace(go.Scatter(
+            x=[140], y=[80],
+            mode='markers+text',
+            marker=dict(size=30, color='lightblue', symbol='circle', line=dict(color='darkblue', width=3)),
+            text=['💧 Well #1<br>(Open)'],
+            textposition='bottom center',
+            textfont=dict(size=10),
+            showlegend=False,
+            hoverinfo='text',
+            hovertext='Well #1: Open well, no cover<br>Serves Neighborhood A'
+        ))
+        
+        # Latrine (uphill from Well #1)
+        fig.add_trace(go.Scatter(
+            x=[100], y=[50],
+            mode='markers+text',
+            marker=dict(size=20, color='brown', symbol='square'),
+            text=['🚽'],
+            textposition='top center',
+            textfont=dict(size=16),
+            showlegend=False,
+            hoverinfo='text',
+            hovertext='Latrine (30m uphill from Well #1)'
+        ))
+        
+        # Arrow from latrine to well
+        fig.add_annotation(
+            x=140, y=80,
+            ax=100, ay=50,
+            xref="x", yref="y",
+            axref="x", ayref="y",
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor="brown"
+        )
+        
+        # Well #2 (safe)
+        fig.add_trace(go.Scatter(
+            x=[445], y=[80],
+            mode='markers+text',
+            marker=dict(size=30, color='lightgreen', symbol='circle', line=dict(color='darkgreen', width=3)),
+            text=['💧 Well #2<br>(Covered)'],
+            textposition='bottom center',
+            textfont=dict(size=10),
+            showlegend=False,
+            hoverinfo='text',
+            hovertext='Well #2: Covered with hand pump<br>Serves Neighborhood B<br>No cases'
+        ))
+        
+        # Add annotations for neighborhoods
+        fig.add_annotation(x=125, y=280, text="NEIGHBORHOOD A<br>(Well #1 users)<br>15 Cases",
+                          showarrow=False, font=dict(size=12, color="darkred"), bgcolor="rgba(255,255,255,0.7)")
+        
+        fig.add_annotation(x=445, y=280, text="NEIGHBORHOOD B<br>(Well #2 users)<br>0 Cases",
+                          showarrow=False, font=dict(size=12, color="darkgreen"), bgcolor="rgba(255,255,255,0.7)")
+        
+        # Update layout
+        fig.update_layout(
+            title="RIVERSIDE VILLAGE",
+            title_x=0.5,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-20, 590]),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-20, 380]),
+            height=500,
+            plot_bgcolor='white',
+            showlegend=True,
+            legend=dict(x=0.02, y=0.98),
+            hovermode='closest'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
     
     with map_col2:
         st.markdown("### 🔍 Key Observations")
