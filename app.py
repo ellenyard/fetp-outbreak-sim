@@ -1,9 +1,8 @@
 import streamlit as st
 import anthropic
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Page config
 st.set_page_config(
@@ -13,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS for "Messy" Handwriting and UI
 st.markdown("""
 <style>
     .main-header {
@@ -23,15 +22,22 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 20px;
     }
-    .messy-note {
-        font-family: 'Courier New', Courier, monospace;
-        background-color: #fdf6e3;
+    /* Simulating messy handwritten notes */
+    .handwritten-note {
+        font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+        font-size: 16px;
+        background-color: #fdf6e3; /* Yellowish paper */
+        color: #2c3e50;
         padding: 15px;
         border: 1px solid #d6d6d6;
-        border-radius: 2px;
-        transform: rotate(-1deg);
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 10px;
+        box-shadow: 3px 3px 7px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        transform: rotate(-0.5deg);
+        line-height: 1.4;
+    }
+    .handwritten-note:nth-child(even) {
+        transform: rotate(1deg);
+        background-color: #fffbf0;
     }
     .stChatInput {
         position: fixed;
@@ -58,315 +64,263 @@ if 'notes' not in st.session_state:
 
 # --- STORY & CHARACTERS ---
 STORY_CONTEXT = """
-**Situation:** Reports of "The Shaking Sickness" in Sidero Valley. 
-Patients present with high fever, tremors, confusion, and in severe cases, seizures.
-Two fatalities reported this morning.
-
-**Setting:**
-Sidero Valley is a mining region. 
-- **North:** The Iron Mine (major employer).
-- **South:** Rice paddies and pig farms.
-- **Center:** The Market and Residential zone.
+Situation: "The Shaking Sickness" in Sidero Valley. 
+Symptoms: High fever, tremors, confusion, seizures.
+Setting: Mining region (North), Rice/Pig Farms (South).
 """
 
 CHARACTERS = {
     "dr_chen": {
         "name": "Dr. Elena Chen",
-        "role": "Director, St. Mary's Hospital (Public)",
+        "role": "Director, St. Mary's Hospital",
         "avatar": "👩‍⚕️",
         "emoji": "👩‍⚕️",
-        "personality": "Professional, exhausted, academic. Relies on data.",
-        "truth_document": """
-        - You run the main public hospital.
-        - You have admitted 6 patients with 'Acute Encephalitis Syndrome' (AES).
-        - Symptoms: Fever >39C, altered mental status, tremors.
-        - All your patients are adult men who work at the Iron Mine.
-        - You suspect it's a toxin at the mine (Heavy metal? Gas?).
-        - You haven't seen any children.
-        - You have electronic records for these 6 cases.
-        """,
-        "initial_greeting": "I'm glad the FETP team is here. I'm convinced this is an occupational hazard at the mine. All my patients are miners."
+        "personality": "Professional, academic. Relies on data.",
+        "truth_document": "You have 6 adult male patients (miners). You suspect toxic gas.",
+        "initial_greeting": "I'm convinced this is occupational. All my patients are miners from the north."
     },
     "healer_marcus": {
         "name": "Marcus the Healer",
         "role": "Private Clinic Practitioner",
         "avatar": "🌿",
         "emoji": "🌿",
-        "personality": "Defensive, traditional, observant. Distrusts the government.",
-        "truth_document": """
-        - You run a small private clinic near the rice paddies.
-        - You have seen 5 patients with 'The Shaking Sickness'.
-        - UNLIKE the hospital, your patients are children and farmers, not miners.
-        - You think the 'Mine Doctors' don't care about the farmers.
-        - You keep messy handwritten notes. You don't use computers.
-        - You will only share your notes if the user treats you with respect.
-        """,
-        "initial_greeting": "Why does the government come now? My people have been sick for a week. You only care about the mine workers."
-    },
-    "foreman_rex": {
-        "name": "Foreman Rex",
-        "role": "Mine Supervisor",
-        "avatar": "👷",
-        "emoji": "👷",
-        "personality": "Gruff, defensive, worried about the mine closing.",
-        "truth_document": """
-        - The mine is safe! We follow all protocols.
-        - Yes, some men are sick, but they probably ate bad food at the market.
-        - We had a ventilation check last month. It passed.
-        - The sick men? They all hang out at the 'Blue Heron' bar after work.
-        """,
-        "initial_greeting": "Look, if you're here to shut us down, you better have proof. My men are safe."
+        "personality": "Suspicious, traditional. Protective of farmers.",
+        "truth_document": "You treat farmers and children. They have the shaking sickness too. You keep messy paper notes.",
+        "initial_greeting": "My people are sick, but the government only cares about the mine. Why should I help you?"
     }
 }
 
 # --- DATASETS ---
 
-# Dataset A: Clean Data from Public Hospital (6 Cases)
+# Clean Hospital Data
 PUBLIC_CASES = [
-    {"ID": "P01", "Age": 45, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 8", "Location": "Mining Camp", "Status": "Alive"},
-    {"ID": "P02", "Age": 28, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 9", "Location": "Mining Camp", "Status": "Alive"},
-    {"ID": "P03", "Age": 52, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 9", "Location": "Town Center", "Status": "Deceased"},
-    {"ID": "P04", "Age": 33, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 10", "Location": "Mining Camp", "Status": "Alive"},
-    {"ID": "P05", "Age": 41, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 10", "Location": "Town Center", "Status": "Alive"},
-    {"ID": "P06", "Age": 29, "Sex": "M", "Occupation": "Miner", "Onset": "Dec 10", "Location": "Mining Camp", "Status": "Alive"},
+    {"ID": "H-01", "Age": 45, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-08", "Symptoms": "Fever, Tremors", "Status": "Alive"},
+    {"ID": "H-02", "Age": 28, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-09", "Symptoms": "Fever, Confusion", "Status": "Alive"},
+    {"ID": "H-03", "Age": 52, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-09", "Symptoms": "Seizures, Coma", "Status": "Deceased"},
+    {"ID": "H-04", "Age": 33, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-10", "Symptoms": "Fever, Tremors", "Status": "Alive"},
+    {"ID": "H-05", "Age": 41, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-10", "Symptoms": "Fever, Ataxia", "Status": "Alive"},
+    {"ID": "H-06", "Age": 29, "Sex": "M", "Occupation": "Miner", "Onset": "2025-12-10", "Symptoms": "Headache, Fever", "Status": "Alive"},
 ]
 
-# Dataset B: Messy Notes from Private Clinic (User must extract these)
-PRIVATE_NOTES = [
-    "Dec 7: Little Sarah (6yo female). Lives near Pig Farm A. High fever, seizing. Mother says she played in the mud.",
-    "Dec 8: Old Man John (65, Farmer). Rice paddy worker. Shaking hands, confusion. Says the birds stopped singing.",
-    "Dec 9: Twin boys (8yo). Farm B. Both vomiting and twitching. Fever 40C.",
-    "Dec 10: Mrs. Adama (40, Rice Farmer). Collapsed in the field. Eyes rolling back."
+# Messy Clinic Notes (Mix of Cases and Non-Cases)
+CLINIC_NOTES_PILE = [
+    "Dec 7. Sarah (6y F). Pig farm. High fever, shaking hands. Mom says she fell in mud.",
+    "Dec 7. Old John (65y M). Farmer. Complains of back pain from planting rice. No fever.",
+    "Dec 8. Twin boys (8y M). Farm B. Both vomiting and twitching. Fever very high.",
+    "Dec 8. Mary (24y F). Pregnant. Routine checkup. Healthy.",
+    "Dec 9. Mrs. Adama (40y F). Collapsed in field. Eyes rolling back. Seizing.",
+    "Dec 9. Boy (12y). Cut leg on rusty fence. Tetanus shot given.",
+    "Dec 9. Baby K (2y M). High fever, stiff neck, screaming. Fontanelle bulging.",
+    "Dec 10. Miner Tom (30y M). Coughing blood. TB suspect. Refer to hospital.",
+    "Dec 10. Girl (5y). Pig farm. Fever, confused, can't walk straight.",
+    "Dec 10. Farmer Ben (50y). Broken arm from tractor accident.",
+    "Dec 11. Grandma Esi (70y). Just old age. Weakness.",
+    "Dec 11. Boy (9y). Farm A. Seizures started this morning. Fever 39.5.",
+    "Dec 11. Girl (7y). Farm A. Same as brother. Shaking.",
+    "Dec 11. Man (45y). Drunk. Sleeping it off.",
+    "Dec 12. Woman (33y). Fever, headache, severe tremors in hands."
 ]
 
 # --- FUNCTIONS ---
 
 def get_ai_response(char_key, user_input, history):
-    """Call Claude API"""
+    """Simple AI Responder"""
     char = CHARACTERS[char_key]
-    system_prompt = f"""
-    Roleplay as {char['name']}, {char['role']}.
-    Context: {STORY_CONTEXT}
-    Personality: {char['personality']}
-    Truths: {char['truth_document']}
-    
-    Rules:
-    1. Be concise.
-    2. If you are Healer Marcus, be suspicious. Only agree to share notes if the user asks nicely or explains why it helps the community.
-    3. If you are Dr. Chen, focus on the miners and the toxin theory.
-    """
-    
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key: return "⚠️ API Key Missing"
-
+    
     try:
         client = anthropic.Anthropic(api_key=api_key)
         msgs = [{"role": m["role"], "content": m["content"]} for m in history]
         msgs.append({"role": "user", "content": user_input})
         
+        system_prompt = f"Roleplay {char['name']}. Context: {STORY_CONTEXT}. Keep answers brief."
+        
         response = client.messages.create(
             model="claude-3-haiku-20240307",
-            max_tokens=250,
+            max_tokens=200,
             system=system_prompt,
             messages=msgs
         )
         return response.content[0].text
-    except Exception as e:
-        return f"Error: {e}"
+    except:
+        return "System Error."
 
-def render_map():
-    """Draws a complex Sidero Valley map using Plotly shapes"""
-    fig = go.Figure()
-    
-    # 1. The River (Blue Path)
-    fig.add_shape(type="path", path="M 0,0 Q 150,100 300,50 T 600,100", 
-                  line=dict(color="lightblue", width=15), layer="below")
-    
-    # 2. The Road (Grey Path)
-    fig.add_shape(type="path", path="M 300,400 L 300,200 L 100,100", 
-                  line=dict(color="#d3d3d3", width=8, dash="solid"), layer="below")
+# --- MAIN APP ---
 
-    # 3. Zones
-    # Mine (Top Left)
-    fig.add_shape(type="rect", x0=20, y0=300, x1=150, y1=380, fillcolor="rgba(100,100,100,0.2)", line_width=0)
-    fig.add_annotation(x=85, y=340, text="🏗️ IRON MINE", showarrow=False)
-    
-    # Farms (Bottom Right)
-    fig.add_shape(type="rect", x0=350, y0=20, x1=550, y1=150, fillcolor="rgba(144, 238, 144, 0.2)", line_width=0)
-    fig.add_annotation(x=450, y=85, text="🌾 RICE PADDIES & PIG FARMS", showarrow=False)
-
-    # 4. Locations
-    fig.add_trace(go.Scatter(x=[300], y=[200], mode='markers+text', marker=dict(size=25, color='red', symbol='cross'), text=["St. Mary's<br>(Public Hospital)"], textposition="top center", name="Public Hospital"))
-    fig.add_trace(go.Scatter(x=[480], y=[60], mode='markers+text', marker=dict(size=20, color='green', symbol='circle'), text=["Marcus's Clinic<br>(Private)"], textposition="bottom center", name="Private Clinic"))
-    
-    # 5. Fog of War Cases
-    # Public cases (Miners) - Only show if Dr. Chen interviewed
-    if 'dr_chen' in st.session_state.interviewed_characters:
-        fig.add_trace(go.Scatter(x=[50, 60, 40, 70, 280, 290], y=[320, 330, 310, 325, 210, 220], 
-                                mode='markers', marker=dict(color='orange', size=10), name="Hospital Cases (Miners)"))
-    
-    # Private cases (Farmers) - Only show if data abstracted
-    if len(st.session_state.manually_entered_cases) > 2:
-        fig.add_trace(go.Scatter(x=[400, 420, 380, 450], y=[80, 90, 70, 100], 
-                                mode='markers', marker=dict(color='purple', size=10), name="Clinic Cases (Farmers)"))
-
-    fig.update_layout(
-        xaxis=dict(range=[0, 600], showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(range=[0, 400], showgrid=False, zeroline=False, showticklabels=False),
-        height=500,
-        margin=dict(l=10, r=10, t=10, b=10),
-        plot_bgcolor='#F0F2F6',
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# --- MAIN APP LAYOUT ---
-
-st.markdown("""
-<div class="main-header">
-    <h1>🏔️ Mystery in Sidero Valley</h1>
-    <p>Mission: Investigate a cluster of "Acute Encephalitis Syndrome" (AES)</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>🏔️ Sidero Valley: Outbreak Investigation</h1></div>', unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/mosquito.png", width=50) # Placeholder icon
     st.markdown("### 🕵️ Investigation Hub")
-    if st.button("🏠 Briefing", use_container_width=True): st.session_state.current_view = 'home'
-    if st.button("🗺️ Valley Map", use_container_width=True): st.session_state.current_view = 'map'
-    if st.button("👥 Interviews", use_container_width=True): st.session_state.current_view = 'contacts'
-    if st.button("🏥 Hospital Records", use_container_width=True): st.session_state.current_view = 'hospital_data'
-    if st.button("🏚️ Private Clinic Records", use_container_width=True): st.session_state.current_view = 'clinic_data'
-    
+    if st.button("🏠 Briefing"): st.session_state.current_view = 'home'
+    if st.button("👥 Interviews"): st.session_state.current_view = 'contacts'
+    if st.button("🏥 Hospital Data"): st.session_state.current_view = 'hospital_data'
+    if st.button("🏚️ Clinic Data (Triage)"): st.session_state.current_view = 'clinic_data'
     st.markdown("---")
-    st.progress(len(st.session_state.manually_entered_cases)/5 if len(st.session_state.manually_entered_cases) < 5 else 1.0, text="Private Data Abstracted")
+    if st.button("📊 **Master Line List & Analysis**"): st.session_state.current_view = 'analysis'
 
-# 1. BRIEFING
+# VIEWS
+
 if st.session_state.current_view == 'home':
-    st.markdown("### 🚨 Urgent Deployment Order")
-    st.markdown("""
-    **To:** FETP Team Alpha  
-    **From:** Ministry of Health  
-    **Subject:** Unexplained Neurological Illness - Sidero Valley
-    
-    **Details:** Local media is reporting a "Shaking Sickness" in Sidero Valley. 
-    St. Mary's Hospital reports 6 admissions with high fever, tremors, and altered mental status.
-    One death occurred this morning.
-    
-    **Initial Hypothesis:** Dr. Chen (Hospital Director) believes it is **industrial poisoning** from the Iron Mine.
-    However, rumors from the farming villages suggest children are also sick.
-    
-    **Your Tasks:**
-    1.  Interview **Dr. Chen** at St. Mary's Hospital.
-    2.  Locate the **Private Clinic** used by farmers (they often avoid the hospital).
-    3.  **Unify the data:** The hospital has computers; the private clinic does not. You must abstract the data manually.
-    4.  Determine if this is Poisoning (Miners only) or Infectious (Community-wide).
-    """)
-    if st.button("Begin Operation"):
-        st.session_state.current_view = 'map'
-        st.rerun()
+    st.info("MISSION: Investigate cluster of 'Acute Encephalitis' in Sidero Valley.")
+    st.write("Start by interviewing Dr. Chen to get the hospital data.")
 
-# 2. MAP
-elif st.session_state.current_view == 'map':
-    st.markdown("### 🗺️ Geographical Overview")
-    st.info("💡 **Hint:** Notice the distinct zones. The Hospital is central, but the Private Clinic is deep in the farming zone.")
-    render_map()
-
-# 3. INTERVIEWS
 elif st.session_state.current_view == 'contacts':
-    st.markdown("### 👥 Key Witnesses")
-    cols = st.columns(3)
-    for key, char in CHARACTERS.items():
-        with cols[list(CHARACTERS.keys()).index(key)]:
-            st.markdown(f"### {char['emoji']}")
-            st.markdown(f"**{char['name']}**")
-            st.caption(char['role'])
-            if st.button(f"Interview", key=key):
-                st.session_state.current_character = key
-                st.session_state.current_view = 'interview'
-                st.rerun()
+    st.markdown("### 👥 Interviews")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### Dr. Chen (Hospital)")
+        if st.button("Talk to Chen"):
+            st.session_state.current_character = 'dr_chen'
+            st.session_state.current_view = 'interview'
+            st.rerun()
+    with col2:
+        st.markdown("#### Healer Marcus (Clinic)")
+        if st.button("Talk to Marcus"):
+            st.session_state.current_character = 'healer_marcus'
+            st.session_state.current_view = 'interview'
+            st.rerun()
 
-# 4. CHAT INTERFACE
 elif st.session_state.current_view == 'interview':
     char = CHARACTERS[st.session_state.current_character]
-    st.markdown(f"### 💬 Interviewing: {char['name']}")
-    if st.button("🔙 Back"): 
-        st.session_state.current_view = 'contacts'
-        st.rerun()
+    if st.session_state.current_character == 'healer_marcus': st.session_state.private_clinic_unlocked = True
     
-    # Unlock Private Clinic logic
-    if st.session_state.current_character == 'healer_marcus':
-        st.session_state.private_clinic_unlocked = True
+    st.markdown(f"### 💬 {char['name']}")
+    if st.button("🔙 Back"): st.session_state.current_view = 'contacts'; st.rerun()
     
+    # Init history
     if st.session_state.current_character not in st.session_state.interview_history:
         st.session_state.interview_history[st.session_state.current_character] = [{"role": "assistant", "content": char['initial_greeting']}]
-        st.session_state.interviewed_characters.add(st.session_state.current_character)
     
     history = st.session_state.interview_history[st.session_state.current_character]
-    
     for msg in history:
-        with st.chat_message(msg['role'], avatar=char['avatar'] if msg['role'] == "assistant" else None):
-            st.write(msg['content'])
+        with st.chat_message(msg['role']): st.write(msg['content'])
             
     if prompt := st.chat_input("Ask a question..."):
         with st.chat_message("user"): st.write(prompt)
         history.append({"role": "user", "content": prompt})
-        
-        with st.chat_message("assistant", avatar=char['avatar']):
-            with st.spinner("Thinking..."):
-                resp = get_ai_response(st.session_state.current_character, prompt, history[:-1])
-                st.write(resp)
+        with st.chat_message("assistant"):
+            resp = get_ai_response(st.session_state.current_character, prompt, history[:-1])
+            st.write(resp)
         history.append({"role": "assistant", "content": resp})
 
-# 5. HOSPITAL DATA (EASY)
 elif st.session_state.current_view == 'hospital_data':
-    st.markdown("### 🏥 St. Mary's Hospital Records (EMR)")
-    if 'dr_chen' in st.session_state.interviewed_characters:
-        st.success("✅ Access Granted by Dr. Chen")
-        df_public = pd.DataFrame(PUBLIC_CASES)
-        st.dataframe(df_public, use_container_width=True)
-        st.caption("Observation: All patients here are Adult Males (Miners).")
+    st.markdown("### 🏥 Hospital Records (Clean)")
+    if 'dr_chen' in st.session_state.interviewed_characters: # Simple check: has user talked to Chen?
+        st.dataframe(pd.DataFrame(PUBLIC_CASES))
     else:
-        st.error("🔒 Access Denied. You must interview Dr. Chen first.")
+        st.warning("🔒 Talk to Dr. Chen to access records.")
 
-# 6. PRIVATE CLINIC DATA (HARD - ABSTRACTION TASK)
 elif st.session_state.current_view == 'clinic_data':
-    st.markdown("### 🏚️ Healer Marcus's Private Clinic")
+    st.markdown("### 🏚️ Private Clinic Records (Triage Task)")
     
     if not st.session_state.private_clinic_unlocked:
-        st.error("🔒 You don't know where this clinic is. Find 'Marcus' in the contacts list.")
+        st.warning("🔒 You need to find Healer Marcus first.")
     else:
-        st.markdown("""
-        **Task:** Marcus doesn't have a computer. He handed you a pile of greasy, handwritten notes. 
-        You must read them and **manually enter the data** into the line list below.
-        """)
+        st.info("📝 **Task:** Read the notes. Decide if each patient meets the Case Definition (Fever + Neuro symptoms). Ignore non-cases.")
         
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.markdown("#### 📝 The Handwritten Notes")
-            for note in PRIVATE_NOTES:
-                st.markdown(f'<div class="messy-note">{note}</div>', unsafe_allow_html=True)
+            st.markdown("#### 📥 The 'Pile' of Notes")
+            for note in CLINIC_NOTES_PILE:
+                st.markdown(f'<div class="handwritten-note">{note}</div>', unsafe_allow_html=True)
         
         with col2:
-            st.markdown("#### 💻 Data Abstraction Form")
-            with st.form("abstraction_form"):
-                c_age = st.number_input("Age", min_value=0, max_value=100)
+            st.markdown("#### 💻 Data Entry Form")
+            with st.form("entry_form"):
+                st.markdown("**Enter New Case**")
+                c_id = st.text_input("Patient ID (e.g., C-01)")
+                c_age = st.number_input("Age", 0, 100)
                 c_sex = st.selectbox("Sex", ["M", "F"])
-                c_occ = st.selectbox("Occupation/Status", ["Miner", "Farmer", "Child", "Other"])
-                c_onset = st.selectbox("Onset Date", ["Dec 7", "Dec 8", "Dec 9", "Dec 10"])
+                c_occ = st.selectbox("Occupation", ["Miner", "Farmer", "Child", "Other"])
+                c_onset = st.date_input("Onset Date", value=None)
+                c_sympt = st.multiselect("Symptoms", ["Fever", "Tremors", "Seizures", "Confusion", "Vomiting", "Headache", "None"])
                 
-                submitted = st.form_submit_button("➕ Add Case to Line List")
+                submitted = st.form_submit_button("➕ Add to Line List")
                 if submitted:
-                    new_case = {"Age": c_age, "Sex": c_sex, "Occupation": c_occ, "Onset": c_onset, "Source": "Private Clinic"}
-                    st.session_state.manually_entered_cases.append(new_case)
-                    st.success("Case Abstracted!")
-            
+                    if not c_id:
+                        st.error("ID required")
+                    else:
+                        new_case = {
+                            "ID": c_id, "Age": c_age, "Sex": c_sex, 
+                            "Occupation": c_occ, "Onset": str(c_onset), 
+                            "Symptoms": ", ".join(c_sympt), "Status": "Unknown"
+                        }
+                        st.session_state.manually_entered_cases.append(new_case)
+                        st.success(f"Added Case {c_id}")
+
+            st.markdown("---")
+            st.markdown(f"**Cases Digitized: {len(st.session_state.manually_entered_cases)}**")
             if st.session_state.manually_entered_cases:
-                st.markdown("#### Your Abstracted Data")
                 st.dataframe(pd.DataFrame(st.session_state.manually_entered_cases))
-                
-                if len(st.session_state.manually_entered_cases) >= 4:
-                    st.success("🎉 Excellent! You have digitized the private records.")
-                    st.info("🤔 **Critical Thinking:** Look at your combined data now. The Hospital had only Miners. The Clinic has Children and Farmers. Does the 'Toxic Mine' hypothesis still hold up? Or is this something environmental affecting everyone (like mosquitoes or pigs)?")
+
+elif st.session_state.current_view == 'analysis':
+    st.markdown("## 📊 Master Analytics Dashboard")
+    
+    # Combine Data
+    df_h = pd.DataFrame(PUBLIC_CASES)
+    df_h['Source'] = 'Hospital'
+    
+    if st.session_state.manually_entered_cases:
+        df_c = pd.DataFrame(st.session_state.manually_entered_cases)
+        df_c['Source'] = 'Clinic (Manual)'
+        df_master = pd.concat([df_h, df_c], ignore_index=True)
+    else:
+        df_master = df_h
+        st.warning("⚠️ Only showing Hospital data. Go to 'Clinic Data' to add more cases.")
+
+    # Show Master Table
+    with st.expander("📋 View Master Line List", expanded=True):
+        st.dataframe(df_master, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Analytics Tabs
+    tab1, tab2, tab3 = st.tabs(["📈 Epi Curve", "👥 Demographics", "🤒 Clinical"])
+    
+    with tab1:
+        st.markdown("### Epidemic Curve")
+        if 'Onset' in df_master.columns:
+            # Simple aggregation
+            epi_data = df_master['Onset'].value_counts().reset_index()
+            epi_data.columns = ['Date', 'Count']
+            epi_data = epi_data.sort_values('Date')
+            
+            fig = px.bar(epi_data, x='Date', y='Count', title="Cases by Onset Date", color_discrete_sequence=['#E74C3C'])
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.error("No Onset data found.")
+
+    with tab2:
+        st.markdown("### Demographics")
+        colA, colB = st.columns(2)
+        with colA:
+            # Sex
+            fig_sex = px.pie(df_master, names='Sex', title="Distribution by Sex")
+            st.plotly_chart(fig_sex, use_container_width=True)
+        with colB:
+            # Age Histogram
+            fig_age = px.histogram(df_master, x='Age', nbins=10, title="Age Distribution")
+            st.plotly_chart(fig_age, use_container_width=True)
+            
+        # Occupation
+        fig_occ = px.bar(df_master['Occupation'].value_counts().reset_index(), x='Occupation', y='count', title="Cases by Occupation")
+        st.plotly_chart(fig_occ, use_container_width=True)
+
+    with tab3:
+        st.markdown("### Symptom Frequency")
+        # Split comma-separated symptoms and count
+        all_symptoms = []
+        for s in df_master['Symptoms']:
+            if s:
+                all_symptoms.extend([x.strip() for x in s.split(',')])
+        
+        if all_symptoms:
+            symptom_counts = pd.Series(all_symptoms).value_counts().reset_index()
+            symptom_counts.columns = ['Symptom', 'Count']
+            fig_sym = px.bar(symptom_counts, x='Count', y='Symptom', orientation='h', title="Most Common Symptoms")
+            st.plotly_chart(fig_sym, use_container_width=True)
+        else:
+            st.info("No symptom data available yet.")
