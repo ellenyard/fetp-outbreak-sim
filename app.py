@@ -29,14 +29,6 @@ st.markdown("""
         font-family: 'Courier New', monospace;
         margin-bottom: 15px;
     }
-    .resource-box {
-        background-color: #e8f4f8;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #b8daff;
-        text-align: center;
-        margin-bottom: 10px;
-    }
     .handwritten-note {
         font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
         font-size: 16px;
@@ -83,13 +75,11 @@ def generate_hidden_population():
         'Sex': np.random.choice(['M', 'F'], n),
         'Occupation': np.random.choice(['Miner', 'Farmer', 'Merchant', 'Student'], n, p=[0.25, 0.4, 0.15, 0.2]),
         'Zone': np.random.choice(['North (Mines)', 'South (Farms)', 'Central (Town)', 'East (Forest)'], n),
-        # Risk Factors
         'Pigs_Near_Home': np.random.choice([True, False], n),
         'Mosquito_Net_Use': np.random.choice([True, False], n),
         'Drank_River_Water': np.random.choice([True, False], n),
-        'Eat_Bushmeat': np.random.choice([True, False], n),
     })
-    # Disease Logic (JE Proxy: Pigs + South + No Net)
+    # Disease Logic
     df['Risk_Score'] = 0
     df.loc[df['Pigs_Near_Home'], 'Risk_Score'] += 3
     df.loc[~df['Mosquito_Net_Use'], 'Risk_Score'] += 2
@@ -106,9 +96,11 @@ PUBLIC_CASES = [
     {"ID": "H-02", "Age": 28, "Sex": "M", "Occ": "Miner", "Onset": "Dec 9", "Symp": "Confusion, Fever"},
     {"ID": "H-03", "Age": 52, "Sex": "M", "Occ": "Miner", "Onset": "Dec 9", "Symp": "Seizures (Died)"},
     {"ID": "H-04", "Age": 33, "Sex": "M", "Occ": "Miner", "Onset": "Dec 10", "Symp": "Rigidity"},
+    {"ID": "H-05", "Age": 41, "Sex": "M", "Occ": "Miner", "Onset": "Dec 10", "Symp": "Tremors, Ataxia"},
+    {"ID": "H-06", "Age": 29, "Sex": "M", "Occ": "Miner", "Onset": "Dec 10", "Symp": "Headache, Fever"},
 ]
 
-# Clinic Notes (Locked)
+# Clinic Notes
 CLINIC_NOTES_PILE = [
     "Dec 7. Sarah (6y F). Pig farm. High fever, shaking hands.",
     "Dec 8. Twin boys (8y M). Farm B. Both vomiting and twitching.",
@@ -119,14 +111,18 @@ CLINIC_NOTES_PILE = [
 
 # Characters
 CHARACTERS = {
-    "dr_chen": {"name": "Dr. Chen", "role": "Hospital Director", "avatar": "👩‍⚕️", "cost": 100, "bio": "Focuses on Miners."},
-    "healer_marcus": {"name": "Healer Marcus", "role": "Private Clinic", "avatar": "🌿", "cost": 150, "bio": "Suspicious of govt."},
-    "foreman_rex": {"name": "Foreman Rex", "role": "Mine Manager", "avatar": "👷", "cost": 200, "bio": "Defensive."},
-    "mama_kofi": {"name": "Mama Kofi", "role": "Mother of Case", "avatar": "👵", "cost": 100, "bio": "Grieving."},
-    "mayor_simon": {"name": "Mayor Simon", "role": "Politician", "avatar": "👔", "cost": 50, "bio": "Worried about money."},
-    "nurse_joy": {"name": "Nurse Joy", "role": "Triage Nurse", "avatar": "🩹", "cost": 50, "bio": "Overworked."},
-    "teacher_grace": {"name": "Teacher Grace", "role": "School Principal", "avatar": "📚", "cost": 50, "bio": "Observant."},
-    "market_lady": {"name": "Auntie Ama", "role": "Market Vendor", "avatar": "🍎", "cost": 50, "bio": "Knows gossip."}
+    "dr_chen": {"name": "Dr. Chen", "role": "Hospital Director", "avatar": "👩‍⚕️", "cost": 100, 
+                "bio": "Focuses on Miners. Precise.", 
+                "data_access": str(PUBLIC_CASES)}, # Explicitly passing data as string
+    "healer_marcus": {"name": "Healer Marcus", "role": "Private Clinic", "avatar": "🌿", "cost": 150, 
+                      "bio": "Suspicious of govt.", 
+                      "data_access": str(CLINIC_NOTES_PILE)},
+    "foreman_rex": {"name": "Foreman Rex", "role": "Mine Manager", "avatar": "👷", "cost": 200, "bio": "Defensive.", "data_access": "None"},
+    "mama_kofi": {"name": "Mama Kofi", "role": "Mother of Case", "avatar": "👵", "cost": 100, "bio": "Grieving.", "data_access": "None"},
+    "mayor_simon": {"name": "Mayor Simon", "role": "Politician", "avatar": "👔", "cost": 50, "bio": "Worried about money.", "data_access": "None"},
+    "nurse_joy": {"name": "Nurse Joy", "role": "Triage Nurse", "avatar": "🩹", "cost": 50, "bio": "Overworked.", "data_access": "None"},
+    "teacher_grace": {"name": "Teacher Grace", "role": "School Principal", "avatar": "📚", "cost": 50, "bio": "Observant.", "data_access": "None"},
+    "market_lady": {"name": "Auntie Ama", "role": "Market Vendor", "avatar": "🍎", "cost": 50, "bio": "Knows gossip.", "data_access": "None"}
 }
 
 # --- FUNCTIONS ---
@@ -134,17 +130,30 @@ def get_ai_response(char_key, user_input, history):
     char = CHARACTERS[char_key]
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key: return "⚠️ API Key Missing"
+    
+    # SYSTEM PROMPT INJECTION
+    data_context = f"DATA YOU HAVE: {char.get('data_access', 'None')}"
+    
     try:
         client = anthropic.Anthropic(api_key=api_key)
         msgs = [{"role": m["role"], "content": m["content"]} for m in history]
         msgs.append({"role": "user", "content": user_input})
-        system_prompt = f"Roleplay {char['name']}. Bio: {char['bio']}."
-        response = client.messages.create(model="claude-3-haiku-20240307", max_tokens=150, system=system_prompt, messages=msgs)
+        
+        system_prompt = f"""
+        Roleplay {char['name']}. Bio: {char['bio']}.
+        {data_context}
+        CRITICAL INSTRUCTIONS:
+        1. If you have data (like a list of cases), READ FROM IT EXACTLY. 
+        2. Do NOT invent new patient names or numbers.
+        3. If the data says "H-01", use that ID. Do not make up "Lukas Petrov".
+        4. If you have no data, speak from general knowledge.
+        """
+        
+        response = client.messages.create(model="claude-3-haiku-20240307", max_tokens=250, system=system_prompt, messages=msgs)
         return response.content[0].text
     except: return "AI Error"
 
 def map_questions(q_text):
-    """Maps free text to columns"""
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key: return []
     avail = list(HIDDEN_POP.columns)
@@ -181,7 +190,7 @@ if st.session_state.current_view == 'briefing':
     
     st.markdown("### 🗺️ Field Map")
     
-    # Map with "Noise"
+    # FIXED MAP LOGIC (No crashes)
     fig = go.Figure()
     # Zones
     fig.add_shape(type="rect", x0=0, y0=200, x1=200, y1=400, fillcolor="rgba(169,169,169,0.3)", line_width=0)
@@ -190,17 +199,13 @@ if st.session_state.current_view == 'briefing':
     fig.add_annotation(x=200, y=20, text="FARMS", showarrow=False)
     # River
     fig.add_trace(go.Scatter(x=[0,400], y=[50,150], mode='lines', line=dict(color='blue', width=5), name='River'))
-    # Landmarks (Signal + Noise)
-    locs = [
-        (300, 300, 'Hospital', 'red', 'cross'),
-        (50, 100, 'Pig Farms', 'pink', 'circle'),
-        (150, 300, 'Market', 'orange', 'square'),
-        (350, 100, 'School', 'blue', 'diamond'),
-        (250, 150, 'Temple', 'purple', 'triangle'),
-        (50, 300, 'Mine Shaft', 'black', 'star')
-    ]
-    for x, y, txt, col, sym in locs:
-        fig.add_trace(go.Scatter(x=[x], y=[y], mode='markers+text', marker=dict(size=12, color=col, symbol=sym), text=[txt], textposition="top center", name=txt))
+    
+    # Valid Symbols Only: circle, square, diamond, cross, x
+    fig.add_trace(go.Scatter(x=[300], y=[300], mode='markers+text', marker=dict(size=12, color='red', symbol='cross'), text=["Hospital"], textposition="top center", name="Hospital"))
+    fig.add_trace(go.Scatter(x=[50], y=[100], mode='markers+text', marker=dict(size=12, color='pink', symbol='circle'), text=["Pig Farms"], textposition="top center", name="Pig Farms"))
+    fig.add_trace(go.Scatter(x=[150], y=[300], mode='markers+text', marker=dict(size=12, color='orange', symbol='square'), text=["Market"], textposition="top center", name="Market"))
+    fig.add_trace(go.Scatter(x=[350], y=[100], mode='markers+text', marker=dict(size=12, color='blue', symbol='diamond'), text=["School"], textposition="top center", name="School"))
+    fig.add_trace(go.Scatter(x=[50], y=[300], mode='markers+text', marker=dict(size=12, color='black', symbol='x'), text=["Mine Shaft"], textposition="top center", name="Mine Shaft"))
     
     fig.update_layout(height=400, xaxis=dict(visible=False), yaxis=dict(visible=False), margin=dict(l=0,r=0,t=0,b=0))
     st.plotly_chart(fig, use_container_width=True)
@@ -233,7 +238,7 @@ elif st.session_state.current_view == 'contacts':
     cols = st.columns(4)
     for i, (k, v) in enumerate(CHARACTERS.items()):
         with cols[i%4]:
-            st.markdown(f"**{v['name']}**")
+            st.markdown(f"**{v['avatar']} {v['name']}**")
             st.caption(f"Cost: ${v['cost']}")
             if st.button(f"Talk", key=k):
                 if st.session_state.budget >= v['cost']:
@@ -284,10 +289,11 @@ elif st.session_state.current_view == 'linelist':
         with col2:
             st.markdown("**Abstraction Form:**")
             with st.form("add_case"):
-                st.text_input("ID")
+                st.text_input("ID (e.g., C-01)")
                 st.text_input("Age")
+                st.text_input("Symptoms")
                 if st.form_submit_button("Add to List"):
-                    st.success("Added (Simulation)")
+                    st.success("Case added to database (Simulation)")
     else:
         st.warning("🔒 Data Locked. Interview Healer Marcus to access.")
 
@@ -296,7 +302,6 @@ elif st.session_state.current_view == 'study_design':
     
     with st.form("protocol"):
         st.markdown("#### 1. Architecture")
-        # No pre-population (Text Input)
         st.text_input("Study Design (e.g., Case-Control, Cohort)", placeholder="Type your design here...")
         st.text_input("Sampling Strategy", placeholder="How will you find people?")
         st.number_input("Sample Size", min_value=10, max_value=1000, value=100)
