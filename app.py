@@ -321,45 +321,82 @@ if st.session_state.current_view == 'map':
         <h3 style="margin-top: 0;">🗺️ Village Layout</h3>
     """, unsafe_allow_html=True)
     
-    # Create a text-based map (in real version, this would be interactive)
+    # Create a simple schematic map
     map_col1, map_col2 = st.columns([2, 1])
     
     with map_col1:
+        # Display a simple schematic
         st.markdown("""
-        ```
-        ═══════════════════════════════════════════════════════
-                        RIVERSIDE VILLAGE
-        ═══════════════════════════════════════════════════════
-        
-                          🏥 Health Center
-                                 |
-                                 |
-        ┌────────────────────────┼────────────────────────┐
-        │                        │                        │
-        │   NEIGHBORHOOD A       │    NEIGHBORHOOD B      │
-        │   (Well #1 users)      │    (Well #2 users)     │
-        │                        │                        │
-        │   🔴🔴🔴 (Cases)        │    (No cases)          │
-        │   🔴🔴🔴               │                        │
-        │   🔴🔴🔴               │                        │
-        │   🔴🔴🔴🔴🔴           │                        │
-        │                        │                        │
-        │     💧 Well #1         │      💧 Well #2        │
-        │     (Open well)        │      (Covered/pump)    │
-        │        |               │                        │
-        │        |               │                        │
-        │     🚽 Latrine         │                        │
-        │   (30m uphill)         │                        │
-        │                        │                        │
-        └────────────────────────┴────────────────────────┘
-        
-        Legend:
-        🔴 = Case location
-        💧 = Water source
-        🚽 = Sanitation facility
-        🏥 = Health facility
-        ```
-        """)
+        <div style="background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px;">
+            <svg width="100%" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+                <!-- Title -->
+                <text x="300" y="25" text-anchor="middle" font-size="18" font-weight="bold">RIVERSIDE VILLAGE</text>
+                
+                <!-- Health Center -->
+                <rect x="250" y="50" width="100" height="60" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+                <text x="300" y="85" text-anchor="middle" font-size="14">🏥 Clinic</text>
+                
+                <!-- Neighborhood A (left side - affected) -->
+                <rect x="50" y="150" width="250" height="230" fill="#FFEBEE" stroke="#D32F2F" stroke-width="2" stroke-dasharray="5,5"/>
+                <text x="175" y="170" text-anchor="middle" font-weight="bold">NEIGHBORHOOD A</text>
+                <text x="175" y="190" text-anchor="middle" font-size="12">(Well #1 users)</text>
+                
+                <!-- Cases in Neighborhood A -->
+                <circle cx="100" cy="220" r="8" fill="#D32F2F"/>
+                <circle cx="130" cy="220" r="8" fill="#D32F2F"/>
+                <circle cx="160" cy="220" r="8" fill="#D32F2F"/>
+                <circle cx="190" cy="220" r="8" fill="#D32F2F"/>
+                <circle cx="220" cy="220" r="8" fill="#D32F2F"/>
+                
+                <circle cx="100" cy="250" r="8" fill="#D32F2F"/>
+                <circle cx="130" cy="250" r="8" fill="#D32F2F"/>
+                <circle cx="160" cy="250" r="8" fill="#D32F2F"/>
+                <circle cx="190" cy="250" r="8" fill="#D32F2F"/>
+                <circle cx="220" cy="250" r="8" fill="#D32F2F"/>
+                
+                <circle cx="100" cy="280" r="8" fill="#D32F2F"/>
+                <circle cx="130" cy="280" r="8" fill="#D32F2F"/>
+                <circle cx="160" cy="280" r="8" fill="#D32F2F"/>
+                <circle cx="190" cy="280" r="8" fill="#D32F2F"/>
+                <circle cx="220" cy="280" r="8" fill="#D32F2F"/>
+                
+                <text x="175" y="310" text-anchor="middle" font-size="12" fill="#D32F2F">🔴 15 Cases</text>
+                
+                <!-- Well #1 -->
+                <circle cx="175" cy="340" r="20" fill="#90CAF9" stroke="#1976D2" stroke-width="2"/>
+                <text x="175" y="347" text-anchor="middle" font-size="14">💧</text>
+                <text x="175" y="365" text-anchor="middle" font-size="11">Well #1 (Open)</text>
+                
+                <!-- Latrine near Well #1 -->
+                <rect x="130" y="305" width="30" height="25" fill="#A1887F" stroke="#5D4037" stroke-width="1"/>
+                <text x="145" y="295" text-anchor="middle" font-size="11">🚽 Latrine</text>
+                
+                <!-- Arrow showing uphill -->
+                <line x1="145" y1="335" x2="175" y2="355" stroke="#5D4037" stroke-width="2" marker-end="url(#arrowhead)"/>
+                <text x="155" y="348" font-size="9">30m</text>
+                
+                <!-- Neighborhood B (right side - unaffected) -->
+                <rect x="320" y="150" width="250" height="230" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2" stroke-dasharray="5,5"/>
+                <text x="445" y="170" text-anchor="middle" font-weight="bold">NEIGHBORHOOD B</text>
+                <text x="445" y="190" text-anchor="middle" font-size="12">(Well #2 users)</text>
+                
+                <text x="445" y="250" text-anchor="middle" font-size="14" fill="#4CAF50">✓ No Cases</text>
+                
+                <!-- Well #2 -->
+                <circle cx="445" cy="340" r="20" fill="#81C784" stroke="#388E3C" stroke-width="2"/>
+                <text x="445" y="347" text-anchor="middle" font-size="14">💧</text>
+                <text x="445" y="365" text-anchor="middle" font-size="11">Well #2 (Covered)</text>
+                
+                <!-- Legend -->
+                <rect x="20" y="20" width="120" height="70" fill="white" stroke="#999" stroke-width="1"/>
+                <text x="30" y="40" font-size="12" font-weight="bold">Legend:</text>
+                <circle cx="35" cy="55" r="5" fill="#D32F2F"/>
+                <text x="50" y="60" font-size="11">Case location</text>
+                <circle cx="35" cy="75" r="8" fill="#90CAF9" stroke="#1976D2" stroke-width="1"/>
+                <text x="50" y="80" font-size="11">Water source</text>
+            </svg>
+        </div>
+        """, unsafe_allow_html=True)
     
     with map_col2:
         st.markdown("### 🔍 Key Observations")
@@ -568,25 +605,51 @@ elif st.session_state.current_view == 'cases':
     
     with col1:
         st.markdown("### 📊 Epidemic Curve")
-        # Simple text-based epi curve
-        st.markdown("""
-        ```
-        Cases by Date of Onset
         
-        6 |              🔴🔴
-        5 |           🔴🔴🔴
-        4 |        🔴🔴🔴🔴
-        3 |     🔴🔴🔴
-        2 |  🔴🔴
-        1 | 🔴
-          |________________
-            3  4  5  6  7  8  9
-               March 2025
-        ```
+        # Create proper epidemic curve data
+        epi_data = {
+            'Mar 3': 1,
+            'Mar 4': 2,
+            'Mar 5': 3,
+            'Mar 6': 3,
+            'Mar 7': 2,
+            'Mar 8': 2,
+            'Mar 9': 2
+        }
         
-        📈 Pattern: Point-source outbreak
-        Peak on March 6-7
-        """)
+        # Create visual bar chart using HTML/CSS
+        max_cases = max(epi_data.values())
+        
+        st.markdown('<div style="background: white; padding: 15px; border-radius: 5px;">', unsafe_allow_html=True)
+        st.markdown('<p style="text-align: center; font-weight: bold; margin-bottom: 10px;">Cases by Date of Onset</p>', unsafe_allow_html=True)
+        
+        # Y-axis and bars
+        for y in range(max_cases, 0, -1):
+            row_html = f'<div style="display: flex; align-items: center; margin: 2px 0;">'
+            row_html += f'<span style="width: 30px; text-align: right; margin-right: 10px; font-size: 12px;">{y}</span>'
+            
+            for date, count in epi_data.items():
+                if count >= y:
+                    row_html += '<div style="width: 60px; height: 20px; background-color: #FF6B35; margin: 0 2px; border: 1px solid #CC5529;"></div>'
+                else:
+                    row_html += '<div style="width: 60px; height: 20px; margin: 0 2px;"></div>'
+            
+            row_html += '</div>'
+            st.markdown(row_html, unsafe_allow_html=True)
+        
+        # X-axis
+        x_axis = '<div style="display: flex; align-items: center; margin-top: 5px; border-top: 2px solid #333;">'
+        x_axis += '<span style="width: 30px; margin-right: 10px;"></span>'
+        for date in epi_data.keys():
+            x_axis += f'<div style="width: 60px; text-align: center; font-size: 10px; margin: 0 2px;">{date.split()[1]}</div>'
+        x_axis += '</div>'
+        st.markdown(x_axis, unsafe_allow_html=True)
+        
+        st.markdown('<p style="text-align: center; font-size: 11px; margin-top: 5px;">March 2025</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.info("📈 **Pattern:** Point-source outbreak with peak on March 6")
+
     
     with col2:
         st.markdown("### 🔍 Key Patterns")
