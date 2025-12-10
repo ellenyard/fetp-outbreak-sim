@@ -55,7 +55,7 @@ st.markdown("""
 
 # Initialize session state
 if 'current_view' not in st.session_state:
-    st.session_state.current_view = 'map'
+    st.session_state.current_view = 'home'  # Start on home screen
 if 'interview_history' not in st.session_state:
     st.session_state.interview_history = {}
 if 'current_character' not in st.session_state:
@@ -66,35 +66,76 @@ if 'day' not in st.session_state:
     st.session_state.day = 1
 if 'interviewed_characters' not in st.session_state:
     st.session_state.interviewed_characters = set()
+if 'visited_clinic' not in st.session_state:
+    st.session_state.visited_clinic = False
 
 # Character database with truth documents
 CHARACTERS = {
+    "nurse_sarah": {
+        "name": "Nurse Sarah Opoku",
+        "role": "Clinic Nurse, Riverside Health Center",
+        "emoji": "👩‍⚕️",
+        "personality": "Professional, organized, detail-oriented. Has maintained careful records of all patients. Concerned but methodical.",
+        "truth_document": """
+        - Head nurse at Riverside Health Center for 12 years
+        - Has complete line list of all 15 cases with detailed information
+        - First patient arrived March 3rd at 06:00 - 4-year-old Sarah Mensah, severe dehydration
+        - By March 4th, had 3 more cases, all children from same neighborhood
+        - Pattern continued - mostly children under 10 and elderly over 60
+        - All patients present with profuse watery diarrhea ("rice water" stool), vomiting, rapid dehydration
+        - 3 deaths so far - all were severely dehydrated on arrival, delayed treatment
+        - Case details she can provide when asked:
+          * Case 1: Sarah M., 4F, onset Mar 3, Neighborhood A, lives near Well #1
+          * Case 2: David K., 6M, onset Mar 4, Neighborhood A, near Well #1
+          * Case 3: Grace O., 3F, onset Mar 4, Neighborhood A, near Well #1
+          * Case 4: Mama Esi, 67F, onset Mar 5, Neighborhood A, near Well #1 (deceased)
+          * Case 5: Kofi A., 8M, onset Mar 5, Neighborhood A, near Well #1
+          * Case 6: Baby Ama, 1F, onset Mar 5, Neighborhood A, near Well #1 (deceased)
+          * Case 7: Peter M., 5M, onset Mar 6, Neighborhood A, near Well #1
+          * Case 8: Ruth N., 7F, onset Mar 6, Neighborhood A, near Well #1
+          * Case 9: Samuel O., 45M, onset Mar 6, Neighborhood A, near Well #1
+          * Case 10: Mary K., 4F, onset Mar 7, Neighborhood A, near Well #1
+          * Case 11: James T., 6M, onset Mar 7, Neighborhood A, near Well #1
+          * Case 12: Fatima A., 35F, onset Mar 8, Neighborhood A, near Well #1
+          * Case 13: Ibrahim S., 9M, onset Mar 8, Neighborhood A, near Well #1
+          * Case 14: Blessing M., 2F, onset Mar 9, Neighborhood A, near Well #1 (deceased)
+          * Case 15: Joseph K., 72M, onset Mar 9, Neighborhood A, near Well #1
+        - Noticed all cases are from same area of village - northern section
+        - When asked about families, she notes they all mention using Well #1 for drinking water
+        - No cases from the southern part of village (Well #2 users)
+        - Symptoms start 6-12 hours after reported exposure
+        - Most severe cases are those who delayed coming to clinic
+        - Clinic running low on ORS and IV fluids
+        - Sent stool samples to National Lab 3 days ago, still waiting for results
+        - Clinical diagnosis: strongly suspects cholera based on presentation
+        - Has been asking patients about food and water sources in routine intake
+        """,
+        "initial_greeting": "Good morning, I'm Nurse Sarah Opoku, head nurse here at the clinic. We've been overwhelmed these past few days. I've been keeping detailed records of every patient. What would you like to know about the cases?"
+    },
     "dr_mensah": {
         "name": "Dr. Kwame Mensah",
         "role": "District Health Officer",
         "emoji": "👨‍⚕️",
-        "personality": "Professional, knowledgeable, somewhat formal. Provides clear medical information.",
+        "personality": "Professional, knowledgeable, somewhat formal. Provides overview but refers to nurse for detailed records.",
         "truth_document": """
         - District Health Officer for Riverside District for 8 years
-        - First case reported on March 3rd at the health center
-        - Total of 15 confirmed cases as of March 10th
-        - All cases present with severe watery diarrhea (described as "rice water"), vomiting, and dehydration
-        - 3 deaths so far (case fatality rate ~20%)
-        - Most severe cases are children under 5 and elderly
-        - Cases are clustered in the northern part of Riverside Village, primarily Neighborhood A
-        - Health center has limited supplies of ORS and IV fluids
-        - No laboratory confirmation yet - samples sent to National Lab 3 days ago
-        - Suspects it might be cholera based on clinical presentation
-        - Village has two main water sources: Well #1 (north) and Well #2 (south)
-        - Well #1 serves about 60 households in Neighborhood A
-        - Well #2 serves about 40 households in Neighborhood B
-        - Most cases are from families using Well #1
-        - No cases reported from Neighborhood B (Well #2 users)
-        - Village has no piped water system
-        - Last cholera outbreak in district was 5 years ago
-        - Concerned about spread during upcoming market day (2 days away)
+        - Oversees 12 health facilities in the district
+        - First notified of cluster on March 5th when Nurse Sarah called with concerns
+        - Visited clinic on March 6th, confirmed outbreak investigation needed
+        - Total of 15 confirmed cases, 3 deaths (case fatality rate ~20%)
+        - Clinical presentation consistent with cholera
+        - Requested FETP team support on March 8th
+        - Arranged for stool samples to be sent to National Lab
+        - Concerned about potential for wider spread
+        - Village has two main water sources but doesn't know details (refers to community members)
+        - Last cholera outbreak in district was 5 years ago in different village
+        - Worried about upcoming market day (2 days away) - could spread to other villages
+        - Has basic supplies at district level but not enough for large outbreak
+        - Can authorize interventions and mobilize resources
+        - Expects team to conduct thorough investigation before recommendations
+        - Nurse Sarah has the detailed case information and line list
         """,
-        "initial_greeting": "Welcome to Riverside Village. I'm Dr. Mensah, the District Health Officer. We've been dealing with a serious outbreak of severe diarrheal illness. I'm very glad the FETP team is here to help us investigate."
+        "initial_greeting": "Welcome to Riverside Village. I'm Dr. Mensah, the District Health Officer. I'm very glad the FETP team is here. We've been dealing with a serious outbreak of severe diarrheal illness. Nurse Sarah at the clinic has been maintaining detailed records. What can I tell you about the situation?"
     },
     "mrs_abena": {
         "name": "Mrs. Abena Osei",
@@ -282,6 +323,10 @@ with col4:
 with st.sidebar:
     st.markdown("### 📊 Navigation")
     
+    if st.button("🏠 Home", use_container_width=True):
+        st.session_state.current_view = 'home'
+        st.rerun()
+    
     if st.button("📍 Map View", use_container_width=True):
         st.session_state.current_view = 'map'
         st.rerun()
@@ -290,7 +335,7 @@ with st.sidebar:
         st.session_state.current_view = 'contacts'
         st.rerun()
     
-    if st.button("📋 Case List", use_container_width=True):
+    if st.button("📋 Line List", use_container_width=True):
         st.session_state.current_view = 'cases'
         st.rerun()
     
@@ -313,7 +358,111 @@ with st.sidebar:
     """)
 
 # Main content area based on current view
-if st.session_state.current_view == 'map':
+if st.session_state.current_view == 'home':
+    st.markdown("## 🚨 Outbreak Investigation Exercise: Northern Coastal Region")
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin: 20px 0;">
+        <h2 style="margin-top: 0; color: white;">⚠️ URGENT: Public Health Emergency</h2>
+        <p style="font-size: 18px; margin-bottom: 0;">You are the newly deployed Outbreak Investigation Team</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("### 📅 Current Date & Time")
+        st.info("**December 10, 2025 | 08:00 Hours**")
+        
+        st.markdown("### 🌍 Location")
+        st.write("**Riverside Village, Northern Coastal Region**")
+        st.write("A rural community of approximately 100 households located near the coast.")
+        
+        st.markdown("### 🏥 Initial Report")
+        st.warning("""
+        Over the last **48 hours**, the local health clinic has reported an alarming spike in patients 
+        presenting with **acute watery diarrhea and severe dehydration**.
+        """)
+        
+        st.markdown("### 📊 Initial Data Snapshot")
+        st.error("""
+        **As of 08:00 this morning:**
+        - **15 confirmed cases** admitted to the health center
+        - **3 deaths** reported
+        - **2 patients** requiring immediate aggressive intravenous fluid resuscitation
+        - **Patient age range:** 1 to 72 years
+        - **Clinical presentation:** Severe watery "rice-water" diarrhea, vomiting, rapid dehydration
+        """)
+        
+        st.markdown("### 🔬 Preliminary Hypothesis")
+        st.info("""
+        Based on the clinical presentation and rapid onset, the **leading preliminary differential diagnosis is Cholera**.
+        
+        However, this remains unconfirmed pending laboratory results and epidemiological investigation.
+        """)
+    
+    with col2:
+        st.markdown("### 🎯 Your Mission")
+        st.success("""
+        Your team's objective is to **systematically manage this unfolding public health crisis**.
+        
+        Over the course of this exercise, you will be tasked with:
+        
+        1. **Defining the problem** and establishing a case definition
+        
+        2. **Conducting a field investigation** to find cases and generate hypotheses (person, place, time)
+        
+        3. **Analyzing epidemiological data** to identify the source and mode of transmission
+        
+        4. **Developing evidence-based control measures**
+        
+        5. **Communicating findings** and recommendations to stakeholders
+        """)
+        
+        st.markdown("---")
+        
+        st.markdown("### 👥 Team Resources")
+        st.write("""
+        You have access to:
+        - District Health Officer
+        - Community Health Worker
+        - Village leadership
+        - Local community members
+        - Basic laboratory services
+        """)
+    
+    st.markdown("---")
+    
+    # Call to action
+    st.markdown("### 🚀 Ready to Begin?")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📍 View Village Map", use_container_width=True, type="primary"):
+            st.session_state.current_view = 'map'
+            st.rerun()
+    
+    with col2:
+        if st.button("👥 Interview Key Contacts", use_container_width=True):
+            st.session_state.current_view = 'contacts'
+            st.rerun()
+    
+    with col3:
+        if st.button("📋 Review Available Data", use_container_width=True):
+            st.session_state.current_view = 'cases'
+            st.rerun()
+    
+    st.markdown("---")
+    st.markdown("""
+    <div style="background-color: #FFF3E0; padding: 15px; border-radius: 5px; border-left: 4px solid #FF6B35;">
+        <p style="margin: 0;"><strong>💡 Investigation Tip:</strong> In a real outbreak, your first step would typically be 
+        to speak with the District Health Officer to understand the situation, review available case information, 
+        and visit the affected area. Use the navigation menu on the left to explore different aspects of the investigation.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+elif st.session_state.current_view == 'map':
     st.markdown("## 📍 Riverside Village Map")
     
     st.markdown("""
@@ -492,8 +641,17 @@ if st.session_state.current_view == 'map':
 elif st.session_state.current_view == 'contacts':
     st.markdown("## 👥 People You Can Interview")
     
-    # Show all characters
-    for char_key, char_data in CHARACTERS.items():
+    st.info("💡 **Tip:** In outbreak investigations, start with health facility staff who have patient information, then expand to community members.")
+    
+    # Order characters: Nurse first, then Dr. Mensah, then community members
+    character_order = ['nurse_sarah', 'dr_mensah', 'mrs_abena', 'chief_okoye', 'mohammed']
+    
+    for char_key in character_order:
+        if char_key not in CHARACTERS:
+            continue
+            
+        char_data = CHARACTERS[char_key]
+        
         with st.container():
             st.markdown(f"""
             <div class="character-card">
@@ -641,16 +799,60 @@ elif st.session_state.current_view == 'interview':
             st.rerun()
 
 elif st.session_state.current_view == 'cases':
-    st.markdown("## 📋 Case Line List")
+    st.markdown("## 📋 Line List")
     
     import pandas as pd
     
-    df = pd.DataFrame(CASES)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True
-    )
+    # Check if they've interviewed the nurse for complete data
+    if 'nurse_sarah' in st.session_state.interviewed_characters:
+        st.success("✅ Complete case information obtained from Nurse Sarah")
+        
+        df = pd.DataFrame(CASES)
+        df['status'] = ['Confirmed'] * 15
+        df['outcome'] = ['Alive'] * 15
+        df['outcome'][3] = 'Deceased'  # Mama Esi
+        df['outcome'][5] = 'Deceased'  # Baby Ama
+        df['outcome'][13] = 'Deceased'  # Blessing M.
+        
+        st.dataframe(
+            df[['id', 'name', 'age', 'sex', 'onset', 'neighborhood', 'well', 'status', 'outcome']],
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.warning("⚠️ Incomplete case information - Visit the clinic and speak with the nurse for detailed records")
+        
+        # Show limited initial data
+        limited_data = {
+            'id': [1, 2, 3, '...', 15],
+            'name': ['Sarah M.', 'David K.', 'Grace O.', '...', 'Joseph K.'],
+            'age': [4, 6, 3, '?', 72],
+            'sex': ['F', 'M', 'F', '?', 'M'],
+            'onset': ['Mar 3', 'Mar 4', 'Mar 4', '?', 'Mar 9'],
+            'details': ['See nurse', 'See nurse', 'See nurse', 'See nurse', 'See nurse']
+        }
+        
+        df_limited = pd.DataFrame(limited_data)
+        st.dataframe(
+            df_limited,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        st.info("""
+        **📝 What you know so far:**
+        - Approximately 15 cases reported to the clinic
+        - Cases started appearing on March 3rd
+        - Range of ages affected
+        - Symptoms: severe watery diarrhea, vomiting, dehydration
+        - 3 deaths reported
+        
+        **👉 Next step:** Interview Nurse Sarah at the clinic to get complete case details, addresses, and exposure information.
+        """)
+        
+        if st.button("🏥 Go to Clinic (Interview Nurse Sarah)", type="primary"):
+            st.session_state.current_view = 'contacts'
+            st.rerun()
     
     st.markdown("---")
     
