@@ -520,191 +520,456 @@ def get_health_center_notes(village_id):
     return notes
 
 # ============================================================================
-# CHARACTERS FOR INTERVIEWS
+# CHARACTERS FOR INTERVIEWS - FULL NPC TRUTH DOCUMENTS
 # ============================================================================
 CHARACTERS = {
-    # Hospital/Health System
-    "dr_okonkwo": {
-        "name": "Dr. Okonkwo",
-        "role": "District Medical Officer",
+    # -------------------------------------------------------------------------
+    # DR. CHEN — Hospital Director
+    # -------------------------------------------------------------------------
+    "dr_chen": {
+        "name": "Dr. Chen",
+        "role": "Hospital Director",
         "avatar": "👨‍⚕️",
         "cost": 0,  # Free - your supervisor
         "location": "District Hospital",
-        "personality": "Methodical, concerned about outbreak response capacity",
+        "personality": "Precise and factual. A bit impatient. Trusts lab data more than interviews. Will not speculate early on.",
+        
+        # TRUTH THE NPC KNOWS (always available)
         "knowledge": [
-            "Has the official hospital line list",
-            "Knows there are 8 severe AES cases, mostly children",
-            "Worried about lab capacity - only 3 CSF samples sent to national lab",
-            "Heard rumors of similar cases in villages not coming to hospital",
-            "Suspects mosquito-borne illness but waiting for lab confirmation"
+            "Has full hospital AES line list: ages 2-12 years primarily, 3 fatalities",
+            "All cases from Nalu & Kabwe villages",
+            "Onsets between June 3-10",
+            "No adult AES cases EXCEPT one miner",
+            "Has seen several children with seizures, fever, confusion",
+            "All hospitalized AES patients are from households within 1 km of rice paddies or pig farms",
+            "No shared meal or event identified",
+            "JE vaccination status poorly recorded, but 'most parents say no vaccines recently'",
+            "One 9-year-old died 24 hours after admission",
+            "They ruled out bacterial meningitis in early cases",
+            "They could not run JE IgM yet - samples sent to regional lab, awaiting results"
         ],
+        
+        # HIDDEN CLUES - only revealed if DIRECTLY asked about these topics
+        "hidden_clues": {
+            "animals": "Two families reported pigs 'acting strangely' - restless, vocalizing at night",
+            "pigs": "Two families reported pigs 'acting strangely' - restless, vocalizing at night",
+            "mosquito nets": "One severe case slept without mosquito nets",
+            "nets": "One severe case slept without mosquito nets",
+            "miner": "The dead miner lived right beside new irrigation ponds",
+            "irrigation": "The dead miner lived right beside new irrigation ponds",
+            "children activities": "Nurses noticed children often play outdoors at dusk",
+            "dusk": "Nurses noticed children often play outdoors at dusk",
+            "evening": "Nurses noticed children often play outdoors at dusk"
+        },
+        
+        # RED HERRINGS - may mention these but they're wrong
+        "red_herrings": [
+            "Possibly 'viral meningitis outbreak from school' - but no event links",
+            "Maybe 'heat stroke or toxins from the mine' - but she doubts it"
+        ],
+        
+        # WHAT THEY DON'T KNOW
+        "does_not_know": [
+            "Pig infection status",
+            "Mosquito pool results", 
+            "Any environmental surveillance data",
+            "True JE infection mechanism"
+        ],
+        
         "data_access": "hospital_cases",
-        "unlocks": None,
-        "trust_threshold": 0
+        "unlocks": None
     },
     
-    "nurse_fatima": {
-        "name": "Nurse Fatima",
-        "role": "Nalu Health Center",
-        "avatar": "👩‍⚕️",
-        "cost": 100,
-        "location": "Nalu Village",
-        "personality": "Overworked, protective of community, keeps detailed notes",
-        "knowledge": [
-            "Has seen 6+ mild fever cases with headaches in past 2 weeks",
-            "Notes that many cases are children who play near the new pig cooperative",
-            "Knows the cooperative was built 2 months ago near the school",
-            "Has noticed more mosquitoes since rice paddies expanded",
-            "Doesn't always report mild cases - 'they recover anyway'"
-        ],
-        "data_access": "health_center_nalu",
-        "unlocks": "health_center_nalu_unlocked",
-        "trust_threshold": 0
-    },
-    
-    "health_worker_joseph": {
-        "name": "Joseph",
-        "role": "Kabwe Community Health Worker",
-        "avatar": "🧑‍⚕️",
-        "cost": 100,
-        "location": "Kabwe Village",
-        "personality": "Enthusiastic, young, good with data",
-        "knowledge": [
-            "Has a notebook with 4 fever cases from Kabwe",
-            "Noticed cases started a few days after Nalu",
-            "Says some Kabwe farmers bought pigs from Nalu cooperative",
-            "Knows which households have pigs and which use bed nets",
-            "Can help with household surveys if asked"
-        ],
-        "data_access": "health_center_kabwe",
-        "unlocks": "health_center_kabwe_unlocked",
-        "trust_threshold": 0
-    },
-    
-    # Community Members
-    "mama_adama": {
-        "name": "Mama Adama",
-        "role": "Mother of Deceased Child",
-        "avatar": "👵",
+    # -------------------------------------------------------------------------
+    # NURSE JOY — Triage Nurse
+    # -------------------------------------------------------------------------
+    "nurse_joy": {
+        "name": "Nurse Joy",
+        "role": "Triage Nurse",
+        "avatar": "🩺",
         "cost": 50,
-        "location": "Nalu Village",
-        "personality": "Grieving, angry at lack of response, wants answers",
+        "location": "District Hospital",
+        "personality": "Exhausted, overwhelmed. Kind but disorganized. Gives 'too much' detail sometimes. Good observer.",
+        
         "knowledge": [
-            "Her 6-year-old daughter Ama died on June 8",
-            "Ama played every evening near the pig pens with friends",
-            "Three of Ama's playmates are also sick",
-            "Family does not use mosquito nets - 'too hot'",
-            "Heard from neighbors that children who got 'the injection' are okay"
+            "Has incoming case logs with symptoms and onset dates",
+            "Children arrived in clusters on June 3, 6, 7, 9",
+            "Symptoms progress: fever → headache → confusion → seizures",
+            "No rash observed in any cases",
+            "Several parents mentioned living 'near the big rice fields'",
+            "Parents mentioned many mosquitoes at dusk"
         ],
-        "data_access": None,
-        "unlocks": None,
-        "trust_threshold": 0
+        
+        "hidden_clues": {
+            "animals": "Two parents mentioned 'pigs screaming at night'",
+            "pigs": "Two parents mentioned 'pigs screaming at night'",
+            "mosquitoes": "Yes, 'bites everywhere, especially around the ankles'",
+            "bites": "Yes, 'bites everywhere, especially around the ankles'",
+            "vaccination": "Many parents said vaccines 'ran out last year'",
+            "vaccines": "Many parents said vaccines 'ran out last year'"
+        },
+        
+        "red_herrings": [
+            "Thinks maybe 'bad drinking water' is causing illness",
+            "Mentions a rumor about 'spirits in the forest' - completely irrelevant"
+        ],
+        
+        "does_not_know": [
+            "JE vaccination schedules",
+            "Lab results",
+            "Pig farms' infection status"
+        ],
+        
+        "data_access": "triage_logs",
+        "unlocks": None
     },
     
-    "chief_boateng": {
-        "name": "Chief Boateng",
-        "role": "Nalu Village Chief",
-        "avatar": "👑",
+    # -------------------------------------------------------------------------
+    # HEALER MARCUS — Private Clinic / Traditional Practitioner  
+    # -------------------------------------------------------------------------
+    "healer_marcus": {
+        "name": "Healer Marcus",
+        "role": "Private Clinic Practitioner",
+        "avatar": "🌿",
         "cost": 150,
         "location": "Nalu Village",
-        "personality": "Diplomatic, worried about village reputation, protective",
+        "personality": "Suspicious of government. Proud, mystical tone. Sometimes helpful, sometimes evasive. Wants recognition.",
+        
         "knowledge": [
-            "Approved the pig cooperative 3 months ago - big investment",
-            "Knows which families are affected but doesn't want panic",
-            "Can authorize household surveys if approached respectfully",
-            "Remembers a similar outbreak '10 years ago' - some children died",
-            "Will mention that Tamu village has fewer problems - 'they have the clinic program'"
+            "Has clinic notes of ~10 children with fever + tremors (AES-like)",
+            "Saw early cases BEFORE hospital did",
+            "Notices many patients from households near pigs",
+            "Several children from pig-farming households came sick",
+            "Symptoms began after increased mosquito activity",
+            "He believes 'bad air from the rice paddies' is to blame"
         ],
-        "data_access": None,
-        "unlocks": "community_trust_nalu",
-        "trust_threshold": 0
+        
+        "hidden_clues": {
+            "animals": "Pigs restless at night... biting insects around them",
+            "pigs": "Pigs restless at night... biting insects around them",
+            "environment": "New irrigation canal brings still water",
+            "irrigation": "New irrigation canal brings still water",
+            "water": "New irrigation canal brings still water",
+            "timing": "He saw first AES case 3 days before hospital admission",
+            "first case": "He saw first AES case 3 days before hospital admission"
+        },
+        
+        "red_herrings": [
+            "Might mention herbal contamination as possible cause",
+            "Suggests 'the mines poison the wind'"
+        ],
+        
+        "does_not_know": [
+            "Vector transmission mechanism",
+            "Lab results",
+            "JE-specific information"
+        ],
+        
+        "data_access": "private_clinic",
+        "unlocks": "health_center_nalu_unlocked"
     },
     
-    "mr_owusu": {
-        "name": "Mr. Owusu",
-        "role": "Pig Cooperative Manager",
-        "avatar": "🐷",
-        "cost": 200,
-        "location": "Nalu Village",
-        "personality": "Defensive about pigs, business-focused, worried about blame",
+    # -------------------------------------------------------------------------
+    # MAMA KOFI — Mother of Case
+    # -------------------------------------------------------------------------
+    "mama_kofi": {
+        "name": "Mama Kofi",
+        "role": "Mother of Sick Child",
+        "avatar": "👵",
+        "cost": 50,
+        "location": "Nalu Village", 
+        "personality": "Emotional, distressed. Highly motivated to talk. But gives unclear sequences unless asked carefully.",
+        
         "knowledge": [
-            "Cooperative has 85 pigs, built 2 months ago",
-            "Located 150m from the primary school",
-            "Some pigs have been 'off their feed' lately - didn't report it",
-            "Sold 12 pigs to Kabwe farmers 3 weeks ago",
-            "Will initially deny any connection to illness",
-            "If pressed, admits a veterinarian mentioned something about 'pig encephalitis'"
+            "Her house is 10-20 meters from pig pen",
+            "Family does not use mosquito nets",
+            "Children play outside at dusk with neighbors",
+            "Recently, pigs have been 'hot, restless, noisy'",
+            "Her daughter's symptoms started after an evening with intense mosquito biting"
         ],
+        
+        "hidden_clues": {
+            "vaccination": "They had no JE vaccine available last year",
+            "vaccine": "They had no JE vaccine available last year",
+            "water": "The irrigation pump broke, causing standing water near homes",
+            "irrigation": "The irrigation pump broke, causing standing water near homes",
+            "standing water": "The irrigation pump broke, causing standing water near homes",
+            "birds": "She saw 'many herons' this season around the paddies",
+            "herons": "She saw 'many herons' this season around the paddies"
+        },
+        
+        "red_herrings": [
+            "Thought it might be 'witchcraft from jealous neighbors'"
+        ],
+        
+        "does_not_know": [
+            "Medical terminology",
+            "Other families' situations in detail",
+            "Lab results"
+        ],
+        
         "data_access": None,
-        "unlocks": None,
-        "trust_threshold": 0
+        "unlocks": None
     },
     
+    # -------------------------------------------------------------------------
+    # TEACHER GRACE — School Principal
+    # -------------------------------------------------------------------------
     "teacher_grace": {
         "name": "Teacher Grace",
-        "role": "Nalu Primary School",
+        "role": "School Principal",
         "avatar": "📚",
         "cost": 50,
         "location": "Nalu Village",
-        "personality": "Observant, cares deeply about students, keeps attendance records",
+        "personality": "Observant. Data-driven. Cooperative. Worried about school reputation.",
+        
         "knowledge": [
-            "Has attendance records - 12 students absent in past 2 weeks",
-            "Noticed pattern: absences cluster among students from homes near pig cooperative",
-            "Students who were vaccinated last year seem fine",
-            "School is next to rice paddies - 'mosquitoes terrible at dismissal time'",
-            "Children play in the fields near pig pens after school"
+            "Three AES cases attend the same school",
+            "Children walk home past the pig co-op",
+            "Evening tutoring sessions mean children are outdoors at dusk",
+            "Mosquitoes inside classrooms after heavy rains"
         ],
+        
+        "hidden_clues": {
+            "vaccination": "She has records showing low JE vaccination rates among students",
+            "vaccine": "She has records showing low JE vaccination rates among students",
+            "mosquitoes": "Parents complained about mosquito breeding in rice paddies",
+            "rice": "Parents complained about mosquito breeding in rice paddies",
+            "food": "No shared school meals recently",
+            "meals": "No shared school meals recently"
+        },
+        
+        "red_herrings": [
+            "Wonders whether the new school latrine project 'brought disease'"
+        ],
+        
+        "does_not_know": [
+            "Medical details",
+            "Pig farm operations",
+            "Lab results"
+        ],
+        
         "data_access": "school_attendance",
-        "unlocks": None,
-        "trust_threshold": 0
+        "unlocks": None
     },
     
-    # Technical Experts
-    "dr_mensah": {
-        "name": "Dr. Mensah",
+    # -------------------------------------------------------------------------
+    # FOREMAN REX — Mine Manager
+    # -------------------------------------------------------------------------
+    "foreman_rex": {
+        "name": "Foreman Rex",
+        "role": "Mine Manager",
+        "avatar": "⛏️",
+        "cost": 200,
+        "location": "Mining Area",
+        "personality": "Defensive. Doesn't want blame. Limited knowledge about community. Direct, curt.",
+        
+        "knowledge": [
+            "One miner is hospitalized with AES",
+            "Mine expanded irrigation ponds recently",
+            "Standing water collects near worker housing"
+        ],
+        
+        "hidden_clues": {
+            "water": "New water pits were created 6 weeks ago",
+            "ponds": "New water pits were created 6 weeks ago",
+            "irrigation": "New water pits were created 6 weeks ago",
+            "mosquitoes": "Mosquitoes worsened after the new pits were dug",
+            "workers": "Workers live near pig-farming villages"
+        },
+        
+        "red_herrings": [
+            "Thinks maybe 'chemical exposure' is causing the illness",
+            "Claims 'mosquitoes aren't a real issue' - but they are"
+        ],
+        
+        "does_not_know": [
+            "Community health details",
+            "Pig farm status",
+            "Medical information"
+        ],
+        
+        "data_access": None,
+        "unlocks": None
+    },
+    
+    # -------------------------------------------------------------------------
+    # AUNTIE AMA — Market Vendor
+    # -------------------------------------------------------------------------
+    "auntie_ama": {
+        "name": "Auntie Ama",
+        "role": "Market Vendor",
+        "avatar": "🍎",
+        "cost": 50,
+        "location": "Central Market",
+        "personality": "Knows everyone. Gossip-heavy. Colorful but unreliable narrator. Good geographic insight.",
+        
+        "knowledge": [
+            "Cases cluster near Nalu & Kabwe villages",
+            "She heard pig farmers complaining about 'mosquitoes eating pigs alive'",
+            "She noticed many sick children from families near rice paddies"
+        ],
+        
+        "hidden_clues": {
+            "pigs": "She saw dead piglets at a farm last week",
+            "piglets": "She saw dead piglets at a farm last week",
+            "dead animals": "She saw dead piglets at a farm last week",
+            "geography": "She knows which households cluster near irrigation canal",
+            "canal": "She knows which households cluster near irrigation canal",
+            "location": "She knows which households cluster near irrigation canal"
+        },
+        
+        "red_herrings": [
+            "Might claim 'bad batch of fruit' caused illness",
+            "Invents rumors for dramatic effect"
+        ],
+        
+        "does_not_know": [
+            "Medical details",
+            "Official data",
+            "Lab results"
+        ],
+        
+        "data_access": None,
+        "unlocks": None
+    },
+    
+    # -------------------------------------------------------------------------
+    # VET AMINA — District Animal Health Officer (MOST ACCURATE NPC)
+    # -------------------------------------------------------------------------
+    "vet_amina": {
+        "name": "Vet Amina",
         "role": "District Veterinary Officer",
         "avatar": "🐄",
         "cost": 150,
         "location": "District Office",
-        "personality": "Technical, One Health advocate, frustrated at lack of coordination",
+        "personality": "Highly technical. Calm and smart. Very helpful if trainees know to ask. Underutilized unless trainees use One Health lens.",
+        
         "knowledge": [
-            "Has been tracking febrile illness in pigs for 3 weeks",
-            "Suspects JE based on pig symptoms and seasonality",
-            "Knows Culex mosquitoes breed in rice paddies - peak season now",
-            "Can collect pig serum samples for JE testing",
-            "Emphasizes pigs are amplifying hosts, not direct source",
-            "Knows JE vaccine exists and is effective"
+            "Pigs are amplifying hosts for Japanese Encephalitis",
+            "She has noticed: restlessness in pigs, fever in piglets, sows miscarrying",
+            "Mosquito abundance is very high near pig pens",
+            "Wild herons and egrets are common this season - they are natural JE reservoirs",
+            "JE is transmitted by Culex mosquitoes between pigs and humans",
+            "Humans are dead-end hosts - they don't transmit further"
         ],
+        
+        "hidden_clues": {
+            "testing": "Pigs near Nalu tested JEV IgM-positive last year",
+            "previous": "Pigs near Nalu tested JEV IgM-positive last year",
+            "last year": "Pigs near Nalu tested JEV IgM-positive last year",
+            "funding": "She warned district officials previously but got no funding for surveillance",
+            "warning": "She warned district officials previously but got no funding for surveillance",
+            "vaccine": "JE vaccination for pigs is not routinely available in this district"
+        },
+        
+        "red_herrings": [],  # She is the most accurate NPC - no red herrings
+        
+        "does_not_know": [
+            "Human lab results",
+            "Timing of rice paddy expansion"
+        ],
+        
         "data_access": "vet_surveillance",
-        "unlocks": None,
-        "trust_threshold": 0
+        "unlocks": "vet_data_unlocked"
     },
     
-    "entomologist_kwame": {
-        "name": "Mr. Kwame",
-        "role": "District Entomologist",
-        "avatar": "🦟",
+    # -------------------------------------------------------------------------
+    # MR. OSEI — Environmental Health Officer
+    # -------------------------------------------------------------------------
+    "mr_osei": {
+        "name": "Mr. Osei",
+        "role": "Environmental Health Officer",
+        "avatar": "🌊",
         "cost": 150,
         "location": "District Office",
-        "personality": "Enthusiastic about vectors, data-driven",
+        "personality": "Practical. Focused on water, sanitation, and environment. Notices physical clues others miss.",
+        
         "knowledge": [
-            "Has mosquito surveillance data showing Culex tritaeniorhynchus increase",
-            "Peak breeding in rice paddies - expansion made it worse",
-            "Can do mosquito pool testing for JE virus",
-            "Knows the vector ecology - evening/night biting",
-            "Recommends bed net distribution and source reduction"
+            "Rice paddy expansion led to more standing water",
+            "Irrigation canal leaks are causing water pooling",
+            "Pig waste accumulating near homes in Nalu",
+            "High mosquito burden near fields & pig farms"
         ],
-        "data_access": "vector_surveillance",
-        "unlocks": None,
-        "trust_threshold": 0
+        
+        "hidden_clues": {
+            "tamu": "Seasonal pools in Tamu also breed mosquitoes but at lower intensity",
+            "other villages": "Seasonal pools in Tamu also breed mosquitoes but at lower intensity",
+            "pig cooperative": "Pig co-op near school violates safe distance guidelines",
+            "school": "Pig co-op near school violates safe distance guidelines",
+            "distance": "Pig co-op near school violates safe distance guidelines",
+            "mosquito counts": "Evening mosquito counts are extremely high - he has data",
+            "surveillance": "Evening mosquito counts are extremely high - he has data"
+        },
+        
+        "red_herrings": [
+            "May suspect waterborne toxin early on",
+            "Mentions latrine overflow - irrelevant to JE"
+        ],
+        
+        "does_not_know": [
+            "Medical details",
+            "Lab results",
+            "Pig infection status"
+        ],
+        
+        "data_access": "environmental_data",
+        "unlocks": "entomology_data_unlocked"
+    },
+    
+    # -------------------------------------------------------------------------
+    # MAYOR SIMON — District Politician
+    # -------------------------------------------------------------------------
+    "mayor_simon": {
+        "name": "Mayor Simon",
+        "role": "District Politician",
+        "avatar": "🏛️",
+        "cost": 100,
+        "location": "District Office",
+        "personality": "Worries about money & reputation. Downplays outbreaks. Pushes for quick explanations. Politically sensitive.",
+        
+        "knowledge": [
+            "He approved the rice paddy expansion project",
+            "He denied funding for mosquito control last budget cycle",
+            "Streetlights near paddies broke months ago - meaning more darkness at dusk"
+        ],
+        
+        "hidden_clues": {
+            "pig cooperative": "He knows pig co-op was placed too close to school - approved it anyway",
+            "location": "He knows pig co-op was placed too close to school - approved it anyway",
+            "siting": "He knows pig co-op was placed too close to school - approved it anyway",
+            "vaccination": "He knows vaccination coverage is low but doesn't want it public",
+            "coverage": "He knows vaccination coverage is low but doesn't want it public"
+        },
+        
+        "red_herrings": [
+            "Suggests 'school must be the source'",
+            "Claims 'miners brought disease' - baseless"
+        ],
+        
+        "does_not_know": [
+            "Medical details",
+            "Technical disease information",
+            "Lab results"
+        ],
+        
+        "data_access": None,
+        "unlocks": None
     }
 }
 
 # ============================================================================
-# AI INTERVIEW FUNCTION
+# AI INTERVIEW FUNCTION - WITH HIDDEN CLUES AND GUARDRAILS
 # ============================================================================
 def get_ai_response(char_key, user_input, history):
-    """Generate character response using Claude API."""
+    """
+    Generate character response using Claude API.
+    Implements the NPC truth document system with:
+    - Base knowledge (always available)
+    - Hidden clues (only revealed if directly asked)
+    - Red herrings (may mislead)
+    - Guardrails (prevent hallucination)
+    """
     char = CHARACTERS[char_key]
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     
@@ -714,37 +979,80 @@ def get_ai_response(char_key, user_input, history):
     # Build knowledge context
     knowledge_text = "\n".join([f"- {k}" for k in char['knowledge']])
     
+    # Build hidden clues context
+    hidden_clues = char.get('hidden_clues', {})
+    hidden_clues_text = ""
+    if hidden_clues:
+        hidden_clues_text = "\n\nHIDDEN CLUES (ONLY reveal if the investigator DIRECTLY asks about these specific topics):\n"
+        # Group by unique values to avoid repetition
+        unique_clues = {}
+        for trigger, clue in hidden_clues.items():
+            if clue not in unique_clues.values():
+                unique_clues[trigger] = clue
+        for trigger, clue in unique_clues.items():
+            hidden_clues_text += f"- If asked about '{trigger}': {clue}\n"
+    
+    # Build red herrings context
+    red_herrings = char.get('red_herrings', [])
+    red_herrings_text = ""
+    if red_herrings:
+        red_herrings_text = "\n\nRED HERRINGS (You may occasionally mention these - they are your misconceptions):\n"
+        for herring in red_herrings:
+            red_herrings_text += f"- {herring}\n"
+    
+    # Build "does not know" context
+    does_not_know = char.get('does_not_know', [])
+    does_not_know_text = ""
+    if does_not_know:
+        does_not_know_text = "\n\nYOU DO NOT KNOW (if asked, say you don't know):\n"
+        for item in does_not_know:
+            does_not_know_text += f"- {item}\n"
+    
     # Get any data this character can share
     data_context = ""
-    if char['data_access'] == 'hospital_cases':
-        data_context = f"\nHOSPITAL DATA YOU CAN SHARE:\n{get_hospital_cases().to_string()}"
-    elif char['data_access'] == 'health_center_nalu' and st.session_state.health_center_nalu_unlocked:
+    if char.get('data_access') == 'hospital_cases':
+        data_context = f"\n\nHOSPITAL DATA YOU CAN SHARE:\n{get_hospital_linelist().to_string()}"
+    elif char.get('data_access') == 'private_clinic':
         notes = get_health_center_notes('V1')
-        data_context = f"\nYOUR CLINIC NOTES:\n" + "\n".join(notes[:5])
-    elif char['data_access'] == 'health_center_kabwe' and st.session_state.health_center_kabwe_unlocked:
-        notes = get_health_center_notes('V2')
-        data_context = f"\nYOUR NOTEBOOK:\n" + "\n".join(notes[:4])
+        data_context = f"\n\nYOUR CLINIC NOTES (handwritten, informal):\n" + "\n".join(notes[:5])
     
-    system_prompt = f"""You are roleplaying as {char['name']}, {char['role']} in Sidero Valley district.
+    # Check which hidden clue triggers might be in the user's question
+    user_lower = user_input.lower()
+    triggered_clues = []
+    for trigger, clue in hidden_clues.items():
+        if trigger.lower() in user_lower:
+            triggered_clues.append(clue)
+    
+    triggered_text = ""
+    if triggered_clues:
+        triggered_text = f"\n\n*** THE INVESTIGATOR ASKED ABOUT A HIDDEN CLUE TOPIC. You should reveal: {'; '.join(set(triggered_clues))} ***"
+    
+    system_prompt = f"""You are {char['name']}, {char['role']} in Sidero Valley district.
 
 PERSONALITY: {char['personality']}
 LOCATION: {char['location']}
 
-YOUR KNOWLEDGE (share naturally when relevant):
+=== YOUR KNOWLEDGE (share naturally when relevant) ===
 {knowledge_text}
 {data_context}
+{hidden_clues_text}
+{red_herrings_text}
+{does_not_know_text}
+{triggered_text}
 
-CRITICAL INSTRUCTIONS:
-1. Stay in character at all times
-2. Share information gradually - don't dump everything at once
-3. Respond naturally to questions - expand on relevant knowledge
-4. If asked about something you don't know, say so realistically
-5. Be helpful but realistic - you're a real person with concerns and opinions
-6. Keep responses concise (2-4 sentences typically)
-7. If the investigator builds rapport, share more details
-8. Reference specific data ONLY if you have it in your knowledge/data sections
+=== CRITICAL GUARDRAILS - FOLLOW EXACTLY ===
+1. Respond ONLY with knowledge consistent with your truth document above
+2. NEVER invent names, cases, lab results, pig farms, or events not listed above
+3. If asked something outside your knowledge, say: "I don't know about that" or "You'd have to ask someone else"
+4. Reveal hidden clues ONLY if the user DIRECTLY asks about those specific topics
+5. You may occasionally mention your red herrings/misconceptions - they reflect your character's biases
+6. Avoid medical diagnoses unless they are explicitly in your truth document
+7. Stay in-character at all times
+8. Keep responses to 2-4 sentences typically
+9. Share information gradually - don't dump everything at once
+10. Be helpful but realistic - you're a real person with concerns and emotions
 
-SETTING: This is a disease outbreak investigation. The interviewer is from the FETP (Field Epidemiology Training Program) investigating acute encephalitis cases in your area. It is currently mid-June.
+SETTING: This is a disease outbreak investigation in June 2025. The interviewer is from the FETP investigating acute encephalitis cases. Several children have died. The community is worried.
 """
     
     try:
@@ -754,13 +1062,13 @@ SETTING: This is a disease outbreak investigation. The interviewer is from the F
         
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=300,
+            max_tokens=350,
             system=system_prompt,
             messages=messages
         )
         
         # Check for unlocks
-        if char.get('unlocks'):
+        if char.get('unlocks') and char['unlocks'] in st.session_state:
             st.session_state[char['unlocks']] = True
         
         return response.content[0].text
@@ -1027,20 +1335,23 @@ elif st.session_state.current_view == 'interviews':
     st.markdown("### 👥 Key Informant Interviews")
     st.info(f"Budget: ${st.session_state.budget:,} | Each interview has a travel/time cost.")
     
-    # Group characters by location
+    # Group characters by location - matches the 10 NPCs from truth documents
     locations = {
-        'District Hospital/Office': ['dr_okonkwo', 'dr_mensah', 'entomologist_kwame'],
-        'Nalu Village': ['nurse_fatima', 'mama_adama', 'chief_boateng', 'mr_owusu', 'teacher_grace'],
-        'Kabwe Village': ['health_worker_joseph']
+        'District Hospital': ['dr_chen', 'nurse_joy'],
+        'District Office': ['vet_amina', 'mr_osei', 'mayor_simon'],
+        'Nalu Village': ['healer_marcus', 'mama_kofi', 'teacher_grace'],
+        'Other Locations': ['foreman_rex', 'auntie_ama']
     }
     
     for location, char_keys in locations.items():
         st.markdown(f"#### 📍 {location}")
         
-        cols = st.columns(len(char_keys))
+        cols = st.columns(min(len(char_keys), 4))
         for i, char_key in enumerate(char_keys):
+            if char_key not in CHARACTERS:
+                continue
             char = CHARACTERS[char_key]
-            with cols[i]:
+            with cols[i % 4]:
                 # Check if already interviewed
                 interviewed = char_key in st.session_state.interview_history
                 
@@ -1509,10 +1820,11 @@ elif st.session_state.current_view == 'debrief':
     st.markdown("#### 🔑 Key Findings Assessment")
     
     critical_clues = {
-        "Identified pigs as amplifying host": st.session_state.health_center_nalu_unlocked,
-        "Connected outbreak to pig cooperative": 'mr_owusu' in st.session_state.interview_history,
-        "Identified Culex mosquitoes as vector": 'entomologist_kwame' in st.session_state.interview_history,
+        "Identified pigs as amplifying host": 'vet_amina' in st.session_state.interview_history,
+        "Connected outbreak to pig cooperative": 'healer_marcus' in st.session_state.interview_history or 'mama_kofi' in st.session_state.interview_history,
+        "Identified Culex mosquitoes as vector": 'mr_osei' in st.session_state.interview_history or st.session_state.entomology_data_unlocked,
         "Found community cases not in hospital data": st.session_state.health_center_nalu_unlocked,
+        "Consulted veterinary officer (One Health)": 'vet_amina' in st.session_state.interview_history,
         "Tested environmental samples": any(r['sample_type'] in ['mosquito_pool', 'pig_serum'] for r in st.session_state.lab_results),
         "Inspected pig cooperative site": 'ES02' in st.session_state.sites_inspected,
         "Built epidemic curve": st.session_state.epi_curve_built,
@@ -1520,16 +1832,16 @@ elif st.session_state.current_view == 'debrief':
         "Deployed analytical study": st.session_state.study_deployed
     }
     
-    score = sum(findings.values())
+    score = sum(critical_clues.values())
     
-    for finding, achieved in findings.items():
+    for finding, achieved in critical_clues.items():
         icon = "✅" if achieved else "❌"
         st.markdown(f"{icon} {finding}")
     
-    st.markdown(f"### Score: {score}/{len(findings)} critical findings")
+    st.markdown(f"### Score: {score}/{len(critical_clues)} critical findings")
     
     # Progress bar
-    st.progress(score / len(findings))
+    st.progress(score / len(critical_clues))
     
     st.markdown("---")
     
