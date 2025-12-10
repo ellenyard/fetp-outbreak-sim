@@ -97,64 +97,98 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# SESSION STATE INITIALIZATION
+# SESSION STATE INITIALIZATION - 5-DAY STRUCTURE
 # ============================================================================
 def init_session_state():
     defaults = {
-        # Navigation
+        # Navigation & Day Structure
         'current_view': 'briefing',
-        'investigation_day': 1,
-        'game_phase': 'initial',  # initial, field, analysis, report
+        'investigation_day': 1,  # Days 1-5
+        'day_phase': 'morning',  # morning, afternoon, evening
+        'exercise_started': False,
         
         # Resources
         'budget': 3000,
         'lab_credits': 15,
-        'field_days': 14,
+        
+        # Day-based Injects (shown when day advances)
+        'inject_shown': {},  # Track which injects have been displayed
+        'current_inject': None,
+        
+        # NPC Access Control (Day-based unlocking)
+        'npcs_unlocked': ['dr_chen', 'nurse_joy', 'mama_kofi', 'foreman_rex', 'teacher_grace'],  # Day 1 NPCs
+        'one_health_triggered': False,  # True when trainee asks about animals/environment
+        'vet_unlocked': False,
+        'env_officer_unlocked': False,
+        'healer_unlocked': False,
         
         # Data Access Flags
-        'hospital_data_accessed': True,  # Public health mandate
+        'hospital_data_accessed': True,
         'health_center_nalu_unlocked': False,
         'health_center_kabwe_unlocked': False,
-        'community_trust_nalu': 0,
-        'community_trust_kabwe': 0,
-        'community_trust_tamu': 0,
+        'vet_data_unlocked': False,
+        'entomology_data_unlocked': False,
         
         # Interview System
         'interview_history': {},
         'current_character': None,
         'clues_discovered': set(),
+        'questions_asked_about': set(),  # Track topics asked (animals, mosquitoes, etc.)
         
-        # Investigation Progress
+        # Day 1: Case Definition & Descriptive Epi
         'case_definition_written': False,
         'case_definition_text': "",
-        'hypothesis_written': False,
-        'hypothesis_text': "",
-        'epi_curve_built': False,
-        'spot_map_created': False,
+        'case_definition_components': {},  # clinical, person, place, time
+        'initial_hypotheses': [],
+        'descriptive_epi_done': False,
         
-        # Lab System
-        'samples_collected': [],
+        # Day 2: Interviews, Hypotheses, Study Design
+        'hypotheses_documented': [],
+        'study_design_chosen': None,  # case-control, cohort, cross-sectional
+        'questionnaire_variables': [],
+        'questionnaire_submitted': False,
+        
+        # Day 3: Analysis
+        'dataset_received': False,
+        'data_cleaning_done': False,
+        'descriptive_analysis_done': False,
+        'analytic_results': None,
+        'odds_ratios_calculated': {},
+        
+        # Day 4: Lab & Environmental
+        'lab_samples_submitted': [],
         'lab_results': [],
-        'pending_labs': [],
+        'lab_queue': [],
+        'environmental_samples': [],
+        'mosquito_traps_set': [],
+        'pig_samples_collected': False,
+        'triangulation_complete': False,
+        
+        # Day 5: Briefing & Consequences
+        'briefing_prepared': False,
+        'recommendations_submitted': [],
+        'final_diagnosis': None,
+        'consequence_outcome': None,
         
         # Field Work
         'sites_inspected': [],
-        'environmental_samples': [],
-        'household_surveys_done': 0,
+        'field_observations': {},
         
-        # Case Registry (what trainee has found)
+        # Case Registry
         'confirmed_cases': [],
-        'suspected_cases': [],
         'manually_entered_cases': [],
         
-        # Study Design
-        'study_type': None,
-        'questionnaire_deployed': False,
-        'field_data_collected': None,
+        # Epi Curve & Spot Map
+        'epi_curve_built': False,
+        'spot_map_viewed': False,
         
-        # Scoring/Debrief
+        # Scoring & Tracking
         'actions_log': [],
-        'critical_findings': set(),
+        'mistakes_made': [],
+        'good_decisions': [],
+        
+        # Facilitator Mode
+        'facilitator_mode': False,
     }
     
     for key, value in defaults.items():
@@ -162,6 +196,371 @@ def init_session_state():
             st.session_state[key] = value
 
 init_session_state()
+
+# ============================================================================
+# DAY STRUCTURE & INJECTS
+# ============================================================================
+DAY_STRUCTURE = {
+    1: {
+        'title': 'Day 1: Detect, Confirm, Describe',
+        'objectives': [
+            'Establish working case definition',
+            'Summarize descriptive epidemiology',
+            'Identify data gaps',
+            'Propose initial hypotheses'
+        ],
+        'inject': {
+            'title': '🚨 INITIAL ALERT',
+            'source': 'District Health Office',
+            'message': '''We are receiving reports of several children with seizures, plus one miner with sudden confusion and coma. 
+            
+**Three deaths were reported in the past 48 hours.**
+
+All cases come from villages near Sidero Valley. We need your team in Nalu immediately.
+
+Your tasks today:
+1. Review the hospital case data
+2. Develop a working case definition  
+3. Begin interviews to understand the situation
+4. Document initial hypotheses'''
+        },
+        'npcs_available': ['dr_chen', 'nurse_joy', 'mama_kofi', 'foreman_rex', 'teacher_grace'],
+        'data_visible': ['hospital_linelist', 'map'],
+        'data_hidden': ['pig_restlessness', 'household_clustering', 'mosquito_positives', 'vaccination_rates']
+    },
+    
+    2: {
+        'title': 'Day 2: Interviews, Hypotheses, Study Design',
+        'objectives': [
+            'Conduct hypothesis-generating interviews',
+            'Develop specific hypotheses',
+            'Choose study design',
+            'Draft questionnaire'
+        ],
+        'inject': {
+            'title': '🏥 ADDITIONAL AES ALERTS',
+            'source': 'District Hospital',
+            'message': '''Four new AES cases from Nalu and Kabwe admitted overnight. 
+
+**Two of the new cases are siblings from the same household.**
+
+Updated line list is available. You should:
+1. Continue key informant interviews
+2. Finalize your hypotheses
+3. Design your analytical study
+4. Prepare your questionnaire'''
+        },
+        'npcs_available': ['dr_chen', 'nurse_joy', 'mama_kofi', 'foreman_rex', 'teacher_grace', 
+                          'healer_marcus', 'auntie_ama'],  # + conditional unlocks
+        'unlock_conditions': {
+            'vet_amina': 'Asked about animals/pigs',
+            'mr_osei': 'Asked about mosquitoes/environment'
+        }
+    },
+    
+    3: {
+        'title': 'Day 3: Data Analysis',
+        'objectives': [
+            'Clean your dataset',
+            'Run descriptive epidemiology',
+            'Conduct analytic study',
+            'Calculate measures of association'
+        ],
+        'inject': {
+            'title': '📊 YOUR DATA HAVE ARRIVED',
+            'source': 'Field Team',
+            'message': '''Your field team has completed data collection based on your study design and questionnaire.
+
+**Note:** The dataset may contain:
+- Missing values
+- Inconsistent coding
+- Data entry errors
+
+This is realistic field data. Clean it carefully before analysis.
+
+Today you should:
+1. Review and clean the dataset
+2. Run descriptive statistics
+3. Calculate odds ratios (case-control) or risk ratios (cohort)
+4. Interpret your findings'''
+        },
+        'analysis_mode': True
+    },
+    
+    4: {
+        'title': 'Day 4: Laboratory & Environmental Sampling',
+        'objectives': [
+            'Order appropriate diagnostic tests',
+            'Collect environmental samples',
+            'Sample animal reservoirs',
+            'Triangulate all evidence'
+        ],
+        'inject': {
+            'title': '🔬 LABORATORY ACCESS GRANTED',
+            'source': 'Regional Laboratory',
+            'message': '''You now have authority to order diagnostic tests.
+
+**Available sample types:**
+- Human CSF (IgM ELISA)
+- Human serum (IgM ELISA)  
+- Pig serum (JEV antibodies)
+- Mosquito pools (JEV PCR)
+- Water samples (bacterial culture)
+- Food samples (culture)
+
+**Budget remaining:** ${budget}
+**Lab credits remaining:** {lab_credits}
+
+Choose wisely - some tests are more useful than others.'''
+        },
+        'lab_unlocked': True
+    },
+    
+    5: {
+        'title': 'Day 5: MOH Briefing & Recommendations',
+        'objectives': [
+            'Prepare verbal briefing',
+            'Present findings to Director',
+            'Recommend interventions',
+            'Receive outcome feedback'
+        ],
+        'inject': {
+            'title': '🏛️ BRIEFING TIME',
+            'source': 'District Director of Health',
+            'message': '''The District Director of Health will see you now.
+
+You must present:
+1. Summary of the outbreak
+2. Your conclusion on the likely cause
+3. Key risk factors identified
+4. Recommended interventions
+5. Resources needed
+6. One Health considerations
+
+**Your recommendations will determine what happens next in the outbreak.**'''
+        },
+        'briefing_mode': True
+    }
+}
+
+# ============================================================================
+# CONSEQUENCE ENGINE
+# ============================================================================
+def calculate_consequences():
+    """
+    Calculate outbreak consequences based on trainee decisions.
+    Returns outcome narrative and statistics.
+    """
+    score = 0
+    outcomes = []
+    
+    # Check for correct diagnosis
+    if st.session_state.final_diagnosis == 'Japanese Encephalitis':
+        score += 20
+        outcomes.append("✅ Correct diagnosis: Japanese Encephalitis identified")
+    else:
+        score -= 10
+        outcomes.append("❌ Incorrect diagnosis led to delayed response")
+    
+    # Check if One Health approach was used
+    if 'vet_amina' in st.session_state.interview_history:
+        score += 15
+        outcomes.append("✅ One Health: Veterinary officer consulted")
+    else:
+        score -= 5
+        outcomes.append("⚠️ Missed One Health opportunity - pig surveillance delayed")
+    
+    if st.session_state.env_officer_unlocked or 'mr_osei' in st.session_state.interview_history:
+        score += 10
+        outcomes.append("✅ Environmental assessment completed")
+    else:
+        outcomes.append("⚠️ Environmental risk factors not fully assessed")
+    
+    # Check lab strategy
+    pig_samples = any('pig' in s.get('sample_type', '') for s in st.session_state.lab_samples_submitted)
+    mosquito_samples = any('mosquito' in s.get('sample_type', '') for s in st.session_state.lab_samples_submitted)
+    human_samples = any('human' in s.get('sample_type', '') for s in st.session_state.lab_samples_submitted)
+    
+    if pig_samples and mosquito_samples and human_samples:
+        score += 20
+        outcomes.append("✅ Comprehensive sampling strategy (human + animal + vector)")
+    elif human_samples and (pig_samples or mosquito_samples):
+        score += 10
+        outcomes.append("⚡ Partial One Health sampling")
+    else:
+        score -= 5
+        outcomes.append("❌ Limited sampling missed key evidence")
+    
+    # Check questionnaire quality
+    good_variables = ['pig', 'mosquito', 'net', 'vaccination', 'evening', 'outdoor', 'dusk']
+    variables_included = sum(1 for v in good_variables if any(v in q.lower() for q in st.session_state.questionnaire_variables))
+    
+    if variables_included >= 5:
+        score += 15
+        outcomes.append("✅ Excellent questionnaire captured key risk factors")
+    elif variables_included >= 3:
+        score += 8
+        outcomes.append("⚡ Adequate questionnaire - some risk factors captured")
+    else:
+        score -= 5
+        outcomes.append("❌ Poor questionnaire missed key exposures")
+    
+    # Check recommendations
+    recommendations = ' '.join(st.session_state.recommendations_submitted).lower()
+    
+    good_recs = {
+        'vaccination': ['vaccine', 'vaccination', 'immunization', 'immunize'],
+        'vector_control': ['bed net', 'bednet', 'mosquito net', 'larvicid', 'spray'],
+        'pig_management': ['pig', 'relocat', 'distance', 'pen'],
+        'surveillance': ['surveillance', 'monitor', 'report'],
+        'education': ['education', 'awareness', 'community']
+    }
+    
+    recs_score = 0
+    for category, keywords in good_recs.items():
+        if any(kw in recommendations for kw in keywords):
+            recs_score += 1
+    
+    if recs_score >= 4:
+        score += 20
+        outcomes.append("✅ Comprehensive intervention package recommended")
+    elif recs_score >= 2:
+        score += 10
+        outcomes.append("⚡ Partial interventions recommended")
+    else:
+        score -= 10
+        outcomes.append("❌ Weak interventions - outbreak likely to continue")
+    
+    # Determine final outcome
+    if score >= 70:
+        final_outcome = {
+            'status': 'SUCCESS',
+            'narrative': '''**OUTBREAK CONTROLLED**
+            
+Your evidence-based recommendations were implemented:
+- Emergency JE vaccination campaign reached 2,500 children
+- Bed nets distributed to high-risk households
+- Pig cooperative relocated 50m from school
+- Mosquito breeding sites treated
+
+**Result:** New cases dropped to zero within 2 weeks. 
+The District Director praised your team's One Health approach.''',
+            'new_cases': 0,
+            'color': 'success'
+        }
+    elif score >= 40:
+        final_outcome = {
+            'status': 'PARTIAL SUCCESS',
+            'narrative': '''**OUTBREAK PARTIALLY CONTROLLED**
+            
+Some of your recommendations were implemented, but gaps remained:
+- Vaccination campaign was delayed
+- Vector control was incomplete
+
+**Result:** Cases continued for another week before declining.
+Two additional children were hospitalized but survived.''',
+            'new_cases': 2,
+            'color': 'warning'
+        }
+    else:
+        final_outcome = {
+            'status': 'OUTBREAK CONTINUES',
+            'narrative': '''**OUTBREAK NOT CONTROLLED**
+            
+Your recommendations missed key interventions:
+- No vaccination campaign initiated
+- Pig cooperative unchanged
+- Mosquito breeding sites remain
+
+**Result:** Cases spread to Tamu village. 
+Three more children died. Regional investigation launched.
+Mayor blamed the investigation team for "incomplete response."''',
+            'new_cases': 8,
+            'color': 'error'
+        }
+    
+    final_outcome['score'] = score
+    final_outcome['outcomes'] = outcomes
+    
+    return final_outcome
+
+def check_npc_unlock_triggers(question_text):
+    """
+    Check if a question should unlock additional NPCs.
+    Called after each interview question.
+    """
+    question_lower = question_text.lower()
+    
+    # Animal/pig triggers → unlock Vet Amina
+    animal_triggers = ['animal', 'pig', 'livestock', 'farm animal', 'cattle', 'pigs', 'swine']
+    if any(trigger in question_lower for trigger in animal_triggers):
+        st.session_state.questions_asked_about.add('animals')
+        if not st.session_state.vet_unlocked:
+            st.session_state.vet_unlocked = True
+            st.session_state.npcs_unlocked.append('vet_amina')
+            st.session_state.one_health_triggered = True
+            return "🔓 **NEW NPC UNLOCKED:** Vet Amina (District Veterinary Officer) - Your question about animals triggered a One Health connection!"
+    
+    # Mosquito/environment triggers → unlock Mr. Osei
+    env_triggers = ['mosquito', 'mosquitoes', 'vector', 'breeding', 'standing water', 'environment', 'rice paddy', 'irrigation']
+    if any(trigger in question_lower for trigger in env_triggers):
+        st.session_state.questions_asked_about.add('mosquitoes')
+        if not st.session_state.env_officer_unlocked:
+            st.session_state.env_officer_unlocked = True
+            st.session_state.npcs_unlocked.append('mr_osei')
+            return "🔓 **NEW NPC UNLOCKED:** Mr. Osei (Environmental Health Officer) - Your question about mosquitoes/environment was insightful!"
+    
+    # Healer triggers (alternative medicine, early cases)
+    healer_triggers = ['traditional', 'healer', 'clinic', 'private', 'early case', 'first case', 'before hospital']
+    if any(trigger in question_lower for trigger in healer_triggers):
+        if not st.session_state.healer_unlocked:
+            st.session_state.healer_unlocked = True
+            st.session_state.npcs_unlocked.append('healer_marcus')
+            return "🔓 **NEW NPC UNLOCKED:** Healer Marcus (Private Clinic) - He saw cases before the hospital!"
+    
+    return None
+
+def advance_day():
+    """Advance to the next day with inject and unlocks."""
+    current_day = st.session_state.investigation_day
+    
+    if current_day < 5:
+        st.session_state.investigation_day += 1
+        new_day = st.session_state.investigation_day
+        
+        # Show inject for new day
+        st.session_state.current_inject = DAY_STRUCTURE[new_day]['inject']
+        st.session_state.inject_shown[new_day] = False
+        
+        # Day 2: Add conditional NPCs if triggers were met
+        if new_day == 2:
+            if st.session_state.one_health_triggered:
+                if 'vet_amina' not in st.session_state.npcs_unlocked:
+                    st.session_state.npcs_unlocked.append('vet_amina')
+        
+        # Day 3: Generate analysis dataset
+        if new_day == 3:
+            st.session_state.dataset_received = True
+        
+        # Day 4: Unlock lab
+        if new_day == 4:
+            pass  # Lab already available
+        
+        # Process pending lab results
+        new_results = []
+        remaining_queue = []
+        for sample in st.session_state.lab_queue:
+            sample['days_remaining'] = sample.get('days_remaining', 1) - 1
+            if sample['days_remaining'] <= 0:
+                new_results.append(sample)
+            else:
+                remaining_queue.append(sample)
+        
+        st.session_state.lab_queue = remaining_queue
+        st.session_state.lab_results.extend(new_results)
+        
+        return True
+    return False
 
 # ============================================================================
 # GROUND TRUTH DATA GENERATION (JE OUTBREAK MODEL)
@@ -1130,82 +1529,168 @@ def process_lab_sample(sample_type, source, village_id):
 # MAIN APPLICATION UI
 # ============================================================================
 
-# Header
-st.markdown("""
+# Header with day info
+current_day = st.session_state.investigation_day
+day_info = DAY_STRUCTURE.get(current_day, {})
+
+st.markdown(f"""
 <div class="main-header">
     <h1>🦟 Sidero Valley Outbreak Investigation</h1>
-    <p style="margin:0; opacity:0.9;">FETP Intermediate 2.0 | Acute Encephalitis Syndrome Cluster</p>
+    <p style="margin:0; opacity:0.9;">FETP Intermediate 2.0 | {day_info.get('title', 'Day ' + str(current_day))}</p>
 </div>
 """, unsafe_allow_html=True)
+
+# ============================================================================
+# SHOW DAILY INJECT (if not yet shown)
+# ============================================================================
+if current_day in DAY_STRUCTURE and not st.session_state.inject_shown.get(current_day, False):
+    inject = DAY_STRUCTURE[current_day]['inject']
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); 
+                border-left: 5px solid #ffc107; 
+                padding: 20px; 
+                border-radius: 0 10px 10px 0;
+                margin-bottom: 20px;">
+        <h3>{inject['title']}</h3>
+        <p><strong>From:</strong> {inject['source']}</p>
+        <div style="white-space: pre-line;">{inject['message'].format(
+            budget=st.session_state.budget,
+            lab_credits=st.session_state.lab_credits
+        )}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("✅ Acknowledge & Continue", key="ack_inject"):
+        st.session_state.inject_shown[current_day] = True
+        st.rerun()
 
 # ============================================================================
 # SIDEBAR
 # ============================================================================
 with st.sidebar:
-    st.markdown("### 📊 Investigation Dashboard")
+    # Day Counter - prominent display
+    st.markdown(f"""
+    <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 10px; margin-bottom: 15px; color: white;">
+        <div style="font-size: 36px; font-weight: bold;">Day {current_day}</div>
+        <div style="font-size: 14px; opacity: 0.9;">{day_info.get('title', '').replace('Day ' + str(current_day) + ': ', '')}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Day objectives
+    if 'objectives' in day_info:
+        with st.expander(f"🎯 Day {current_day} Objectives", expanded=True):
+            for obj in day_info['objectives']:
+                st.markdown(f"• {obj}")
     
     # Resources
-    st.markdown("**Resources**")
+    st.markdown("### 💰 Resources")
     col1, col2 = st.columns(2)
     col1.metric("Budget", f"${st.session_state.budget:,}")
     col2.metric("Lab Credits", st.session_state.lab_credits)
     
-    st.metric("Investigation Day", st.session_state.investigation_day)
+    # Advance Day button
+    st.markdown("---")
+    
+    if current_day < 5:
+        if st.button(f"⏭️ Complete Day {current_day} → Day {current_day + 1}", use_container_width=True, type="primary"):
+            if advance_day():
+                st.rerun()
+    else:
+        st.success("📋 Final Day - Complete your briefing!")
     
     st.markdown("---")
     
-    # Learning Objectives (collapsible)
-    with st.expander("🎯 Learning Objectives"):
-        st.markdown("""
-        **By completing this simulation, you will practice:**
-        
-        1. Developing a case definition for AES
-        2. Conducting key informant interviews
-        3. Building and interpreting an epidemic curve
-        4. Formulating and testing hypotheses
-        5. Integrating One Health data sources
-        6. Designing a case-control study
-        7. Interpreting laboratory results
-        """)
-    
-    st.markdown("---")
-    
-    # Navigation
+    # Navigation - day-appropriate options
     st.markdown("### 🧭 Navigation")
     
-    nav_options = {
-        'briefing': '📞 Briefing',
-        'interviews': '👥 Interviews',
-        'linelist': '📋 Line List',
-        'epicurve': '📈 Epi Curve',
-        'map': '🗺️ Field Map',
-        'laboratory': '🧪 Laboratory',
-        'study_design': '🔬 Study Design',
-        'debrief': '📝 Debrief'
-    }
+    # Base navigation always available
+    nav_options = [
+        ('briefing', '📞 Briefing/Inject'),
+        ('interviews', '👥 Interviews'),
+        ('linelist', '📋 Line List'),
+        ('epicurve', '📈 Epi Curve'),
+        ('spotmap', '📍 Spot Map'),
+        ('field', '🗺️ Field Sites'),
+    ]
     
-    for key, label in nav_options.items():
+    # Day 2+: Study design
+    if current_day >= 2:
+        nav_options.append(('study', '🔬 Study Design'))
+    
+    # Day 3+: Analysis
+    if current_day >= 3:
+        nav_options.append(('analysis', '📊 Analysis'))
+    
+    # Day 4+: Laboratory
+    if current_day >= 4:
+        nav_options.append(('laboratory', '🧪 Laboratory'))
+    
+    # Day 5: Briefing
+    if current_day >= 5:
+        nav_options.append(('final_briefing', '🏛️ MOH Briefing'))
+    
+    # Always show debrief
+    nav_options.append(('debrief', '📝 Debrief'))
+    
+    for key, label in nav_options:
         if st.button(label, key=f"nav_{key}", use_container_width=True):
             st.session_state.current_view = key
             st.rerun()
     
     st.markdown("---")
     
-    # Progress Tracking
+    # Progress Tracking by Day
     with st.expander("📋 Progress Checklist"):
-        checks = {
-            'Case definition written': st.session_state.case_definition_written,
-            'Hospital data reviewed': st.session_state.hospital_data_accessed,
-            'Nalu health center accessed': st.session_state.health_center_nalu_unlocked,
-            'Kabwe health center accessed': st.session_state.health_center_kabwe_unlocked,
-            'Epi curve built': st.session_state.epi_curve_built,
-            'Lab samples collected': len(st.session_state.lab_results) > 0,
-            'Study deployed': st.session_state.questionnaire_deployed
-        }
+        st.markdown("**Day 1: Detect & Describe**")
+        st.markdown(f"{'✅' if st.session_state.case_definition_written else '⬜'} Case definition written")
+        st.markdown(f"{'✅' if st.session_state.epi_curve_built else '⬜'} Epi curve reviewed")
+        st.markdown(f"{'✅' if len(st.session_state.interview_history) > 0 else '⬜'} Initial interviews")
         
-        for item, done in checks.items():
-            icon = "✅" if done else "⬜"
-            st.markdown(f"{icon} {item}")
+        if current_day >= 2:
+            st.markdown("**Day 2: Hypotheses & Design**")
+            st.markdown(f"{'✅' if len(st.session_state.hypotheses_documented) > 0 else '⬜'} Hypotheses documented")
+            st.markdown(f"{'✅' if st.session_state.study_design_chosen else '⬜'} Study design chosen")
+            st.markdown(f"{'✅' if st.session_state.questionnaire_submitted else '⬜'} Questionnaire submitted")
+        
+        if current_day >= 3:
+            st.markdown("**Day 3: Analysis**")
+            st.markdown(f"{'✅' if st.session_state.data_cleaning_done else '⬜'} Data cleaned")
+            st.markdown(f"{'✅' if st.session_state.descriptive_analysis_done else '⬜'} Descriptive analysis")
+            st.markdown(f"{'✅' if st.session_state.analytic_results else '⬜'} Analytic results")
+        
+        if current_day >= 4:
+            st.markdown("**Day 4: Lab & Environment**")
+            st.markdown(f"{'✅' if len(st.session_state.lab_samples_submitted) > 0 else '⬜'} Samples submitted")
+            st.markdown(f"{'✅' if st.session_state.pig_samples_collected else '⬜'} Pig samples collected")
+            st.markdown(f"{'✅' if len(st.session_state.mosquito_traps_set) > 0 else '⬜'} Mosquito pools tested")
+        
+        if current_day >= 5:
+            st.markdown("**Day 5: Briefing**")
+            st.markdown(f"{'✅' if st.session_state.briefing_prepared else '⬜'} Briefing prepared")
+            st.markdown(f"{'✅' if st.session_state.final_diagnosis else '⬜'} Diagnosis submitted")
+    
+    # One Health Progress
+    with st.expander("🌍 One Health Integration"):
+        st.markdown(f"{'✅' if st.session_state.vet_unlocked else '🔒'} Veterinary Officer consulted")
+        st.markdown(f"{'✅' if st.session_state.env_officer_unlocked else '🔒'} Environmental Officer consulted")
+        st.markdown(f"{'✅' if st.session_state.pig_samples_collected else '🔒'} Animal samples collected")
+        st.markdown(f"{'✅' if len(st.session_state.mosquito_traps_set) > 0 else '🔒'} Vector sampling done")
+        
+        if not st.session_state.one_health_triggered:
+            st.info("💡 Tip: Ask NPCs about animals or mosquitoes to unlock One Health experts!")
+    
+    st.markdown("---")
+    
+    # Facilitator mode
+    with st.expander("🔐 Facilitator Mode"):
+        password = st.text_input("Password:", type="password", key="fac_pw")
+        if password == FACILITATOR_PASSWORD:
+            st.session_state.facilitator_mode = True
+            st.success("✅ Facilitator mode enabled")
+        elif password:
+            st.error("Incorrect password")
 
 # ============================================================================
 # MAIN CONTENT VIEWS
@@ -1333,60 +1818,30 @@ if st.session_state.current_view == 'briefing':
 
 elif st.session_state.current_view == 'interviews':
     st.markdown("### 👥 Key Informant Interviews")
-    st.info(f"Budget: ${st.session_state.budget:,} | Each interview has a travel/time cost.")
+    st.info(f"💰 Budget: ${st.session_state.budget:,} | Day {st.session_state.investigation_day}")
     
-    # Group characters by location - matches the 10 NPCs from truth documents
-    locations = {
-        'District Hospital': ['dr_chen', 'nurse_joy'],
-        'District Office': ['vet_amina', 'mr_osei', 'mayor_simon'],
-        'Nalu Village': ['healer_marcus', 'mama_kofi', 'teacher_grace'],
-        'Other Locations': ['foreman_rex', 'auntie_ama']
-    }
+    # Show unlock notifications
+    if st.session_state.one_health_triggered and not st.session_state.get('one_health_notified'):
+        st.success("🌍 **One Health Approach Activated!** You've unlocked additional expert NPCs by asking about animals/environment.")
+        st.session_state.one_health_notified = True
     
-    for location, char_keys in locations.items():
-        st.markdown(f"#### 📍 {location}")
-        
-        cols = st.columns(min(len(char_keys), 4))
-        for i, char_key in enumerate(char_keys):
-            if char_key not in CHARACTERS:
-                continue
-            char = CHARACTERS[char_key]
-            with cols[i % 4]:
-                # Check if already interviewed
-                interviewed = char_key in st.session_state.interview_history
-                
-                st.markdown(f"**{char['avatar']} {char['name']}**")
-                st.caption(char['role'])
-                st.caption(f"Cost: ${char['cost']}")
-                
-                if interviewed:
-                    st.success("✓ Interviewed")
-                
-                if st.button(f"Talk to {char['name'].split()[0]}", key=f"btn_{char_key}"):
-                    if st.session_state.budget >= char['cost']:
-                        st.session_state.budget -= char['cost']
-                        st.session_state.current_character = char_key
-                        if char_key not in st.session_state.interview_history:
-                            st.session_state.interview_history[char_key] = []
-                        st.rerun()
-                    else:
-                        st.error("Insufficient funds!")
-        
-        st.markdown("---")
-    
-    # Active Interview
+    # Active Interview takes priority
     if st.session_state.current_character:
         char = CHARACTERS[st.session_state.current_character]
         
-        st.markdown(f"### 💬 Interviewing {char['name']}")
-        st.caption(f"{char['role']} | {char['location']}")
+        st.markdown(f"### 💬 Interviewing {char['avatar']} {char['name']}")
+        st.caption(f"{char['role']} | 📍 {char['location']}")
         
-        if st.button("🔙 End Interview"):
-            st.session_state.current_character = None
-            st.rerun()
+        col1, col2 = st.columns([1, 5])
+        with col1:
+            if st.button("🔙 End"):
+                st.session_state.current_character = None
+                st.rerun()
+        
+        st.markdown("---")
         
         # Display conversation history
-        history = st.session_state.interview_history[st.session_state.current_character]
+        history = st.session_state.interview_history.get(st.session_state.current_character, [])
         
         for msg in history:
             if msg['role'] == 'user':
@@ -1398,21 +1853,100 @@ elif st.session_state.current_view == 'interviews':
         
         # Chat input
         if prompt := st.chat_input("Ask a question..."):
+            # Check for NPC unlock triggers BEFORE showing response
+            unlock_msg = check_npc_unlock_triggers(prompt)
+            
             with st.chat_message("user"):
                 st.write(prompt)
-            history.append({"role": "user", "content": prompt})
+            
+            if st.session_state.current_character not in st.session_state.interview_history:
+                st.session_state.interview_history[st.session_state.current_character] = []
+            
+            st.session_state.interview_history[st.session_state.current_character].append({
+                "role": "user", "content": prompt
+            })
             
             with st.chat_message("assistant", avatar=char['avatar']):
                 with st.spinner("..."):
                     response = get_ai_response(
                         st.session_state.current_character,
                         prompt,
-                        history[:-1]
+                        st.session_state.interview_history[st.session_state.current_character][:-1]
                     )
                     st.write(response)
             
-            history.append({"role": "assistant", "content": response})
+            st.session_state.interview_history[st.session_state.current_character].append({
+                "role": "assistant", "content": response
+            })
+            
+            # Show unlock notification if triggered
+            if unlock_msg:
+                st.info(unlock_msg)
+            
             st.rerun()
+    
+    else:
+        # NPC Selection Grid with unlock status
+        st.markdown("#### Select someone to interview:")
+        
+        # Group by location with unlock status
+        locations = {
+            'District Hospital': ['dr_chen', 'nurse_joy'],
+            'District Office': ['vet_amina', 'mr_osei', 'mayor_simon'],
+            'Nalu Village': ['healer_marcus', 'mama_kofi', 'teacher_grace'],
+            'Other Locations': ['foreman_rex', 'auntie_ama']
+        }
+        
+        for location, char_keys in locations.items():
+            st.markdown(f"##### 📍 {location}")
+            
+            cols = st.columns(min(len(char_keys), 4))
+            for i, char_key in enumerate(char_keys):
+                if char_key not in CHARACTERS:
+                    continue
+                    
+                char = CHARACTERS[char_key]
+                is_unlocked = char_key in st.session_state.npcs_unlocked
+                interviewed = char_key in st.session_state.interview_history
+                
+                with cols[i % 4]:
+                    # Show locked/unlocked status
+                    if not is_unlocked:
+                        st.markdown(f"**🔒 {char['name']}**")
+                        st.caption(f"{char['role']}")
+                        st.caption("*Ask about animals or environment to unlock*")
+                    else:
+                        st.markdown(f"**{char['avatar']} {char['name']}**")
+                        st.caption(char['role'])
+                        st.caption(f"Cost: ${char['cost']}")
+                        
+                        if interviewed:
+                            st.success("✓ Interviewed")
+                        
+                        btn_label = "Continue" if interviewed else "Talk"
+                        if st.button(f"{btn_label}", key=f"btn_{char_key}"):
+                            cost = 0 if interviewed else char['cost']
+                            if st.session_state.budget >= cost:
+                                if not interviewed:
+                                    st.session_state.budget -= cost
+                                st.session_state.current_character = char_key
+                                if char_key not in st.session_state.interview_history:
+                                    st.session_state.interview_history[char_key] = []
+                                st.rerun()
+                            else:
+                                st.error("Insufficient funds!")
+            
+            st.markdown("---")
+        
+        # Hint for One Health
+        if not st.session_state.one_health_triggered:
+            st.markdown("""
+            <div style="background: #e8f4f8; padding: 15px; border-radius: 10px; border-left: 4px solid #17a2b8;">
+                <strong>💡 Investigation Tip:</strong> Some experts are not yet available. 
+                Try asking your current contacts about <em>animals</em>, <em>pigs</em>, <em>mosquitoes</em>, 
+                or <em>environmental factors</em> to unlock additional NPCs!
+            </div>
+            """, unsafe_allow_html=True)
 
 elif st.session_state.current_view == 'linelist':
     st.markdown("### 📋 Case Line List")
@@ -1792,6 +2326,130 @@ elif st.session_state.current_view == 'study_design':
                 
             else:
                 st.error("Insufficient funds!")
+
+# ============================================================================
+# DAY 5: MOH BRIEFING VIEW
+# ============================================================================
+elif st.session_state.current_view == 'final_briefing':
+    st.markdown("### 🏛️ MOH Briefing - Day 5")
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); 
+                color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="margin:0;">Present Your Findings to the District Director of Health</h3>
+        <p style="margin:10px 0 0 0; opacity:0.9;">Your recommendations will determine the outbreak response.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.consequence_outcome:
+        # Already submitted - show results
+        outcome = st.session_state.consequence_outcome
+        
+        if outcome['status'] == 'SUCCESS':
+            st.success(f"## ✅ {outcome['status']}")
+        elif outcome['status'] == 'PARTIAL SUCCESS':
+            st.warning(f"## ⚠️ {outcome['status']}")
+        else:
+            st.error(f"## ❌ {outcome['status']}")
+        
+        st.markdown(outcome['narrative'])
+        
+        st.markdown("---")
+        st.markdown("### 📊 Performance Assessment")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Overall Score", f"{outcome['score']}/100")
+            st.metric("New Cases After Intervention", outcome['new_cases'])
+        
+        with col2:
+            st.markdown("**Key Decisions:**")
+            for item in outcome['outcomes']:
+                st.markdown(item)
+    
+    else:
+        # Briefing form
+        st.markdown("### Your Briefing")
+        
+        with st.form("moh_briefing"):
+            st.markdown("#### 1. Outbreak Summary")
+            summary = st.text_area(
+                "Summarize the outbreak (who, what, where, when):",
+                height=100,
+                placeholder="e.g., Since June 3, 2025, we have identified X cases of acute encephalitis syndrome..."
+            )
+            
+            st.markdown("#### 2. Your Diagnosis")
+            diagnosis = st.selectbox(
+                "What is the most likely cause of this outbreak?",
+                ["Select diagnosis...", "Japanese Encephalitis", "Bacterial meningitis", 
+                 "Cerebral malaria", "Rabies", "Nipah virus", "Chemical/toxic exposure",
+                 "Waterborne pathogen", "Unknown viral encephalitis"]
+            )
+            st.session_state.final_diagnosis = diagnosis
+            
+            st.markdown("#### 3. Key Risk Factors Identified")
+            risk_factors = st.multiselect(
+                "Select the risk factors your investigation identified:",
+                ["Proximity to pig pens", "Lack of mosquito net use", "Evening outdoor activities",
+                 "Low JE vaccination coverage", "Proximity to rice paddies", "Contaminated water",
+                 "School exposure", "Mine chemical exposure", "Food contamination"]
+            )
+            
+            st.markdown("#### 4. Evidence Supporting Your Diagnosis")
+            evidence = st.text_area(
+                "What evidence supports your conclusion?",
+                height=100,
+                placeholder="e.g., Lab results showed..., Epidemiologic analysis revealed..., Environmental sampling confirmed..."
+            )
+            
+            st.markdown("#### 5. Recommended Interventions")
+            st.markdown("*List your top recommendations for controlling this outbreak:*")
+            
+            rec1 = st.text_input("Recommendation 1 (highest priority):", 
+                                placeholder="e.g., Emergency JE vaccination campaign")
+            rec2 = st.text_input("Recommendation 2:", 
+                                placeholder="e.g., Bed net distribution")
+            rec3 = st.text_input("Recommendation 3:", 
+                                placeholder="e.g., Mosquito breeding site control")
+            rec4 = st.text_input("Recommendation 4:", 
+                                placeholder="e.g., Pig farm relocation")
+            rec5 = st.text_input("Recommendation 5:", 
+                                placeholder="e.g., Community health education")
+            
+            st.markdown("#### 6. One Health Considerations")
+            one_health = st.text_area(
+                "How should human, animal, and environmental health sectors coordinate?",
+                height=80,
+                placeholder="e.g., Joint surveillance between health and veterinary services..."
+            )
+            
+            if st.form_submit_button("📤 Submit Briefing to Director", type="primary"):
+                # Store recommendations
+                st.session_state.recommendations_submitted = [rec1, rec2, rec3, rec4, rec5]
+                st.session_state.final_diagnosis = diagnosis
+                st.session_state.briefing_prepared = True
+                
+                # Calculate consequences
+                outcome = calculate_consequences()
+                st.session_state.consequence_outcome = outcome
+                
+                st.rerun()
+        
+        # Pre-briefing checklist
+        st.markdown("---")
+        st.markdown("### 📋 Pre-Briefing Checklist")
+        
+        checks = [
+            ("Completed Day 1-4 activities", st.session_state.investigation_day >= 5),
+            ("Interviewed key informants", len(st.session_state.interview_history) >= 3),
+            ("Built epidemic curve", st.session_state.epi_curve_built),
+            ("Submitted lab samples", len(st.session_state.lab_samples_submitted) > 0),
+            ("Consulted veterinary officer (One Health)", 'vet_amina' in st.session_state.interview_history),
+        ]
+        
+        for item, done in checks:
+            st.markdown(f"{'✅' if done else '⬜'} {item}")
 
 elif st.session_state.current_view == 'debrief':
     st.markdown("### 📝 Investigation Debrief")
