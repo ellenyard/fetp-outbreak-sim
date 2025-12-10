@@ -304,20 +304,9 @@ Remember: You are being interviewed by an FETP epidemiologist investigating this
 st.markdown("""
 <div class="main-header">
     <h1>🦠 FETP Outbreak Investigation Simulation</h1>
-    <p style="margin:0;">Day 1: Initial Investigation | Riverside Village Cholera Outbreak | March 10, 2025</p>
+    <p style="margin:0;">Day 1: Initial Investigation | Riverside Village | December 10, 2025</p>
 </div>
 """, unsafe_allow_html=True)
-
-# Top bar info
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Day", f"Day {st.session_state.day}")
-with col2:
-    st.metric("Confirmed Cases", "15")
-with col3:
-    st.metric("Deaths", "3")
-with col4:
-    st.metric("Characters Interviewed", len(st.session_state.interviewed_characters))
 
 # Sidebar navigation
 with st.sidebar:
@@ -343,19 +332,13 @@ with st.sidebar:
         st.session_state.current_view = 'notes'
         st.rerun()
     
-    if st.button("🎯 Objectives", use_container_width=True):
+    if st.button("🎯 Investigation Steps", use_container_width=True):
         st.session_state.current_view = 'objectives'
         st.rerun()
     
     st.markdown("---")
-    st.markdown("### 🔬 Quick Stats")
-    st.info(f"""
-    **Attack Rate (Well #1 users):** ~25%
-    
-    **Attack Rate (Well #2 users):** 0%
-    
-    **Case Fatality Rate:** 20%
-    """)
+    st.markdown("### ℹ️ About")
+    st.caption("Use navigation above to explore different aspects of the investigation.")
 
 # Main content area based on current view
 if st.session_state.current_view == 'home':
@@ -601,27 +584,27 @@ elif st.session_state.current_view == 'map':
         st.plotly_chart(fig, use_container_width=True)
     
     with map_col2:
-        st.markdown("### 🔍 Key Observations")
-        st.warning("""
-        **All 15 cases** are located in Neighborhood A
+        st.markdown("### 📍 Map Legend")
+        st.markdown("""
+        **Red dots (🔴):** Confirmed case locations
         
-        **Well #1 characteristics:**
-        - Open well (no cover)
-        - Serves ~60 households
-        - 15 meters deep
-        - Located 30m downhill from latrine
+        **Blue circles (💧):** Water sources
         
-        **Well #2 characteristics:**
-        - Covered with hand pump
-        - Serves ~40 households  
-        - 25 meters deep
-        - Zero cases among users
+        **Neighborhoods:**
+        - Neighborhood A (left, shaded red)
+        - Neighborhood B (right, shaded green)
+        
+        **Other features:**
+        - 🏥 Health clinic
+        - 🚽 Latrine
         """)
         
-        st.success("""
-        💡 **Spatial Pattern:**
+        st.markdown("---")
         
-        Clear clustering around Well #1. This is a classic waterborne outbreak pattern!
+        st.info("""
+        💡 **Using the map:**
+        
+        Hover over elements to see details. Look for spatial patterns in case distribution.
         """)
     
     st.markdown("</div>", unsafe_allow_html=True)
@@ -951,68 +934,258 @@ elif st.session_state.current_view == 'notes':
             st.rerun()
 
 elif st.session_state.current_view == 'objectives':
-    st.markdown("## 🎯 Day 1 Learning Objectives")
-    
-    objectives = [
-        {
-            "obj": "Understand the outbreak context and timeline",
-            "complete": len(st.session_state.interviewed_characters) > 0
-        },
-        {
-            "obj": "Identify the population at risk",
-            "complete": 'dr_mensah' in st.session_state.interviewed_characters or 'mrs_abena' in st.session_state.interviewed_characters
-        },
-        {
-            "obj": "Conduct hypothesis-generating interviews",
-            "complete": len(st.session_state.interviewed_characters) >= 2
-        },
-        {
-            "obj": "Recognize spatial clustering of cases",
-            "complete": True  # They've seen the map
-        },
-        {
-            "obj": "Form initial hypotheses about outbreak source",
-            "complete": len(st.session_state.interviewed_characters) >= 3
-        }
-    ]
-    
-    for obj in objectives:
-        status = "✅" if obj["complete"] else "⭕"
-        color_class = "objective-complete" if obj["complete"] else "objective-pending"
-        st.markdown(f"<p class='{color_class}'>{status} {obj['obj']}</p>", unsafe_allow_html=True)
-    
-    completed = sum(1 for obj in objectives if obj["complete"])
-    st.progress(completed / len(objectives))
-    st.caption(f"{completed} of {len(objectives)} objectives completed")
-    
-    if completed == len(objectives):
-        st.success("🎉 Congratulations! You've completed all Day 1 objectives. In the full simulation, you'd move on to Day 2: Questionnaire Design.")
-    
-    st.markdown("---")
-    st.markdown("### 📚 What Comes Next (Full Simulation)")
+    st.markdown("## 🎯 Outbreak Investigation Steps")
     
     st.info("""
-    **Day 2:** Design questionnaire and study
-    - Define case and control criteria
-    - Design data collection form
-    - Determine sample size
-    - Plan sampling strategy
-    
-    **Day 3:** Collect and analyze data
-    - System generates your custom dataset
-    - Perform statistical analysis
-    - Create tables and figures
-    
-    **Day 4:** Environmental investigation
-    - Collect water/environmental samples
-    - Request lab tests
-    - Triangulate all evidence
-    
-    **Day 5:** Interventions and outcomes
-    - Propose control measures
-    - Present to MOH Director
-    - See epidemic curve response
+    These are the standard steps for conducting an outbreak investigation. Work through them systematically.
+    Some steps may require multiple actions or interviews.
     """)
+    
+    # Initialize step completion tracking
+    if 'steps_completed' not in st.session_state:
+        st.session_state.steps_completed = {
+            'step1': False,
+            'step2': False,
+            'step3': False,
+            'step4': False,
+            'step5': False,
+            'step6': False,
+            'step7': False,
+            'step8': False,
+            'step9': False,
+            'step10': False
+        }
+    
+    if 'case_definition' not in st.session_state:
+        st.session_state.case_definition = ""
+    
+    if 'hypotheses' not in st.session_state:
+        st.session_state.hypotheses = []
+    
+    if 'interventions' not in st.session_state:
+        st.session_state.interventions = []
+    
+    # Step 1: Prepare for Field Work
+    with st.expander("**Step 1: Prepare for Field Work**", expanded=True):
+        st.markdown("### 📋 Objectives:")
+        st.write("- Establish the existence of an outbreak")
+        st.write("- Verify the diagnosis")
+        st.write("- Define and identify cases")
+        
+        if 'nurse_sarah' in st.session_state.interviewed_characters or 'dr_mensah' in st.session_state.interviewed_characters:
+            st.success("✅ You have interviewed health staff and verified the outbreak")
+            st.session_state.steps_completed['step1'] = True
+        else:
+            st.warning("⚠️ Action needed: Interview health facility staff to verify the outbreak")
+            if st.button("Go to Contacts", key="step1_contacts"):
+                st.session_state.current_view = 'contacts'
+                st.rerun()
+    
+    # Step 2: Verify the Diagnosis
+    with st.expander("**Step 2: Verify the Diagnosis**"):
+        st.markdown("### 🔬 Objectives:")
+        st.write("- Confirm clinical diagnosis")
+        st.write("- Review laboratory results (when available)")
+        st.write("- Ensure cases meet diagnostic criteria")
+        
+        st.info("""
+        **Current status:**
+        - Clinical presentation consistent with cholera
+        - Laboratory samples sent to National Lab (results pending)
+        - Awaiting confirmatory testing
+        """)
+        
+        st.session_state.steps_completed['step2'] = True
+    
+    # Step 3: Define a Case and Count Cases
+    with st.expander("**Step 3: Establish Case Definition**"):
+        st.markdown("### 📝 Objectives:")
+        st.write("- Create a working case definition (clinical, time, place)")
+        st.write("- Identify and count all cases meeting the definition")
+        
+        st.markdown("---")
+        st.markdown("**Enter your case definition:**")
+        
+        case_def = st.text_area(
+            "Case Definition",
+            value=st.session_state.case_definition,
+            height=150,
+            placeholder="Example: Any person residing in Riverside Village with onset of acute watery diarrhea and vomiting between March 1-10, 2025...",
+            help="A case definition should include clinical criteria, time period, and geographic area"
+        )
+        
+        if st.button("Save Case Definition"):
+            st.session_state.case_definition = case_def
+            if case_def.strip():
+                st.success("✅ Case definition saved")
+                st.session_state.steps_completed['step3'] = True
+            st.rerun()
+        
+        if st.session_state.case_definition:
+            st.success(f"✅ Case definition recorded: {st.session_state.case_definition[:100]}...")
+            st.session_state.steps_completed['step3'] = True
+    
+    # Step 4: Perform Descriptive Epidemiology
+    with st.expander("**Step 4: Descriptive Epidemiology (Person, Place, Time)**"):
+        st.markdown("### 📊 Objectives:")
+        st.write("- Characterize cases by person (age, sex, occupation, etc.)")
+        st.write("- Characterize cases by place (residence, workplace, exposures)")
+        st.write("- Characterize cases by time (epidemic curve, onset dates)")
+        
+        if 'nurse_sarah' in st.session_state.interviewed_characters:
+            st.success("✅ Complete line list obtained from Nurse Sarah")
+            st.info("""
+            **Actions you can take:**
+            - Review the Line List for demographic patterns
+            - Review the Map for geographic clustering
+            - Examine the epidemic curve for temporal patterns
+            - Calculate attack rates by subgroup
+            """)
+            st.session_state.steps_completed['step4'] = True
+        else:
+            st.warning("⚠️ Obtain complete case line list first (interview Nurse Sarah)")
+    
+    # Step 5: Develop Hypotheses
+    with st.expander("**Step 5: Develop Hypotheses**"):
+        st.markdown("### 💡 Objectives:")
+        st.write("- Generate hypotheses about source and mode of transmission")
+        st.write("- Consider all plausible explanations")
+        st.write("- Prioritize hypotheses for testing")
+        
+        st.markdown("---")
+        st.markdown("**What are your hypotheses about the source/transmission?**")
+        
+        new_hypothesis = st.text_input(
+            "Add a hypothesis",
+            placeholder="Example: Contaminated water from Well #1 is the source",
+            key="new_hyp"
+        )
+        
+        if st.button("Add Hypothesis") and new_hypothesis:
+            st.session_state.hypotheses.append(new_hypothesis)
+            st.rerun()
+        
+        if st.session_state.hypotheses:
+            st.markdown("**Your hypotheses:**")
+            for i, hyp in enumerate(st.session_state.hypotheses, 1):
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    st.write(f"{i}. {hyp}")
+                with col2:
+                    if st.button("🗑️", key=f"del_hyp_{i}"):
+                        st.session_state.hypotheses.pop(i-1)
+                        st.rerun()
+            st.session_state.steps_completed['step5'] = True
+    
+    # Step 6: Evaluate Hypotheses / Conduct Studies
+    with st.expander("**Step 6: Evaluate Hypotheses / Conduct Studies**"):
+        st.markdown("### 🔍 Objectives:")
+        st.write("- Design and conduct analytical studies if needed")
+        st.write("- Conduct environmental investigations")
+        st.write("- Collect additional samples for testing")
+        
+        st.info("""
+        **In the full simulation, you would:**
+        - Design a case-control or cohort study
+        - Create a questionnaire
+        - Collect environmental samples
+        - Request laboratory testing
+        
+        **For this demo:** Continue interviewing community members to gather evidence supporting or refuting your hypotheses.
+        """)
+        
+        if len(st.session_state.interviewed_characters) >= 3:
+            st.session_state.steps_completed['step6'] = True
+    
+    # Step 7: Implement Control Measures
+    with st.expander("**Step 7: Implement Control and Prevention Measures**"):
+        st.markdown("### 🛡️ Objectives:")
+        st.write("- Recommend immediate control measures")
+        st.write("- Implement interventions to stop transmission")
+        st.write("- Prevent additional cases")
+        
+        st.markdown("---")
+        st.markdown("**What control measures do you recommend?**")
+        
+        new_intervention = st.text_input(
+            "Add a control measure",
+            placeholder="Example: Chlorinate Well #1 and distribute safe water",
+            key="new_int"
+        )
+        
+        if st.button("Add Control Measure") and new_intervention:
+            st.session_state.interventions.append(new_intervention)
+            st.rerun()
+        
+        if st.session_state.interventions:
+            st.markdown("**Your recommended interventions:**")
+            for i, intervention in enumerate(st.session_state.interventions, 1):
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    st.write(f"{i}. {intervention}")
+                with col2:
+                    if st.button("🗑️", key=f"del_int_{i}"):
+                        st.session_state.interventions.pop(i-1)
+                        st.rerun()
+            st.session_state.steps_completed['step7'] = True
+    
+    # Step 8: Communicate Findings
+    with st.expander("**Step 8: Communicate Findings**"):
+        st.markdown("### 📢 Objectives:")
+        st.write("- Prepare written report")
+        st.write("- Present findings to stakeholders")
+        st.write("- Provide recommendations")
+        
+        st.info("""
+        **In a real investigation, you would:**
+        - Write an outbreak investigation report
+        - Present to Ministry of Health officials
+        - Brief community leaders
+        - Provide recommendations for prevention
+        
+        **For this demo:** This step would involve presenting your findings in the full simulation.
+        """)
+    
+    # Step 9: Execute Additional Studies
+    with st.expander("**Step 9: Execute Additional Studies (If Needed)**"):
+        st.markdown("### 🔬 Objectives:")
+        st.write("- Conduct follow-up investigations if questions remain")
+        st.write("- Perform additional laboratory testing")
+        st.write("- Long-term monitoring")
+        
+        st.info("This step may not be needed for all outbreaks. Depends on initial findings.")
+    
+    # Step 10: Maintain Surveillance
+    with st.expander("**Step 10: Maintain Surveillance**"):
+        st.markdown("### 👁️ Objectives:")
+        st.write("- Continue monitoring for new cases")
+        st.write("- Evaluate effectiveness of control measures")
+        st.write("- Document lessons learned")
+        
+        st.info("""
+        **Ongoing activities:**
+        - Daily case count monitoring
+        - Evaluate if interventions are working
+        - Plan for sustained prevention
+        """)
+    
+    # Progress Summary
+    st.markdown("---")
+    st.markdown("### 📈 Investigation Progress")
+    
+    completed = sum(1 for v in st.session_state.steps_completed.values() if v)
+    total_steps = len(st.session_state.steps_completed)
+    
+    progress = completed / total_steps
+    st.progress(progress)
+    st.caption(f"{completed} of {total_steps} key steps completed or in progress")
+    
+    if completed >= 6:
+        st.success("🎉 You're making excellent progress! Continue your investigation and finalize your recommendations.")
+    elif completed >= 3:
+        st.info("👍 Good start! Keep gathering information and developing your hypotheses.")
+    else:
+        st.warning("🔍 Early stages - Begin by interviewing key contacts and gathering case information.")
 
 # Footer
 st.markdown("---")
