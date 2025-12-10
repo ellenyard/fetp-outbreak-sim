@@ -59,6 +59,7 @@ if 'completed_steps' not in st.session_state: st.session_state.completed_steps =
 # Resources
 if 'budget' not in st.session_state: st.session_state.budget = 2500
 if 'lab_credits' not in st.session_state: st.session_state.lab_credits = 10
+if 'current_inspection' not in st.session_state: st.session_state.current_inspection = None  # FIXED: Remembers active photo
 
 # Study Design
 if 'case_definition' not in st.session_state: st.session_state.case_definition = ""
@@ -113,7 +114,7 @@ CLINIC_NOTES_PILE = [
 CHARACTERS = {
     "dr_chen": {"name": "Dr. Chen", "role": "Hospital Director", "avatar": "👩‍⚕️", "cost": 100, 
                 "bio": "Focuses on Miners. Precise.", 
-                "data_access": str(PUBLIC_CASES)}, # Explicitly passing data as string
+                "data_access": str(PUBLIC_CASES)},
     "healer_marcus": {"name": "Healer Marcus", "role": "Private Clinic", "avatar": "🌿", "cost": 150, 
                       "bio": "Suspicious of govt.", 
                       "data_access": str(CLINIC_NOTES_PILE)},
@@ -131,7 +132,6 @@ def get_ai_response(char_key, user_input, history):
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key: return "⚠️ API Key Missing"
     
-    # SYSTEM PROMPT INJECTION
     data_context = f"DATA YOU HAVE: {char.get('data_access', 'None')}"
     
     try:
@@ -190,7 +190,7 @@ if st.session_state.current_view == 'briefing':
     
     st.markdown("### 🗺️ Field Map")
     
-    # FIXED MAP LOGIC (No crashes)
+    # FIXED MAP LOGIC
     fig = go.Figure()
     # Zones
     fig.add_shape(type="rect", x0=0, y0=200, x1=200, y1=400, fillcolor="rgba(169,169,169,0.3)", line_width=0)
@@ -200,7 +200,7 @@ if st.session_state.current_view == 'briefing':
     # River
     fig.add_trace(go.Scatter(x=[0,400], y=[50,150], mode='lines', line=dict(color='blue', width=5), name='River'))
     
-    # Valid Symbols Only: circle, square, diamond, cross, x
+    # Valid Symbols
     fig.add_trace(go.Scatter(x=[300], y=[300], mode='markers+text', marker=dict(size=12, color='red', symbol='cross'), text=["Hospital"], textposition="top center", name="Hospital"))
     fig.add_trace(go.Scatter(x=[50], y=[100], mode='markers+text', marker=dict(size=12, color='pink', symbol='circle'), text=["Pig Farms"], textposition="top center", name="Pig Farms"))
     fig.add_trace(go.Scatter(x=[150], y=[300], mode='markers+text', marker=dict(size=12, color='orange', symbol='square'), text=["Market"], textposition="top center", name="Market"))
@@ -212,24 +212,39 @@ if st.session_state.current_view == 'briefing':
     
     st.markdown("#### 📷 Site Inspections ($50 each)")
     col1, col2, col3 = st.columns(3)
+    
     with col1:
         if st.button("Inspect Mine"):
             if st.session_state.budget >= 50:
                 st.session_state.budget -= 50
-                st.image("https://placehold.co/300x200?text=Dark+Mine+Shaft", caption="Ventilation looks poor.")
+                st.session_state.current_inspection = "mine"
                 st.rerun()
+            else: st.error("No Funds")
+            
     with col2:
         if st.button("Inspect Pig Farms"):
             if st.session_state.budget >= 50:
                 st.session_state.budget -= 50
-                st.image("https://placehold.co/300x200?text=Muddy+Pig+Sty", caption="Stagnant water nearby.")
+                st.session_state.current_inspection = "pigs"
                 st.rerun()
+            else: st.error("No Funds")
+            
     with col3:
         if st.button("Inspect River"):
             if st.session_state.budget >= 50:
                 st.session_state.budget -= 50
-                st.image("https://placehold.co/300x200?text=River+Bank", caption="Children swimming.")
+                st.session_state.current_inspection = "river"
                 st.rerun()
+            else: st.error("No Funds")
+    
+    # RENDER THE ACTIVE INSPECTION IMAGE
+    st.markdown("---")
+    if st.session_state.current_inspection == "mine":
+        st.image("https://placehold.co/600x300?text=Mine+Shaft:+Poor+Ventilation+Observed", caption="Inspection: North Mines")
+    elif st.session_state.current_inspection == "pigs":
+        st.image("https://placehold.co/600x300?text=Pig+Sty:+Stagnant+Water+Pools", caption="Inspection: South Farms")
+    elif st.session_state.current_inspection == "river":
+        st.image("https://placehold.co/600x300?text=River+Bank:+Mosquito+Breeding+Site", caption="Inspection: River")
 
 elif st.session_state.current_view == 'contacts':
     st.markdown("### 👥 Interviews")
