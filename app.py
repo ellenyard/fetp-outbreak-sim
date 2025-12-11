@@ -147,6 +147,97 @@ def t(key: str) -> str:
 
 
 # =========================
+# TIME AND RESOURCE COSTS
+# =========================
+
+# Time costs in hours for various activities
+TIME_COSTS = {
+    # Interviews - primarily time cost
+    "interview_initial": 1.0,      # First interview with an NPC
+    "interview_followup": 0.5,     # Follow-up questions with same NPC
+    
+    # Case finding
+    "clinic_records_review": 2.0,  # Reviewing clinic records
+    
+    # Data collection
+    "questionnaire_development": 1.5,  # Developing questionnaire
+    "questionnaire_admin_per_10": 2.0, # Administering questionnaire (per 10 respondents)
+    
+    # Analysis
+    "descriptive_analysis": 1.0,   # Running descriptive analyses
+    "data_cleaning": 1.5,          # Cleaning dataset
+    
+    # Lab and environment
+    "sample_collection": 1.0,      # Per sample collection trip
+    "environmental_inspection": 2.0,  # Site inspection
+    
+    # Travel
+    "travel_to_village": 0.5,      # Travel time to a village
+    "travel_between_villages": 0.5,  # Travel between villages
+}
+
+# Budget costs (some activities cost money, not just time)
+BUDGET_COSTS = {
+    "questionnaire_printing": 50,   # Printing questionnaires
+    "lab_sample_human": 25,         # Human sample collection supplies
+    "lab_sample_animal": 35,        # Animal sample collection
+    "lab_sample_mosquito": 40,      # Mosquito trap setup
+    "transport_per_trip": 20,       # Vehicle/fuel costs
+}
+
+
+def spend_time(hours: float, activity: str = "") -> bool:
+    """
+    Deduct time from daily allowance.
+    Returns True if successful, False if not enough time.
+    """
+    if st.session_state.time_remaining >= hours:
+        st.session_state.time_remaining -= hours
+        return True
+    return False
+
+
+def spend_budget(amount: float, activity: str = "") -> bool:
+    """
+    Deduct from budget.
+    Returns True if successful, False if not enough budget.
+    """
+    if st.session_state.budget >= amount:
+        st.session_state.budget -= amount
+        return True
+    return False
+
+
+def check_resources(time_needed: float = 0, budget_needed: float = 0) -> tuple:
+    """
+    Check if enough resources are available.
+    Returns (can_proceed: bool, message: str)
+    """
+    messages = []
+    can_proceed = True
+    
+    if time_needed > 0 and st.session_state.time_remaining < time_needed:
+        can_proceed = False
+        messages.append(f"Not enough time (need {time_needed}h, have {st.session_state.time_remaining}h)")
+    
+    if budget_needed > 0 and st.session_state.budget < budget_needed:
+        can_proceed = False
+        messages.append(f"Not enough budget (need ${budget_needed}, have ${st.session_state.budget})")
+    
+    return can_proceed, "; ".join(messages) if messages else "OK"
+
+
+def format_resource_cost(time_cost: float = 0, budget_cost: float = 0) -> str:
+    """Format a resource cost string for display."""
+    parts = []
+    if time_cost > 0:
+        parts.append(f"⏱️ {time_cost}h")
+    if budget_cost > 0:
+        parts.append(f"💰 ${budget_cost}")
+    return " | ".join(parts) if parts else "Free"
+
+
+# =========================
 # VILLAGE BRIEFING DOCUMENTS  
 # =========================
 
@@ -1424,6 +1515,7 @@ def sidebar_navigation():
             can_advance, missing = check_day_prerequisites(st.session_state.current_day, st.session_state)
             if can_advance:
                 st.session_state.current_day += 1
+                st.session_state.time_remaining = 8  # Reset time for new day
                 st.session_state.advance_missing_tasks = []
                 st.rerun()
             else:
@@ -1611,7 +1703,17 @@ def view_interviews():
     npc_truth = truth["npc_truth"]
 
     st.header("👥 Interviews")
-    st.info(f"💰 Budget: ${st.session_state.budget} | Interview community members and officials to gather information.")
+    
+    # Resource display
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("💰 Budget", f"${st.session_state.budget}")
+    with col2:
+        st.metric("⏱️ Time Remaining", f"{st.session_state.time_remaining}h")
+    with col3:
+        st.metric("Interviews Completed", len(st.session_state.interview_history))
+    
+    st.caption("Each new interview costs time. Follow-up questions with the same person are quicker.")
 
     # Group NPCs by availability
     available_npcs = []
@@ -1631,20 +1733,26 @@ def view_interviews():
             interviewed = npc_key in st.session_state.interview_history
             status = "✓ Interviewed" if interviewed else ""
             
+            # Calculate costs
+            time_cost = TIME_COSTS["interview_followup"] if interviewed else TIME_COSTS["interview_initial"]
+            budget_cost = 0 if interviewed else npc.get("cost", 0)
+            
             st.markdown(f"**{npc['avatar']} {npc['name']}** {status}")
-            st.caption(f"{npc['role']} — Cost: ${npc['cost']}")
+            st.caption(f"{npc['role']}")
+            st.caption(f"Cost: {format_resource_cost(time_cost, budget_cost)}")
             
             btn_label = "Continue" if interviewed else "Talk"
             if st.button(f"{btn_label}", key=f"btn_{npc_key}"):
-                cost = 0 if interviewed else npc.get("cost", 0)
-                if st.session_state.budget >= cost:
-                    if not interviewed:
-                        st.session_state.budget -= cost
+                can_proceed, msg = check_resources(time_cost, budget_cost)
+                if can_proceed:
+                    spend_time(time_cost, f"Interview: {npc['name']}")
+                    if budget_cost > 0:
+                        spend_budget(budget_cost, f"Interview: {npc['name']}")
                     st.session_state.current_npc = npc_key
                     st.session_state.interview_history.setdefault(npc_key, [])
                     st.rerun()
                 else:
-                    st.error("Insufficient budget for this interview.")
+                    st.error(msg)
     
     # Show locked NPCs (without hints about how to unlock)
     if locked_npcs:
@@ -1708,6 +1816,27 @@ def view_case_finding():
     """View for reviewing clinic records and finding additional cases."""
     st.header("🔍 Case Finding - Clinic Records Review")
     
+    # Resource display and cost warning
+    time_cost = TIME_COSTS["clinic_records_review"]
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("⏱️ Time Remaining", f"{st.session_state.time_remaining}h")
+    with col2:
+        st.metric("📋 Activity Cost", f"{time_cost}h")
+    with col3:
+        if st.session_state.clinic_records_reviewed:
+            st.success("✅ Completed")
+        else:
+            st.info("Not yet completed")
+    
+    # Check if already done or if enough time
+    if not st.session_state.clinic_records_reviewed:
+        if st.session_state.time_remaining < time_cost:
+            st.error(f"⚠️ Not enough time to review clinic records. Need {time_cost}h, have {st.session_state.time_remaining}h.")
+            st.info("Advance to the next day to get more time, or prioritize other activities.")
+            return
+    
     st.markdown("""
     You've obtained permission to review records from the **Nalu Health Center**.
     Look through these handwritten clinic notes to identify potential AES cases 
@@ -1755,35 +1884,42 @@ def view_case_finding():
             st.caption(", ".join(selected))
     
     with col2:
-        if st.button("Submit Case Finding", type="primary"):
-            st.session_state.selected_clinic_cases = selected
-            st.session_state.clinic_records_reviewed = True
-            
-            # Calculate score
-            true_positives = sum(1 for rid in selected 
-                               for r in records if r['record_id'] == rid and r.get('is_aes'))
-            false_positives = len(selected) - true_positives
-            
-            # Count total true AES cases
-            total_aes = sum(1 for r in records if r.get('is_aes'))
-            false_negatives = total_aes - true_positives
-            
-            st.session_state.case_finding_score = {
-                'true_positives': true_positives,
-                'false_positives': false_positives,
-                'false_negatives': false_negatives,
-                'total_aes': total_aes,
-                'selected': len(selected)
-            }
-            
-            st.success(f"✅ Case finding complete! You identified {true_positives} of {total_aes} potential AES cases.")
-            
-            if false_positives > 0:
-                st.warning(f"⚠️ {false_positives} record(s) you selected may not be AES cases.")
-            if false_negatives > 0:
-                st.info(f"📝 {false_negatives} potential AES case(s) were missed. Review records with fever + neurological symptoms.")
-            
-            st.rerun()
+        # Only show submit if not already done
+        if not st.session_state.clinic_records_reviewed:
+            if st.button(f"Submit Case Finding (costs {time_cost}h)", type="primary"):
+                # Deduct time
+                spend_time(time_cost, "Clinic records review")
+                
+                st.session_state.selected_clinic_cases = selected
+                st.session_state.clinic_records_reviewed = True
+                
+                # Calculate score
+                true_positives = sum(1 for rid in selected 
+                                   for r in records if r['record_id'] == rid and r.get('is_aes'))
+                false_positives = len(selected) - true_positives
+                
+                # Count total true AES cases
+                total_aes = sum(1 for r in records if r.get('is_aes'))
+                false_negatives = total_aes - true_positives
+                
+                st.session_state.case_finding_score = {
+                    'true_positives': true_positives,
+                    'false_positives': false_positives,
+                    'false_negatives': false_negatives,
+                    'total_aes': total_aes,
+                    'selected': len(selected)
+                }
+                
+                st.success(f"✅ Case finding complete! You identified {true_positives} of {total_aes} potential AES cases.")
+                
+                if false_positives > 0:
+                    st.warning(f"⚠️ {false_positives} record(s) you selected may not be AES cases.")
+                if false_negatives > 0:
+                    st.info(f"📝 {false_negatives} potential AES case(s) were missed. Review records with fever + neurological symptoms.")
+                
+                st.rerun()
+        else:
+            st.info("Already completed")
     
     # Show previous score if available
     if st.session_state.case_finding_score:
@@ -2162,15 +2298,36 @@ def view_study_design():
 
 def view_lab_and_environment():
     st.header("🧪 Lab & Environment")
+    
+    # Resource display
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("💰 Budget", f"${st.session_state.budget}")
+    with col2:
+        st.metric("⏱️ Time Remaining", f"{st.session_state.time_remaining}h")
+    with col3:
+        st.metric("🧪 Lab Credits", st.session_state.lab_credits)
 
-    st.markdown(
-        "Order lab tests and environmental investigations. "
-        "This simple interface demonstrates how orders flow into `process_lab_order()`."
-    )
+    st.markdown("""
+    Collect and submit samples for laboratory testing. Each sample type has different 
+    time and budget costs for collection.
+    """)
+    
+    # Sample costs table
+    with st.expander("📋 Sample Collection Costs"):
+        cost_data = {
+            "Sample Type": ["Human CSF", "Human Serum", "Pig Serum", "Mosquito Pool"],
+            "Time (hours)": [1.0, 0.5, 1.0, 1.5],
+            "Budget ($)": [25, 25, 35, 40],
+            "Lab Credits": [3, 2, 2, 3]
+        }
+        st.dataframe(pd.DataFrame(cost_data), hide_index=True)
 
     truth = st.session_state.truth
     villages = truth["villages"]
 
+    st.markdown("### Submit New Sample")
+    
     col1, col2, col3 = st.columns(3)
     with col1:
         sample_type = st.selectbox(
@@ -2190,22 +2347,47 @@ def view_lab_and_environment():
         )
 
     source_description = st.text_input("Source description (e.g., 'Case from Nalu')", "")
+    
+    # Calculate costs based on sample type
+    sample_costs = {
+        "human_CSF": {"time": 1.0, "budget": 25, "credits": 3},
+        "human_serum": {"time": 0.5, "budget": 25, "credits": 2},
+        "pig_serum": {"time": 1.0, "budget": 35, "credits": 2},
+        "mosquito_pool": {"time": 1.5, "budget": 40, "credits": 3},
+    }
+    
+    costs = sample_costs.get(sample_type, {"time": 1.0, "budget": 25, "credits": 2})
+    
+    st.caption(f"This sample will cost: ⏱️ {costs['time']}h | 💰 ${costs['budget']} | 🧪 {costs['credits']} credits")
 
     if st.button("Submit lab order"):
-        order = {
-            "sample_type": sample_type,
-            "village_id": village_id,
-            "test": test,
-            "source_description": source_description or "Unspecified source",
-        }
-        result = process_lab_order(order, truth["lab_samples"])
-        st.session_state.lab_results.append(result)
-        st.session_state.lab_samples_submitted.append(order)
-        st.session_state.lab_credits -= result.get("cost", 0)
-        st.success(
-            f"Lab order submitted. Result: {result['result']} "
-            f"(turnaround {result['days_to_result']} days)."
-        )
+        # Check resources
+        can_proceed, msg = check_resources(costs['time'], costs['budget'])
+        if not can_proceed:
+            st.error(msg)
+        elif st.session_state.lab_credits < costs['credits']:
+            st.error(f"Not enough lab credits (need {costs['credits']}, have {st.session_state.lab_credits})")
+        else:
+            # Deduct resources
+            spend_time(costs['time'], f"Sample collection: {sample_type}")
+            spend_budget(costs['budget'], f"Sample collection: {sample_type}")
+            st.session_state.lab_credits -= costs['credits']
+            
+            order = {
+                "sample_type": sample_type,
+                "village_id": village_id,
+                "test": test,
+                "source_description": source_description or "Unspecified source",
+            }
+            result = process_lab_order(order, truth["lab_samples"])
+            st.session_state.lab_results.append(result)
+            st.session_state.lab_samples_submitted.append(order)
+            
+            st.success(
+                f"Lab order submitted. Result: {result['result']} "
+                f"(turnaround {result['days_to_result']} days)."
+            )
+            st.rerun()
 
     if st.session_state.lab_results:
         st.markdown("### Lab results so far")
@@ -2225,6 +2407,245 @@ def view_village_profiles():
     
     tabs = st.tabs(["Nalu Village", "Kabwe Village", "Tamu Village"])
     
+    # SVG illustrations for each village
+    nalu_rice_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Sun -->
+        <circle cx="350" cy="40" r="25" fill="#FFD700"/>
+        <!-- Mountains in background -->
+        <polygon points="0,120 80,60 160,120" fill="#6B8E23"/>
+        <polygon points="100,120 200,40 300,120" fill="#556B2F"/>
+        <polygon points="250,120 350,70 400,120" fill="#6B8E23"/>
+        <!-- Rice paddies (flooded fields) -->
+        <rect x="0" y="120" width="400" height="80" fill="#4A7C59"/>
+        <!-- Water reflection lines -->
+        <rect x="10" y="130" width="80" height="3" fill="#87CEEB" opacity="0.5"/>
+        <rect x="100" y="145" width="90" height="3" fill="#87CEEB" opacity="0.5"/>
+        <rect x="200" y="135" width="70" height="3" fill="#87CEEB" opacity="0.5"/>
+        <rect x="280" y="150" width="100" height="3" fill="#87CEEB" opacity="0.5"/>
+        <rect x="50" y="160" width="60" height="3" fill="#87CEEB" opacity="0.5"/>
+        <rect x="150" y="170" width="80" height="3" fill="#87CEEB" opacity="0.5"/>
+        <!-- Rice plants (small green lines) -->
+        <g stroke="#228B22" stroke-width="2">
+            <line x1="30" y1="140" x2="30" y2="125"/>
+            <line x1="50" y1="145" x2="50" y2="130"/>
+            <line x1="70" y1="140" x2="70" y2="125"/>
+            <line x1="120" y1="150" x2="120" y2="135"/>
+            <line x1="140" y1="145" x2="140" y2="130"/>
+            <line x1="160" y1="155" x2="160" y2="140"/>
+            <line x1="220" y1="145" x2="220" y2="130"/>
+            <line x1="250" y1="150" x2="250" y2="135"/>
+            <line x1="300" y1="140" x2="300" y2="125"/>
+            <line x1="340" y1="155" x2="340" y2="140"/>
+            <line x1="370" y1="145" x2="370" y2="130"/>
+        </g>
+        <!-- Mosquitoes -->
+        <text x="180" y="115" font-size="12">🦟</text>
+        <text x="320" y="105" font-size="10">🦟</text>
+        <text x="60" y="110" font-size="11">🦟</text>
+        <!-- Label -->
+        <text x="200" y="190" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Rice Paddies - Standing Water Year-Round</text>
+    </svg>
+    '''
+    
+    nalu_pigs_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Ground -->
+        <rect x="0" y="140" width="400" height="60" fill="#8B4513"/>
+        <!-- Mud patches -->
+        <ellipse cx="100" cy="160" rx="40" ry="15" fill="#654321"/>
+        <ellipse cx="280" cy="165" rx="50" ry="18" fill="#654321"/>
+        <!-- Fence -->
+        <rect x="20" y="100" width="360" height="5" fill="#8B4513"/>
+        <rect x="30" y="60" width="8" height="80" fill="#8B4513"/>
+        <rect x="100" y="60" width="8" height="80" fill="#8B4513"/>
+        <rect x="170" y="60" width="8" height="80" fill="#8B4513"/>
+        <rect x="240" y="60" width="8" height="80" fill="#8B4513"/>
+        <rect x="310" y="60" width="8" height="80" fill="#8B4513"/>
+        <rect x="20" y="80" width="360" height="4" fill="#8B4513"/>
+        <!-- Shelter roof -->
+        <polygon points="280,40 350,40 380,70 250,70" fill="#A0522D"/>
+        <rect x="260" y="70" width="110" height="50" fill="#DEB887"/>
+        <!-- Pigs -->
+        <ellipse cx="80" cy="130" rx="25" ry="18" fill="#FFB6C1"/>
+        <circle cx="60" cy="125" r="8" fill="#FFB6C1"/>
+        <ellipse cx="150" cy="135" rx="22" ry="15" fill="#FFC0CB"/>
+        <circle cx="132" cy="130" r="7" fill="#FFC0CB"/>
+        <ellipse cx="200" cy="128" rx="20" ry="14" fill="#FFB6C1"/>
+        <circle cx="184" cy="123" r="6" fill="#FFB6C1"/>
+        <!-- More pigs in background -->
+        <ellipse cx="290" cy="115" rx="18" ry="12" fill="#FFA0AB"/>
+        <ellipse cx="330" cy="118" rx="16" ry="11" fill="#FFA0AB"/>
+        <!-- Flies -->
+        <text x="120" y="115" font-size="8">•</text>
+        <text x="180" y="110" font-size="8">•</text>
+        <text x="250" y="105" font-size="8">•</text>
+        <!-- Label -->
+        <text x="200" y="190" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Pig Cooperative - ~200 Pigs Near Village</text>
+    </svg>
+    '''
+    
+    kabwe_mixed_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Hills -->
+        <ellipse cx="100" cy="140" rx="120" ry="50" fill="#6B8E23"/>
+        <ellipse cx="300" cy="150" rx="140" ry="45" fill="#556B2F"/>
+        <!-- Ground -->
+        <rect x="0" y="140" width="400" height="60" fill="#8B7355"/>
+        <!-- Rice paddy section (left) -->
+        <rect x="0" y="140" width="150" height="40" fill="#4A7C59"/>
+        <rect x="10" y="150" width="40" height="2" fill="#87CEEB" opacity="0.5"/>
+        <rect x="60" y="155" width="50" height="2" fill="#87CEEB" opacity="0.5"/>
+        <!-- Maize/upland section (right) -->
+        <g stroke="#DAA520" stroke-width="2">
+            <line x1="200" y1="140" x2="200" y2="110"/>
+            <line x1="220" y1="140" x2="220" y2="115"/>
+            <line x1="240" y1="140" x2="240" y2="105"/>
+            <line x1="260" y1="140" x2="260" y2="112"/>
+            <line x1="280" y1="140" x2="280" y2="108"/>
+            <line x1="300" y1="140" x2="300" y2="115"/>
+            <line x1="320" y1="140" x2="320" y2="110"/>
+            <line x1="340" y1="140" x2="340" y2="118"/>
+            <line x1="360" y1="140" x2="360" y2="105"/>
+        </g>
+        <!-- Corn tops -->
+        <g fill="#FFD700">
+            <circle cx="200" cy="105" r="4"/>
+            <circle cx="240" cy="100" r="4"/>
+            <circle cx="280" cy="103" r="4"/>
+            <circle cx="320" cy="105" r="4"/>
+            <circle cx="360" cy="100" r="4"/>
+        </g>
+        <!-- Path dividing -->
+        <rect x="155" y="140" width="30" height="60" fill="#C4A76C"/>
+        <!-- Small pig pen -->
+        <rect x="380" y="150" width="15" height="15" fill="#8B4513"/>
+        <ellipse cx="387" cy="160" rx="5" ry="4" fill="#FFB6C1"/>
+        <!-- Mosquito (fewer) -->
+        <text x="80" y="135" font-size="10">🦟</text>
+        <!-- Label -->
+        <text x="200" y="190" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Mixed Farming - Rice Paddies & Upland Crops</text>
+    </svg>
+    '''
+    
+    kabwe_path_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Rice paddies (green with water) -->
+        <rect x="0" y="100" width="400" height="100" fill="#4A7C59"/>
+        <!-- Water reflections -->
+        <rect x="20" y="120" width="60" height="3" fill="#87CEEB" opacity="0.4"/>
+        <rect x="100" y="140" width="80" height="3" fill="#87CEEB" opacity="0.4"/>
+        <rect x="250" y="130" width="70" height="3" fill="#87CEEB" opacity="0.4"/>
+        <rect x="50" y="160" width="90" height="3" fill="#87CEEB" opacity="0.4"/>
+        <rect x="300" y="155" width="80" height="3" fill="#87CEEB" opacity="0.4"/>
+        <!-- Path through paddies -->
+        <path d="M 0,180 Q 100,150 200,160 Q 300,170 400,140" stroke="#C4A76C" stroke-width="20" fill="none"/>
+        <!-- Children walking -->
+        <text x="120" y="155" font-size="16">👧</text>
+        <text x="150" y="160" font-size="14">👦</text>
+        <text x="180" y="158" font-size="15">👧</text>
+        <!-- School building in distance -->
+        <rect x="350" y="80" width="40" height="40" fill="#CD853F"/>
+        <polygon points="350,80 370,60 390,80" fill="#8B0000"/>
+        <rect x="365" y="95" width="10" height="25" fill="#8B4513"/>
+        <!-- Sign -->
+        <text x="370" y="75" font-size="8" text-anchor="middle">SCHOOL</text>
+        <!-- Village houses in background -->
+        <rect x="20" y="70" width="25" height="25" fill="#DEB887"/>
+        <polygon points="20,70 32,55 45,70" fill="#8B4513"/>
+        <rect x="60" y="75" width="20" height="20" fill="#DEB887"/>
+        <polygon points="60,75 70,62 80,75" fill="#8B4513"/>
+        <!-- Label -->
+        <text x="200" y="195" text-anchor="middle" font-size="12" fill="white" font-weight="bold">Children Walk Through Paddies to School in Nalu</text>
+    </svg>
+    '''
+    
+    tamu_upland_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Sun -->
+        <circle cx="350" cy="35" r="25" fill="#FFD700"/>
+        <!-- Hills/mountains -->
+        <polygon points="0,130 100,50 200,130" fill="#228B22"/>
+        <polygon points="150,130 280,30 400,130" fill="#2E8B57"/>
+        <!-- Dry ground -->
+        <rect x="0" y="130" width="400" height="70" fill="#C4A76C"/>
+        <!-- Cassava/yam plants -->
+        <g fill="#228B22">
+            <ellipse cx="50" cy="140" rx="20" ry="15"/>
+            <ellipse cx="120" cy="145" rx="25" ry="18"/>
+            <ellipse cx="200" cy="138" rx="22" ry="16"/>
+            <ellipse cx="280" cy="142" rx="20" ry="14"/>
+            <ellipse cx="350" cy="140" rx="25" ry="17"/>
+        </g>
+        <!-- Goats instead of pigs -->
+        <text x="100" y="165" font-size="16">🐐</text>
+        <text x="250" y="160" font-size="14">🐐</text>
+        <!-- Chickens -->
+        <text x="180" y="170" font-size="12">🐔</text>
+        <text x="320" y="168" font-size="11">🐔</text>
+        <!-- No mosquitoes - dry terrain -->
+        <!-- Trees -->
+        <rect x="30" y="100" width="8" height="30" fill="#8B4513"/>
+        <circle cx="34" cy="90" r="20" fill="#228B22"/>
+        <rect x="370" y="95" width="8" height="35" fill="#8B4513"/>
+        <circle cx="374" cy="85" r="22" fill="#2E8B57"/>
+        <!-- Label -->
+        <text x="200" y="190" text-anchor="middle" font-size="14" fill="#333" font-weight="bold">Upland Terrain - No Rice Paddies, Few Pigs</text>
+    </svg>
+    '''
+    
+    tamu_forest_svg = '''
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Sky -->
+        <rect width="400" height="200" fill="#87CEEB"/>
+        <!-- Forest background -->
+        <rect x="0" y="80" width="400" height="120" fill="#228B22"/>
+        <!-- Multiple trees -->
+        <g>
+            <!-- Tree 1 -->
+            <rect x="30" y="60" width="12" height="80" fill="#8B4513"/>
+            <circle cx="36" cy="45" r="30" fill="#2E8B57"/>
+            <!-- Tree 2 -->
+            <rect x="90" y="50" width="15" height="90" fill="#8B4513"/>
+            <circle cx="97" cy="35" r="35" fill="#228B22"/>
+            <!-- Tree 3 -->
+            <rect x="160" y="70" width="10" height="70" fill="#8B4513"/>
+            <circle cx="165" cy="55" r="28" fill="#2E8B57"/>
+            <!-- Tree 4 -->
+            <rect x="220" y="55" width="14" height="85" fill="#8B4513"/>
+            <circle cx="227" cy="40" r="32" fill="#228B22"/>
+            <!-- Tree 5 -->
+            <rect x="290" y="65" width="11" height="75" fill="#8B4513"/>
+            <circle cx="295" cy="50" r="30" fill="#2E8B57"/>
+            <!-- Tree 6 -->
+            <rect x="350" y="45" width="16" height="95" fill="#8B4513"/>
+            <circle cx="358" cy="30" r="38" fill="#228B22"/>
+        </g>
+        <!-- Ground/path -->
+        <rect x="0" y="160" width="400" height="40" fill="#C4A76C"/>
+        <!-- Well (spring water) -->
+        <ellipse cx="200" cy="175" rx="25" ry="10" fill="#4169E1"/>
+        <ellipse cx="200" cy="170" rx="28" ry="8" fill="#696969" fill-opacity="0.5"/>
+        <!-- Village houses -->
+        <rect x="100" y="145" width="20" height="20" fill="#DEB887"/>
+        <polygon points="100,145 110,132 120,145" fill="#8B4513"/>
+        <rect x="280" y="148" width="18" height="18" fill="#DEB887"/>
+        <polygon points="280,148 289,136 298,148" fill="#8B4513"/>
+        <!-- Label -->
+        <text x="200" y="195" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">Forested Area - Spring-Fed Water, Less Standing Water</text>
+    </svg>
+    '''
+    
     for i, (village_key, village) in enumerate(VILLAGE_PROFILES.items()):
         with tabs[i]:
             col1, col2 = st.columns([2, 1])
@@ -2235,50 +2656,37 @@ def view_village_profiles():
                 st.markdown(desc)
             
             with col2:
-                # Placeholder images - in production, these would be actual images
-                st.markdown("### 📸 Photos")
+                st.markdown("### 📸 Scene Illustrations")
                 
                 if village_key == "nalu":
-                    st.markdown("""
-                    **Rice Paddies Near Village**
+                    st.markdown("**Rice Paddies Near Village**")
+                    st.markdown(nalu_rice_svg, unsafe_allow_html=True)
+                    st.caption("Irrigated rice fields with standing water year-round")
                     
-                    *Irrigated rice fields surround the village on three sides. 
-                    Standing water is present year-round.*
-                    """)
-                    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Rice_paddy_field.jpg/320px-Rice_paddy_field.jpg", 
-                             caption="Rice paddies (representative)", use_container_width=True)
-                    
-                    st.markdown("""
-                    **Pig Cooperative**
-                    
-                    *~200 pigs housed 500m from village center*
-                    """)
+                    st.markdown("---")
+                    st.markdown("**Pig Cooperative**")
+                    st.markdown(nalu_pigs_svg, unsafe_allow_html=True)
+                    st.caption("~200 pigs housed 500m from village center")
                     
                 elif village_key == "kabwe":
-                    st.markdown("""
-                    **Mixed Farming Area**
+                    st.markdown("**Mixed Farming Area**")
+                    st.markdown(kabwe_mixed_svg, unsafe_allow_html=True)
+                    st.caption("Combination of rice paddies and upland maize")
                     
-                    *Households practice both rice and upland farming.*
-                    """)
-                    
-                    st.markdown("""
-                    **Path to Nalu**
-                    
-                    *Children walk through paddy fields to school.*
-                    """)
+                    st.markdown("---")
+                    st.markdown("**Path to Nalu School**")
+                    st.markdown(kabwe_path_svg, unsafe_allow_html=True)
+                    st.caption("Children walk through paddy fields daily")
                     
                 elif village_key == "tamu":
-                    st.markdown("""
-                    **Upland Terrain**
+                    st.markdown("**Upland Terrain**")
+                    st.markdown(tamu_upland_svg, unsafe_allow_html=True)
+                    st.caption("Higher elevation with cassava/yam farming, goats not pigs")
                     
-                    *Higher elevation, no rice paddies nearby.*
-                    """)
-                    
-                    st.markdown("""
-                    **Forested Areas**
-                    
-                    *More forest cover, fewer standing water sources.*
-                    """)
+                    st.markdown("---")
+                    st.markdown("**Forested Areas**")
+                    st.markdown(tamu_forest_svg, unsafe_allow_html=True)
+                    st.caption("Spring-fed wells, less standing water")
             
             # Quick stats summary
             st.markdown("---")
