@@ -117,6 +117,14 @@ def init_session_state():
     st.session_state.setdefault("vet_unlocked", False)
     st.session_state.setdefault("env_officer_unlocked", False)
     st.session_state.setdefault("questions_asked_about", set())
+    
+    # Clinic records and case finding (Day 1)
+    st.session_state.setdefault("clinic_records_reviewed", False)
+    st.session_state.setdefault("selected_clinic_cases", [])
+    st.session_state.setdefault("case_finding_score", None)
+    
+    # Descriptive epidemiology
+    st.session_state.setdefault("descriptive_epi_viewed", False)
 
 
 # =========================
@@ -554,6 +562,427 @@ INFORMATION RULES:
 
 
 # =========================
+# CLINIC RECORDS FOR CASE FINDING
+# =========================
+
+def generate_clinic_records():
+    """
+    Generate messy, handwritten-style clinic records.
+    Mix of AES cases and unrelated illnesses.
+    Returns list of record dicts.
+    """
+    import random
+    random.seed(42)
+    
+    # True AES cases that should be found (6-8 cases)
+    true_aes_cases = [
+        {
+            "record_id": "NHC-0034",
+            "date": "2-Jun",
+            "patient": "Kwame A., male",
+            "age": "7 yrs",
+            "village": "Nalu",
+            "complaint": "fever 3 days, confusion, jerking movements",
+            "notes": "mother says child was playing near rice fields. referred to hosp.",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0041",
+            "date": "4-Jun", 
+            "patient": "Esi M.",
+            "age": "5",
+            "village": "Nalu vill.",
+            "complaint": "High fever, not responding to name, shaking",
+            "notes": "very sick. Family has pigs. Sent to district hosp URGENT",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0047",
+            "date": "5 June",
+            "patient": "Yaw K. (boy)",
+            "age": "9 years",
+            "village": "Kabwe",
+            "complaint": "fever, severe headache, vomited x3, then seizure in clinic",
+            "notes": "Lives nr paddy fields. Admitted for obs then transferred",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0052",
+            "date": "6/6",
+            "patient": "Abena F.",
+            "age": "4y",
+            "village": "Nalu",
+            "complaint": "feverish, drowsy, mother says 'not herself', stiff neck?",
+            "notes": "neck stiffness uncertain - child crying. watch closely",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0058",
+            "date": "7-June",
+            "patient": "Kofi B.",
+            "age": "11",
+            "village": "Kabwe village",
+            "complaint": "fever x4 days, confusion today, parents v. worried",
+            "notes": "walks past pig coop to school daily. Referred to hosp",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0063",
+            "date": "8 Jun",
+            "patient": "Adwoa S., F",
+            "age": "6 yr",
+            "village": "Nalu",
+            "complaint": "fever, then became unresponsive, jerking arms",
+            "notes": "no net at home. near rice paddies. URGENT referral",
+            "is_aes": True
+        },
+        {
+            "record_id": "NHC-0071",
+            "date": "9-Jun",
+            "patient": "male child (name unclear)",
+            "age": "~8",
+            "village": "Nalu area",
+            "complaint": "brought in fitting, high fever, confusion",
+            "notes": "family farms rice + keeps pigs. transferred to DH",
+            "is_aes": True
+        },
+    ]
+    
+    # Non-AES cases (noise - 18-22 records)
+    non_aes_cases = [
+        {
+            "record_id": "NHC-0031",
+            "date": "1-Jun",
+            "patient": "Akua D.",
+            "age": "34",
+            "village": "Tamu",
+            "complaint": "cough x2 weeks, some fever",
+            "notes": "?TB - refer for sputum",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0032",
+            "date": "1-Jun",
+            "patient": "Mensah K.",
+            "age": "45 yrs",
+            "village": "Kabwe",
+            "complaint": "painful urination, fever",
+            "notes": "UTI. Gave antibiotics",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0033",
+            "date": "2-Jun",
+            "patient": "baby girl (Serwaa)",
+            "age": "8 months",
+            "village": "Nalu",
+            "complaint": "diarrhea x3 days, not feeding well",
+            "notes": "ORS given. mother counseled on feeding",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0035",
+            "date": "2-Jun",
+            "patient": "Owusu P.",
+            "age": "52",
+            "village": "Tamu",
+            "complaint": "knee pain, swelling",
+            "notes": "arthritis. gave pain meds",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0036",
+            "date": "3-Jun",
+            "patient": "Ama T.",
+            "age": "28",
+            "village": "Kabwe",
+            "complaint": "pregnant, routine ANC visit",
+            "notes": "28 weeks. All normal.",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0037",
+            "date": "3-Jun",
+            "patient": "child (Kweku)",
+            "age": "3",
+            "village": "Nalu",
+            "complaint": "fever, runny nose, cough",
+            "notes": "common cold. supportive care",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0038",
+            "date": "3 June",
+            "patient": "Fatima A.",
+            "age": "19",
+            "village": "Tamu",
+            "complaint": "headache, body pains, fever",
+            "notes": "? malaria. RDT positive. Gave ACT.",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0039",
+            "date": "4-Jun",
+            "patient": "elderly man (Nana K.)",
+            "age": "~70",
+            "village": "Kabwe",
+            "complaint": "difficulty breathing, swollen legs",
+            "notes": "heart failure? referred to hospital",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0040",
+            "date": "4-Jun",
+            "patient": "Adjoa M.",
+            "age": "25",
+            "village": "Nalu",
+            "complaint": "skin rash, itching x1 week",
+            "notes": "fungal infection. Gave cream.",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0042",
+            "date": "4-Jun",
+            "patient": "Yaw A.",
+            "age": "6",
+            "village": "Tamu",
+            "complaint": "ear pain, fever",
+            "notes": "otitis media. antibiotics given",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0043",
+            "date": "5-Jun",
+            "patient": "Comfort O.",
+            "age": "31",
+            "village": "Kabwe",
+            "complaint": "lower abdominal pain",
+            "notes": "? PID. referred for further eval",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0044",
+            "date": "5-Jun",
+            "patient": "Kofi M.",
+            "age": "40",
+            "village": "Nalu",
+            "complaint": "cut on hand from farming, infected",
+            "notes": "wound cleaned, dressed, tetanus given",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0045",
+            "date": "5-Jun",
+            "patient": "Grace A.",
+            "age": "15",
+            "village": "Tamu",
+            "complaint": "painful menstruation",
+            "notes": "dysmenorrhea. pain meds given",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0046",
+            "date": "5 Jun",
+            "patient": "infant (Kwabena)",
+            "age": "4 mo",
+            "village": "Kabwe",
+            "complaint": "immunization visit",
+            "notes": "vaccines given. growing well.",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0048",
+            "date": "6-Jun",
+            "patient": "Akosua B.",
+            "age": "22",
+            "village": "Nalu",
+            "complaint": "vomiting, diarrhea since yesterday",
+            "notes": "gastroenteritis. ORS, observe",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0049",
+            "date": "6-Jun",
+            "patient": "Kwame O.",
+            "age": "55",
+            "village": "Tamu",
+            "complaint": "high BP at community screening",
+            "notes": "BP 160/95. started on meds. f/u 2 weeks",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0050",
+            "date": "6-Jun",
+            "patient": "child (Ama)",
+            "age": "2 yrs",
+            "village": "Kabwe",
+            "complaint": "not eating, mild fever, irritable",
+            "notes": "teething? no serious illness. reassured mother",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0051",
+            "date": "6/6",
+            "patient": "Joseph K.",
+            "age": "38",
+            "village": "Nalu",
+            "complaint": "back pain x1 month",
+            "notes": "muscle strain from farming. rest + pain meds",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0053",
+            "date": "7-Jun",
+            "patient": "Afia S.",
+            "age": "12",
+            "village": "Tamu",
+            "complaint": "fever, joint pains, headache",
+            "notes": "malaria RDT neg. ? viral illness. observe",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0054",
+            "date": "7-Jun",
+            "patient": "Nana A.",
+            "age": "65",
+            "village": "Kabwe",
+            "complaint": "blurry vision, eye pain",
+            "notes": "? cataracts. referred to eye clinic",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0055",
+            "date": "7-Jun",
+            "patient": "Charity M.",
+            "age": "29",
+            "village": "Nalu",
+            "complaint": "breast lump, worried",
+            "notes": "small mobile lump. referred for mammo",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0056",
+            "date": "7 Jun",
+            "patient": "boy (Yaw)",
+            "age": "10",
+            "village": "Kabwe",
+            "complaint": "fell from tree, arm pain",
+            "notes": "? fracture. splinted, sent to hosp for xray",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0057",
+            "date": "7-Jun",
+            "patient": "Esi K.",
+            "age": "8",
+            "village": "Tamu",
+            "complaint": "fever, vomiting, abdominal pain",
+            "notes": "? acute abdomen. referred to hospital",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0059",
+            "date": "8-Jun",
+            "patient": "adult male",
+            "age": "~30",
+            "village": "Nalu",
+            "complaint": "productive cough, night sweats",
+            "notes": "TB suspect. sputum collected",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0060",
+            "date": "8-Jun",
+            "patient": "Abena K.",
+            "age": "48",
+            "village": "Kabwe",
+            "complaint": "fatigue, weight loss, thirst",
+            "notes": "? diabetes. referred for glucose test",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0061",
+            "date": "8 Jun",
+            "patient": "infant girl",
+            "age": "6 mo",
+            "village": "Tamu",
+            "complaint": "rash on face and body",
+            "notes": "eczema. gave moisturizer advice",
+            "is_aes": False
+        },
+        {
+            "record_id": "NHC-0062",
+            "date": "8-Jun",
+            "patient": "Kwesi A.",
+            "age": "44",
+            "village": "Nalu",
+            "complaint": "epigastric pain after eating",
+            "notes": "? peptic ulcer. gave antacids. diet advice",
+            "is_aes": False
+        },
+    ]
+    
+    # Combine and shuffle
+    all_records = true_aes_cases + non_aes_cases
+    random.shuffle(all_records)
+    
+    return all_records
+
+
+def render_clinic_record(record: dict, show_checkbox: bool = True) -> bool:
+    """
+    Render a single clinic record in a handwritten style.
+    Returns True if selected as potential case.
+    """
+    # Simulate messy handwriting with varied formatting
+    style = """
+    <div style="
+        background: #fffef0;
+        border: 1px solid #d4c99e;
+        border-radius: 2px;
+        padding: 12px;
+        margin: 8px 0;
+        font-family: 'Comic Sans MS', 'Segoe Script', cursive;
+        font-size: 14px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        transform: rotate({rotation}deg);
+    ">
+        <div style="color: #666; font-size: 11px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 8px;">
+            <strong>{record_id}</strong> &nbsp;|&nbsp; {date}
+        </div>
+        <div><strong>Pt:</strong> {patient} &nbsp; <strong>Age:</strong> {age}</div>
+        <div><strong>Village:</strong> {village}</div>
+        <div style="margin-top: 6px;"><strong>Complaint:</strong> {complaint}</div>
+        <div style="margin-top: 6px; color: #555; font-style: italic;">Notes: {notes}</div>
+    </div>
+    """
+    
+    import random
+    rotation = random.uniform(-0.5, 0.5)
+    
+    html = style.format(
+        rotation=rotation,
+        record_id=record.get("record_id", "???"),
+        date=record.get("date", "???"),
+        patient=record.get("patient", "???"),
+        age=record.get("age", "?"),
+        village=record.get("village", "?"),
+        complaint=record.get("complaint", ""),
+        notes=record.get("notes", "")
+    )
+    
+    st.markdown(html, unsafe_allow_html=True)
+    
+    if show_checkbox:
+        return st.checkbox(
+            f"Add to line list", 
+            key=f"select_{record['record_id']}",
+            value=record['record_id'] in st.session_state.get('selected_clinic_cases', [])
+        )
+    return False
+
+
+# =========================
 # VISUALS: MAP, LINE LIST, EPI CURVE
 # =========================
 
@@ -677,9 +1106,9 @@ def sidebar_navigation():
 
     st.sidebar.markdown("---")
 
-    # Navigation with spot map added
-    labels = ["Overview / Briefing", "Interviews", "Spot Map", "Data & Study Design", "Lab & Environment", "Interventions & Outcome"]
-    internal = ["overview", "interviews", "spotmap", "study", "lab", "outcome"]
+    # Navigation - day-appropriate options
+    labels = ["Overview / Briefing", "Case Finding", "Descriptive Epi", "Interviews", "Spot Map", "Data & Study Design", "Lab & Environment", "Interventions & Outcome"]
+    internal = ["overview", "casefinding", "descriptive", "interviews", "spotmap", "study", "lab", "outcome"]
     
     if st.session_state.current_view in internal:
         current_idx = internal.index(st.session_state.current_view)
@@ -776,7 +1205,9 @@ def day_task_list(day: int):
     """Show tasks and whether they are completed."""
     st.markdown("### Key tasks for today")
     if day == 1:
-        st.checkbox("Review line list and epi curve", value=st.session_state.line_list_viewed, disabled=True)
+        st.checkbox("Review initial cases", value=st.session_state.line_list_viewed, disabled=True)
+        st.checkbox("Review clinic records for additional cases", value=st.session_state.clinic_records_reviewed, disabled=True)
+        st.checkbox("Perform descriptive epidemiology", value=st.session_state.descriptive_epi_viewed, disabled=True)
         st.checkbox("Write a working case definition", value=st.session_state.case_definition_written, disabled=True)
         st.checkbox("Document initial hypotheses", value=st.session_state.hypotheses_documented, disabled=True)
         st.checkbox("Complete at least 2 interviews", value=len(st.session_state.interview_history) >= 2, disabled=True)
@@ -1006,6 +1437,346 @@ def view_interviews():
             if unlock_notification:
                 st.success(unlock_notification)
                 st.rerun()
+
+
+def view_case_finding():
+    """View for reviewing clinic records and finding additional cases."""
+    st.header("🔍 Case Finding - Clinic Records Review")
+    
+    st.markdown("""
+    You've obtained permission to review records from the **Nalu Health Center**.
+    Look through these handwritten clinic notes to identify potential AES cases 
+    that may not have been reported to the district hospital.
+    
+    **Your task:** Review each record and select any that might be related to the outbreak.
+    Consider: fever, neurological symptoms (confusion, seizures, altered consciousness), 
+    and geographic/temporal clustering.
+    """)
+    
+    st.info("💡 Tip: Not every fever is AES. Look for the combination of fever AND neurological symptoms.")
+    
+    # Generate clinic records
+    if 'clinic_records' not in st.session_state:
+        st.session_state.clinic_records = generate_clinic_records()
+    
+    records = st.session_state.clinic_records
+    
+    # Show records in columns
+    st.markdown("---")
+    st.markdown("### 📋 Nalu Health Center - Patient Register (June 2025)")
+    
+    col1, col2 = st.columns(2)
+    
+    selected = []
+    for i, record in enumerate(records):
+        with col1 if i % 2 == 0 else col2:
+            render_clinic_record(record, show_checkbox=False)
+            is_selected = st.checkbox(
+                f"Potential AES case",
+                key=f"clinic_select_{record['record_id']}",
+                value=record['record_id'] in st.session_state.selected_clinic_cases
+            )
+            if is_selected:
+                selected.append(record['record_id'])
+    
+    st.markdown("---")
+    
+    # Summary and submission
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown(f"**Selected records:** {len(selected)}")
+        if selected:
+            st.caption(", ".join(selected))
+    
+    with col2:
+        if st.button("Submit Case Finding", type="primary"):
+            st.session_state.selected_clinic_cases = selected
+            st.session_state.clinic_records_reviewed = True
+            
+            # Calculate score
+            true_positives = sum(1 for rid in selected 
+                               for r in records if r['record_id'] == rid and r.get('is_aes'))
+            false_positives = len(selected) - true_positives
+            
+            # Count total true AES cases
+            total_aes = sum(1 for r in records if r.get('is_aes'))
+            false_negatives = total_aes - true_positives
+            
+            st.session_state.case_finding_score = {
+                'true_positives': true_positives,
+                'false_positives': false_positives,
+                'false_negatives': false_negatives,
+                'total_aes': total_aes,
+                'selected': len(selected)
+            }
+            
+            st.success(f"✅ Case finding complete! You identified {true_positives} of {total_aes} potential AES cases.")
+            
+            if false_positives > 0:
+                st.warning(f"⚠️ {false_positives} record(s) you selected may not be AES cases.")
+            if false_negatives > 0:
+                st.info(f"📝 {false_negatives} potential AES case(s) were missed. Review records with fever + neurological symptoms.")
+            
+            st.rerun()
+    
+    # Show previous score if available
+    if st.session_state.case_finding_score:
+        score = st.session_state.case_finding_score
+        with st.expander("📊 Your Case Finding Results"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("True Positives", score['true_positives'])
+            with col2:
+                st.metric("False Positives", score['false_positives'])
+            with col3:
+                st.metric("Missed Cases", score['false_negatives'])
+            
+            sensitivity = score['true_positives'] / score['total_aes'] * 100 if score['total_aes'] > 0 else 0
+            st.progress(sensitivity / 100)
+            st.caption(f"Sensitivity: {sensitivity:.0f}% ({score['true_positives']}/{score['total_aes']} AES cases identified)")
+
+
+def view_descriptive_epi():
+    """View for descriptive epidemiology analysis."""
+    st.header("📈 Descriptive Epidemiology")
+    
+    st.session_state.descriptive_epi_viewed = True
+    
+    truth = st.session_state.truth
+    individuals = truth["individuals"]
+    households = truth["households"]
+    villages = truth["villages"]
+    
+    # Get all symptomatic cases
+    cases = individuals[individuals["symptomatic_AES"] == True].copy()
+    
+    # Merge with location info
+    hh_vil = households.merge(villages[["village_id", "village_name"]], on="village_id", how="left")
+    cases = cases.merge(hh_vil[["hh_id", "village_name", "village_id"]], on="hh_id", how="left")
+    
+    st.markdown("""
+    Descriptive epidemiology summarizes the outbreak by **Person**, **Place**, and **Time**.
+    This helps characterize who is affected and generate hypotheses about the cause.
+    """)
+    
+    st.markdown("---")
+    
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Cases", len(cases))
+    with col2:
+        deaths = len(cases[cases['outcome'] == 'died'])
+        cfr = deaths / len(cases) * 100 if len(cases) > 0 else 0
+        st.metric("Deaths", deaths, f"CFR: {cfr:.1f}%")
+    with col3:
+        median_age = cases['age'].median()
+        st.metric("Median Age", f"{median_age:.0f} years")
+    with col4:
+        date_range = f"{cases['onset_date'].min()} to {cases['onset_date'].max()}"
+        st.metric("Date Range", date_range)
+    
+    st.markdown("---")
+    
+    # Three columns for Person, Place, Time
+    tab1, tab2, tab3 = st.tabs(["👤 Person", "📍 Place", "📅 Time"])
+    
+    with tab1:
+        st.markdown("### Person Characteristics")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Age Distribution")
+            
+            # Age histogram
+            fig = go.Figure()
+            fig.add_trace(go.Histogram(
+                x=cases['age'],
+                nbinsx=15,
+                marker_color='#3498db'
+            ))
+            fig.update_layout(
+                xaxis_title="Age (years)",
+                yaxis_title="Number of cases",
+                height=300,
+                margin=dict(l=10, r=10, t=10, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Age group table
+            bins = [0, 4, 9, 14, 19, 49, 100]
+            labels = ['0-4', '5-9', '10-14', '15-19', '20-49', '50+']
+            cases['age_group'] = pd.cut(cases['age'], bins=bins, labels=labels, right=True)
+            age_table = cases['age_group'].value_counts().sort_index()
+            
+            st.markdown("**Cases by Age Group:**")
+            age_df = pd.DataFrame({
+                'Age Group': age_table.index,
+                'Cases': age_table.values,
+                '%': (age_table.values / len(cases) * 100).round(1)
+            })
+            st.dataframe(age_df, hide_index=True)
+        
+        with col2:
+            st.markdown("#### Sex Distribution")
+            
+            sex_counts = cases['sex'].value_counts()
+            
+            fig = go.Figure(data=[go.Pie(
+                labels=sex_counts.index,
+                values=sex_counts.values,
+                marker_colors=['#3498db', '#e74c3c']
+            )])
+            fig.update_layout(height=250, margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("**Cases by Sex:**")
+            for sex, count in sex_counts.items():
+                pct = count / len(cases) * 100
+                st.markdown(f"- {sex}: {count} ({pct:.1f}%)")
+            
+            st.markdown("#### Outcomes")
+            outcome_counts = cases['outcome'].value_counts()
+            for outcome, count in outcome_counts.items():
+                pct = count / len(cases) * 100
+                st.markdown(f"- {outcome}: {count} ({pct:.1f}%)")
+    
+    with tab2:
+        st.markdown("### Place - Geographic Distribution")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Cases by Village")
+            
+            village_counts = cases['village_name'].value_counts()
+            
+            fig = go.Figure(data=[go.Bar(
+                x=village_counts.index,
+                y=village_counts.values,
+                marker_color=['#e74c3c', '#f39c12', '#27ae60'][:len(village_counts)]
+            )])
+            fig.update_layout(
+                xaxis_title="Village",
+                yaxis_title="Number of cases",
+                height=300,
+                margin=dict(l=10, r=10, t=10, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown("#### Attack Rates by Village")
+            
+            # Calculate attack rates
+            village_pop = villages.set_index('village_name')['population_size'].to_dict()
+            
+            attack_rates = []
+            for village in village_counts.index:
+                pop = village_pop.get(village, 500)
+                cases_n = village_counts[village]
+                ar = cases_n / pop * 1000
+                attack_rates.append({
+                    'Village': village,
+                    'Cases': cases_n,
+                    'Population': pop,
+                    'Attack Rate (per 1000)': round(ar, 1)
+                })
+            
+            ar_df = pd.DataFrame(attack_rates)
+            st.dataframe(ar_df, hide_index=True)
+            
+            st.markdown("#### Village Characteristics")
+            st.dataframe(
+                villages[['village_name', 'has_rice_paddies', 'pig_density', 'JE_vacc_coverage']],
+                hide_index=True
+            )
+    
+    with tab3:
+        st.markdown("### Time - Epidemic Curve")
+        
+        # Epi curve
+        if 'onset_date' in cases.columns:
+            counts = cases.groupby('onset_date').size().reset_index(name='cases')
+            counts = counts.sort_values('onset_date')
+            
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=counts['onset_date'],
+                y=counts['cases'],
+                marker_color='#e74c3c'
+            ))
+            fig.update_layout(
+                xaxis_title="Onset Date",
+                yaxis_title="Number of Cases",
+                height=350,
+                margin=dict(l=10, r=10, t=10, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Temporal Summary:**")
+                st.markdown(f"- First case onset: {cases['onset_date'].min()}")
+                st.markdown(f"- Last case onset: {cases['onset_date'].max()}")
+                st.markdown(f"- Peak date: {counts.loc[counts['cases'].idxmax(), 'onset_date']}")
+            
+            with col2:
+                st.markdown("**Epi Curve Interpretation:**")
+                st.markdown("""
+                - **Point source:** Sharp rise and fall
+                - **Propagated:** Multiple peaks
+                - **Continuous:** Plateau pattern
+                """)
+        
+        # Cases by village over time
+        st.markdown("#### Cases by Village Over Time")
+        if 'onset_date' in cases.columns:
+            pivot = cases.groupby(['onset_date', 'village_name']).size().unstack(fill_value=0)
+            
+            fig = go.Figure()
+            colors = {'Nalu Village': '#e74c3c', 'Kabwe Village': '#f39c12', 'Tamu Village': '#27ae60'}
+            for col in pivot.columns:
+                fig.add_trace(go.Bar(
+                    x=pivot.index,
+                    y=pivot[col],
+                    name=col,
+                    marker_color=colors.get(col, '#3498db')
+                ))
+            
+            fig.update_layout(
+                barmode='stack',
+                xaxis_title="Onset Date",
+                yaxis_title="Number of Cases",
+                height=300,
+                margin=dict(l=10, r=10, t=10, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Interpretation prompts
+    with st.expander("🤔 Descriptive Epi Interpretation Questions"):
+        st.markdown("""
+        **Person:**
+        - What age groups are most affected? What does this suggest?
+        - Is there a sex difference? If so, what might explain it?
+        
+        **Place:**
+        - Which villages have the highest attack rates?
+        - What do the affected villages have in common?
+        - What might explain the geographic pattern?
+        
+        **Time:**
+        - What type of epidemic curve does this look like?
+        - What does the timing suggest about the incubation period?
+        - Is the outbreak ongoing or resolving?
+        
+        **Synthesis:**
+        - Based on person, place, and time, what hypotheses can you generate?
+        - What additional information would help narrow down the cause?
+        """)
 
 
 def view_study_design():
@@ -1272,6 +2043,10 @@ def main():
     view = st.session_state.current_view
     if view == "overview":
         view_overview()
+    elif view == "casefinding":
+        view_case_finding()
+    elif view == "descriptive":
+        view_descriptive_epi()
     elif view == "interviews":
         view_interviews()
     elif view == "spotmap":
