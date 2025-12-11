@@ -1,0 +1,11 @@
+hh_id,village_id,pigs_owned,pig_pen_distance_m,uses_mosquito_nets,rice_field_distance_m,children_under_15,JE_vaccination_children
+HH001,V1,8,15,FALSE,40,3,none
+HH002,V1,2,30,FALSE,60,2,low
+HH003,V1,0,,TRUE,120,1,medium
+HH004,V1,5,10,FALSE,50,4,none
+HH005,V1,3,25,TRUE,80,2,low
+HH101,V2,3,25,TRUE,90,2,low
+HH102,V2,0,,TRUE,200,1,medium
+HH103,V2,1,40,TRUE,110,2,medium
+HH201,V3,0,,TRUE,400,2,high
+HH202,V3,0,,TRUE,350,1,high

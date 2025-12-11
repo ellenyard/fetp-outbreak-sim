@@ -1,0 +1,4 @@
+village_id,village_name,has_rice_paddies,pig_density,distance_to_wetland_km,JE_vacc_coverage,population_size,net_use_rate,notes
+V1,Nalu Village,TRUE,High,0.4,0.22,480,0.30,Paddies expanded 2 months ago; pig co-op near school
+V2,Kabwe Village,TRUE,Moderate,1.2,0.40,510,0.50,Scattered pig farms; intermittent irrigation
+V3,Tamu Village,FALSE,Low,2.5,0.55,390,0.70,Dryland farming; seasonal mosquito pools

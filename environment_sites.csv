@@ -1,0 +1,6 @@
+site_id,site_type,village_id,breeding_index,culex_present,JEV_positive,description,photo_key
+ES01,rice_paddy,V1,high,TRUE,TRUE,Flooded rice paddies 200m from school. Expanded 2 months ago.,rice_paddy
+ES02,pig_cooperative,V1,high,TRUE,TRUE,New pig cooperative with 80+ pigs. Built near residential area.,pig_cooperative
+ES03,irrigation_canal,V2,medium,TRUE,TRUE,Irrigation canal system with stagnant water sections.,mosquito_breeding
+ES04,seasonal_pool,V3,low,TRUE,FALSE,Seasonal rain pools. Currently small.,mosquito_breeding
+ES05,wetland,V1,high,TRUE,TRUE,Natural wetland area. Traditional fishing spot.,wetland

@@ -1,0 +1,11 @@
+sample_id,sample_type,linked_person_id,linked_village_id,true_JEV_positive,notes
+L001,human_CSF,P0001,V1,TRUE,Child case severe - Ama
+L002,human_serum,P0002,V1,TRUE,Child case mild - Kofi
+L003,human_serum,P1001,V2,TRUE,Child case severe - Esi
+L004,human_CSF,P0101,V1,TRUE,Child case mild - Baby Kwesi
+L005,human_CSF,P2001,V3,FALSE,Febrile illness not JE
+L101,pig_serum,,V1,TRUE,Pig cooperative sample
+L102,pig_serum,,V2,TRUE,Scattered farm sample
+L201,mosquito_pool,,V1,TRUE,Rice paddy collection
+L202,mosquito_pool,,V2,TRUE,Canal collection
+L203,mosquito_pool,,V3,FALSE,Seasonal pool - negative
