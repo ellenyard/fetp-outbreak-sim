@@ -38,13 +38,24 @@ def init_session_state():
         # CSV/JSON files are in the repo root right now
         st.session_state.truth = load_truth_and_population(data_dir=".")
 
+    # Alert page logic (Day 0)
+    st.session_state.setdefault("alert_acknowledged", False)
+
     if "current_day" not in st.session_state:
-        # 1–5
+        # 1–5 for the investigation days
         st.session_state.current_day = 1
 
     if "current_view" not in st.session_state:
-        # Start on the briefing/overview page
-        st.session_state.current_view = "overview"
+        # Start on alert screen until acknowledged
+        st.session_state.current_view = "alert"
+
+    # If alert is not acknowledged, force the view to "alert"
+    if not st.session_state.alert_acknowledged:
+        st.session_state.current_view = "alert"
+    else:
+        # If alert already acknowledged but view is still "alert", move to overview
+        if st.session_state.current_view == "alert":
+            st.session_state.current_view = "overview"
 
     # Resources
     st.session_state.setdefault("budget", 1000)
@@ -204,7 +215,7 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
 
 
 def get_npc_response(npc_key: str, user_input: str) -> str:
-    """Call Anthropic using npc_truth + epidemiologic context."""
+    """Call Anthropic using npc_truth + epidemiologic context, with more natural tone."""
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         return "⚠️ Anthropic API key missing."
@@ -223,10 +234,11 @@ You are {npc_truth['name']}, the {npc_truth['role']} in Sidero Valley.
 Personality:
 {npc_truth['personality']}
 
-Outbreak context (for your awareness):
+Outbreak context (for your awareness only; do NOT recite this as a block of text):
 {epi_context}
 
-ALWAYS REVEAL (inevitably come up over the conversation):
+ALWAYS REVEAL:
+These ideas should naturally come up over the course of conversation, not all at once:
 {npc_truth['always_reveal']}
 
 CONDITIONAL CLUES:
@@ -235,18 +247,25 @@ Conditional clues (keyword: clue):
 {npc_truth['conditional_clues']}
 
 RED HERRINGS:
-You may mention these occasionally but do NOT contradict the core truth:
+You may mention these occasionally, but do NOT contradict the core truth:
 {npc_truth['red_herrings']}
 
 UNKNOWN:
 If the user asks about these topics, say you do not know:
 {npc_truth['unknowns']}
 
-RULES:
-- Answer in 2–4 sentences.
-- Stay in character as a real person from the district.
+CONVERSATION STYLE:
+- Speak naturally and informally, like a real person from this district.
+- Use contractions (I'm, it's, there's, don't).
+- Vary sentence length; avoid sounding like a formal report.
+- You can hesitate briefly (e.g., 'Hmm, let me think...') or show emotion (concern, frustration, worry) if it fits your personality.
+- You can add a short aside about what you're doing (e.g., sorting charts, walking across the yard).
+- Do NOT list clues as bullet points; blend them into your sentences like normal speech.
+- Stay in character and keep your answers to 2–5 sentences.
+
+INFORMATION RULES:
 - Do not invent new case counts, lab results, or locations beyond what is implied above.
-- If unsure, say you are not sure.
+- If you are unsure about something, say you are not sure rather than making it up.
 """
 
     # Decide which conditional clues are allowed in this answer
@@ -260,7 +279,7 @@ RULES:
     conditional_text = ""
     if conditional_to_use:
         conditional_text = (
-            "\n\nYou may reveal these NEW specific clues in this answer:\n"
+            "\n\nIn this answer, try to work in these NEW ideas naturally if they fit the question:\n"
             + "\n".join(f"- {c}" for c in conditional_to_use)
         )
 
@@ -272,7 +291,7 @@ RULES:
 
     resp = client.messages.create(
         model="claude-3-haiku-20240307",
-        max_tokens=300,
+        max_tokens=350,
         system=system_prompt + conditional_text,
         messages=msgs,
     )
@@ -345,7 +364,9 @@ def get_initial_cases(truth: dict, n: int = 12) -> pd.DataFrame:
     cases = merged[merged["symptomatic_AES"] == True].copy()
     if "onset_date" in cases.columns:
         cases = cases.sort_values("onset_date")
-    return cases.head(n)[["person_id", "age", "sex", "village_name", "onset_date", "severe_neuro", "outcome"]]
+    return cases.head(n)[
+        ["person_id", "age", "sex", "village_name", "onset_date", "severe_neuro", "outcome"]
+    ]
 
 
 def make_epi_curve(truth: dict) -> go.Figure:
@@ -383,6 +404,13 @@ def make_epi_curve(truth: dict) -> go.Figure:
 
 def sidebar_navigation():
     st.sidebar.title("Sidero Valley JE Simulation")
+
+    if not st.session_state.alert_acknowledged:
+        # Before the alert is acknowledged, keep sidebar simple
+        st.sidebar.markdown("**Status:** Awaiting outbreak alert acknowledgment.")
+        st.sidebar.info("Review the alert on the main screen to begin the investigation.")
+        return
+
     st.sidebar.markdown(
         f"**Day:** {st.session_state.current_day} / 5\n\n"
         f"**Budget:** ${st.session_state.budget}\n"
@@ -473,6 +501,40 @@ def day_task_list(day: int):
 
     if st.session_state.advance_missing_tasks:
         st.warning("To advance to the next day, you still need to:\n- " + "\n- ".join(st.session_state.advance_missing_tasks))
+
+
+# =========================
+# VIEWS
+# =========================
+
+def view_alert():
+    """Day 0: Alert call intro screen."""
+    st.title("📞 Outbreak Alert – Sidero Valley")
+
+    st.markdown(
+        """
+You are on duty at the District Health Office when a call comes in from the regional hospital.
+
+> **\"We’ve admitted several children with sudden fever, seizures, and confusion.  
+> Most are from the rice-growing villages in Sidero Valley. We’re worried this might be the start of something bigger.\"**
+
+Within the last 48 hours:
+- Multiple children with acute encephalitis syndrome (AES) have been hospitalized  
+- Most are from Nalu and Kabwe villages  
+- No obvious foodborne event or large gathering has been identified  
+
+Your team has been asked to investigate, using a One Health approach.
+"""
+    )
+
+    st.info(
+        "When you’re ready, begin the investigation. You’ll move through the steps of an outbreak investigation over five simulated days."
+    )
+
+    if st.button("Begin investigation"):
+        st.session_state.alert_acknowledged = True
+        st.session_state.current_day = 1
+        st.session_state.current_view = "overview"
 
 
 def view_overview():
@@ -588,7 +650,8 @@ def view_study_design():
     if st.button("Save Questionnaire"):
         lines = [ln for ln in q_text.splitlines() if ln.strip()]
         st.session_state.decisions["questionnaire_raw"] = lines
-        st.session_state.decisions["mapped_columns"] = lines  # je_logic maps keywords → real cols
+        # je_logic will map these strings → specific columns using keyword rules
+        st.session_state.decisions["mapped_columns"] = lines
         st.session_state.questionnaire_submitted = True
         st.success("Questionnaire saved.")
 
@@ -703,6 +766,11 @@ def main():
     )
     init_session_state()
     sidebar_navigation()
+
+    # If alert hasn't been acknowledged yet, always show alert screen
+    if not st.session_state.alert_acknowledged:
+        view_alert()
+        return
 
     view = st.session_state.current_view
     if view == "overview":
