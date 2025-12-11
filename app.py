@@ -83,6 +83,15 @@ def init_session_state():
     st.session_state.setdefault("current_npc", None)
     st.session_state.setdefault("unlock_flags", {})
 
+    # NEW: NPC emotional state & memory summary (per NPC)
+    # structure: npc_state[npc_key] = {
+    #   "emotion": "neutral" | "cooperative" | "wary" | "annoyed" | "offended",
+    #   "interaction_count": int,
+    #   "rude_count": int,
+    #   "polite_count": int,
+    # }
+    st.session_state.setdefault("npc_state", {})
+
     # Flags used for day progression
     st.session_state.setdefault("case_definition_written", False)
     st.session_state.setdefault("questionnaire_submitted", False)
@@ -214,8 +223,146 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     return epi_context
 
 
+def analyze_user_tone(user_input: str) -> str:
+    """
+    Very simple tone detector: 'polite', 'rude', or 'neutral'.
+    Used to update emotional state.
+    """
+    text = user_input.lower()
+
+    polite_words = ["please", "thank you", "thanks", "appreciate", "grateful"]
+    rude_words = [
+        "stupid", "idiot", "useless", "incompetent", "what's wrong with you",
+        "you people", "this is your fault", "do your job", "now!", "right now"
+    ]
+
+    if any(w in text for w in rude_words):
+        return "rude"
+    if any(w in text for w in polite_words):
+        return "polite"
+    # Very shouty messages
+    if text.isupper() and len(text) > 5:
+        return "rude"
+    return "neutral"
+
+
+def update_npc_emotion(npc_key: str, user_tone: str):
+    """
+    Update the NPC's emotional state based on user tone.
+    Emotional state persists across the whole exercise,
+    shifts gradually, and can recover over time.
+    """
+    state = st.session_state.npc_state.setdefault(
+        npc_key,
+        {
+            "emotion": "neutral",
+            "interaction_count": 0,
+            "rude_count": 0,
+            "polite_count": 0,
+        },
+    )
+
+    state["interaction_count"] += 1
+
+    emotion_order = ["cooperative", "neutral", "wary", "annoyed", "offended"]
+
+    def move_emotion(current, direction):
+        idx = emotion_order.index(current)
+        if direction == "up":  # more positive
+            idx = max(0, idx - 1)
+        elif direction == "down":  # more negative
+            idx = min(len(emotion_order) - 1, idx + 1)
+        return emotion_order[idx]
+
+    if user_tone == "polite":
+        state["polite_count"] += 1
+        # Move one step more positive, and recover a bit if they were annoyed
+        state["emotion"] = move_emotion(state["emotion"], "up")
+
+    elif user_tone == "rude":
+        state["rude_count"] += 1
+        # Move one step more negative
+        state["emotion"] = move_emotion(state["emotion"], "down")
+
+    else:
+        # Over time, neutral tone can slowly nudge annoyed back toward wary/neutral
+        if state["emotion"] in ["annoyed", "offended"] and state["interaction_count"] % 3 == 0:
+            state["emotion"] = move_emotion(state["emotion"], "up")
+
+    st.session_state.npc_state[npc_key] = state
+    return state
+
+
+def describe_emotional_state(state: dict) -> str:
+    """
+    Turn emotion + history into a short description for the system prompt.
+    This is what the LLM sees about how they feel toward the trainee.
+    """
+    emotion = state["emotion"]
+    rude = state["rude_count"]
+    polite = state["polite_count"]
+
+    base = ""
+    if emotion == "cooperative":
+        base = "You currently feel friendly and cooperative toward the investigation team."
+    elif emotion == "neutral":
+        base = "You feel neutral toward the investigation team."
+    elif emotion == "wary":
+        base = "You feel cautious and slightly guarded. You will answer but watch your words."
+    elif emotion == "annoyed":
+        base = (
+            "You feel irritated and impatient with the team. "
+            "You give shorter answers and avoid volunteering extra information unless they ask clearly."
+        )
+    else:  # offended
+        base = (
+            "You feel offended by how the team has treated you. "
+            "You answer briefly and share only what seems necessary for public health."
+        )
+
+    if rude >= 2 and emotion in ["annoyed", "offended"]:
+        base += " You remember previous rude or disrespectful questions."
+
+    if polite >= 2 and emotion in ["neutral", "wary"]:
+        base += " They've also been respectful at times, which softens you a little."
+
+    return base
+
+
+def classify_question_scope(user_input: str) -> str:
+    """
+    Rough categorization of the question:
+    - 'greeting' : just hello / pleasantries
+    - 'broad'    : 'tell me everything', 'what do you know', etc.
+    - 'narrow'   : specific question
+    """
+    text = user_input.strip().lower()
+    # Greeting only
+    if any(text == g for g in ["hi", "hello", "good morning", "good afternoon", "good evening"]):
+        return "greeting"
+    if text in ["hi dr chen", "hello dr chen", "hi doctor", "hello doctor"]:
+        return "greeting"
+
+    # broad prompts
+    broad_phrases = [
+        "tell me everything",
+        "tell me what you know",
+        "what do you know",
+        "explain the situation",
+        "give me an overview",
+        "what's going on",
+        "what is happening",
+        "what is going on"
+    ]
+    if any(p in text for p in broad_phrases):
+        return "broad"
+
+    # default
+    return "narrow"
+
+
 def get_npc_response(npc_key: str, user_input: str) -> str:
-    """Call Anthropic using npc_truth + epidemiologic context, with more natural tone."""
+    """Call Anthropic using npc_truth + epidemiologic context, with memory & emotional state."""
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         return "⚠️ Anthropic API key missing."
@@ -223,76 +370,105 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
     truth = st.session_state.truth
     npc_truth = truth["npc_truth"][npc_key]
 
+    # Determine question scope & user tone
+    question_scope = classify_question_scope(user_input)
+    user_tone = analyze_user_tone(user_input)
+    npc_state = update_npc_emotion(npc_key, user_tone)
+    emotional_description = describe_emotional_state(npc_state)
+
     epi_context = build_npc_data_context(npc_key, truth)
 
     if npc_key not in st.session_state.revealed_clues:
         st.session_state.revealed_clues[npc_key] = []
 
+    # Conversation history = memory; we pass it in messages
+    history = st.session_state.interview_history.get(npc_key, [])
+
+    # Build system prompt
     system_prompt = f"""
 You are {npc_truth['name']}, the {npc_truth['role']} in Sidero Valley.
 
 Personality:
 {npc_truth['personality']}
 
-Outbreak context (for your awareness only; do NOT recite this as a block of text):
+Your current emotional state toward the investigation team:
+{emotional_description}
+
+Outbreak context (for your awareness; DO NOT recite this unless directly asked about those details):
 {epi_context}
 
-ALWAYS REVEAL:
-These ideas should naturally come up over the course of conversation, not all at once:
+CONVERSATION BEHAVIOR:
+- Speak like a real person from this district: natural, informal, sometimes imperfect.
+- Vary sentence length and structure; avoid sounding scripted or overly polished.
+- You remember what has already been discussed in this conversation.
+- You may briefly refer back to earlier questions ("Like I mentioned before...") instead of repeating everything.
+- If the user is polite and respectful, you tend to be warmer and more open.
+- If the user is rude or demanding, you become more guarded and give shorter, cooler answers.
+- If the user seems confused, you can slow down and clarify.
+- You may occasionally repeat yourself or wander slightly off-topic, then pull yourself back.
+- You never dump all your knowledge at once unless the user clearly asks something like "tell me everything you know."
+
+QUESTION SCOPE:
+- If the user just greets you, respond with a normal greeting and ask how you can help. Do NOT share outbreak facts yet.
+- If the user asks a narrow question, answer in 1–3 sentences.
+- If the user asks a broad question like "what do you know" or "tell me everything," you may answer in more detail (up to about 5–7 sentences) and provide a thoughtful overview.
+
+ALWAYS REVEAL (gradually, not all at once):
 {npc_truth['always_reveal']}
 
 CONDITIONAL CLUES:
-Reveal a conditional clue ONLY when the user's question clearly relates to its keyword.
-Conditional clues (keyword: clue):
+- Reveal a conditional clue ONLY when the user's question clearly relates to that topic.
+- Work clues into natural speech; do NOT list them as bullet points.
 {npc_truth['conditional_clues']}
 
 RED HERRINGS:
-You may mention these occasionally, but do NOT contradict the core truth:
+- You may mention these occasionally, but do NOT contradict the core truth:
 {npc_truth['red_herrings']}
 
 UNKNOWN:
-If the user asks about these topics, say you do not know:
+- If the user asks about these topics, you must say you do not know:
 {npc_truth['unknowns']}
 
-CONVERSATION STYLE:
-- Speak naturally and informally, like a real person from this district.
-- Use contractions (I'm, it's, there's, don't).
-- Vary sentence length; avoid sounding like a formal report.
-- You can hesitate briefly (e.g., 'Hmm, let me think...') or show emotion (concern, frustration, worry) if it fits your personality.
-- You can add a short aside about what you're doing (e.g., sorting charts, walking across the yard).
-- Do NOT list clues as bullet points; blend them into your sentences like normal speech.
-- Stay in character and keep your answers to 2–5 sentences.
-
 INFORMATION RULES:
-- Do not invent new case counts, lab results, or locations beyond what is implied above.
-- If you are unsure about something, say you are not sure rather than making it up.
+- Never invent new outbreak details (case counts, test results, locations) beyond what is implied in the context.
+- If you are unsure, say you are not certain.
 """
 
     # Decide which conditional clues are allowed in this answer
     lower_q = user_input.lower()
     conditional_to_use = []
     for keyword, clue in npc_truth.get("conditional_clues", {}).items():
-        if keyword.lower() in lower_q and clue not in st.session_state.revealed_clues[npc_key]:
+        # Require keyword substring AND a question mark for a clearer "ask"
+        if keyword.lower() in lower_q and "?" in lower_q and clue not in st.session_state.revealed_clues[npc_key]:
             conditional_to_use.append(clue)
             st.session_state.revealed_clues[npc_key].append(clue)
 
-    conditional_text = ""
+    # For broad questions, we allow more clues to be used in a single answer
+    # For narrow ones, just a few
+    if question_scope == "broad":
+        # already permissive above; nothing extra needed
+        pass
+    else:
+        # For narrow questions, keep at most 1 new conditional clue
+        if len(conditional_to_use) > 1:
+            conditional_to_use = conditional_to_use[:1]
+
     if conditional_to_use:
-        conditional_text = (
-            "\n\nIn this answer, try to work in these NEW ideas naturally if they fit the question:\n"
+        system_prompt += (
+            "\n\nThe user has just asked about topics that connect to some NEW ideas you can reveal. "
+            "Work the following ideas naturally into your answer if they fit the question:\n"
             + "\n".join(f"- {c}" for c in conditional_to_use)
         )
 
     client = anthropic.Anthropic(api_key=api_key)
 
-    history = st.session_state.interview_history.get(npc_key, [])
     msgs = [{"role": m["role"], "content": m["content"]} for m in history]
     msgs.append({"role": "user", "content": user_input})
 
     resp = client.messages.create(
         model="claude-3-haiku-20240307",
-        max_tokens=350,
-        system=system_prompt + conditional_text,
+        max_tokens=400,
+        system=system_prompt,
         messages=msgs,
     )
 
@@ -515,8 +691,8 @@ def view_alert():
         """
 You are on duty at the District Health Office when a call comes in from the regional hospital.
 
-> **\"We’ve admitted several children with sudden fever, seizures, and confusion.  
-> Most are from the rice-growing villages in Sidero Valley. We’re worried this might be the start of something bigger.\"**
+> **"We’ve admitted several children with sudden fever, seizures, and confusion.  
+> Most are from the rice-growing villages in Sidero Valley. We’re worried this might be the start of something bigger."**
 
 Within the last 48 hours:
 - Multiple children with acute encephalitis syndrome (AES) have been hospitalized  
