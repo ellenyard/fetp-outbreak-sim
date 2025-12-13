@@ -14,6 +14,7 @@ try:
         process_lab_order,
         evaluate_interventions,
         check_day_prerequisites,
+        get_day_spec,
         parse_xlsform,
         llm_map_xlsform_questions,
         llm_build_select_one_choice_maps,
@@ -29,6 +30,7 @@ except Exception:
         process_lab_order,
         evaluate_interventions,
         check_day_prerequisites,
+        get_day_spec,
     )
     parse_xlsform = None
     llm_map_xlsform_questions = None
@@ -429,14 +431,20 @@ def init_session_state():
             "study_design": None,
             "mapped_columns": [],
             "sample_size": {"cases": 15, "controls_per_case": 2},
-            "lab_orders": [],
+
+            # Day 2–5 artifacts
             "questionnaire_raw": [],
-            "questionnaire_file": None,  # For uploaded XLS
+            "questionnaire_file": None,  # Uploaded XLSForm
+            "analysis_summary": "",
+            "draft_interventions": [],
+
+            # Final briefing
             "final_diagnosis": "",
             "recommendations": [],
         }
 
     st.session_state.setdefault("generated_dataset", None)
+    st.session_state.setdefault("dataset_generated", False)
     st.session_state.setdefault("lab_results", [])
     st.session_state.setdefault("lab_samples_submitted", [])
     st.session_state.setdefault("interview_history", {})
@@ -487,10 +495,50 @@ def init_session_state():
     # Descriptive epidemiology
     st.session_state.setdefault("descriptive_epi_viewed", False)
 
+    # Phase 2: decisions as first-class objects (audit trail)
+    st.session_state.setdefault("decision_log", [])
+
+    # Lab pipeline: store orders (pending/final) separate from rendered table
+    st.session_state.setdefault("lab_orders", [])
+
+    # Environmental actions / findings (site inspections, vector checks)
+    st.session_state.setdefault("environment_findings", [])
+
+    # Day 3 analysis confirmation (analysis happens outside the sim)
+    st.session_state.setdefault("analysis_confirmed", False)
+
 
 # =========================
 # UTILITY FUNCTIONS
 # =========================
+
+
+def log_decision(decision_type: str, details: dict = None):
+    """Append a structured decision event for later 'because X → Y' explanation."""
+    try:
+        from datetime import datetime
+        ev = {
+            "ts": datetime.utcnow().isoformat() + "Z",
+            "day": int(st.session_state.get("current_day", 1)),
+            "type": str(decision_type),
+            "details": details or {},
+        }
+        st.session_state.decision_log.append(ev)
+    except Exception:
+        # Never crash the sim for logging
+        return
+
+
+def refresh_lab_orders_for_current_day():
+    """Reveal lab results whose ready_day has arrived; keep others pending."""
+    cur = int(st.session_state.get("current_day", 1))
+    orders = st.session_state.get("lab_orders", []) or []
+    for o in orders:
+        try:
+            if str(o.get("result")) == "PENDING" and int(o.get("ready_day", 99)) <= cur:
+                o["result"] = o.get("final_result_hidden", "INCONCLUSIVE")
+        except Exception:
+            continue
 
 def build_epidemiologic_context(truth: dict) -> str:
     """Short summary of the outbreak from truth tables."""
@@ -1797,6 +1845,8 @@ def day_task_list(day: int):
             st.checkbox("Clean dataset", value=dataset_done, disabled=True)
             
             st.checkbox("Preliminary descriptive stats", value=st.session_state.descriptive_analysis_done, disabled=True)
+            
+            st.checkbox("Analysis confirmed (outside simulation)", value=st.session_state.analysis_confirmed, disabled=True)
         elif day == 4:
             st.checkbox("Analytical results (OR, 95% CI)", value=False, disabled=True)
             
@@ -1857,6 +1907,33 @@ def view_overview():
 
     day_task_list(st.session_state.current_day)
 
+    # Phase 1: show the 'pedagogical contract' for the day
+    spec = get_day_spec(st.session_state.current_day) or {}
+    with st.expander("📄 Day contract (required outputs, optional actions, and 'good enough')", expanded=False):
+        colA, colB = st.columns(2)
+        with colA:
+            st.markdown("**Required outputs**")
+            for it in (spec.get("required_outputs") or []):
+                st.markdown(f"- {it}")
+            st.markdown("")
+            st.markdown("**Optional actions**")
+            for it in (spec.get("optional_actions") or []):
+                st.markdown(f"- {it}")
+        with colB:
+            st.markdown("**What 'good enough' looks like**")
+            for it in (spec.get("good_enough") or []):
+                st.markdown(f"- {it}")
+            st.markdown("")
+            st.markdown("**If missing**")
+            for it in (spec.get("if_missing") or []):
+                st.markdown(f"- {it}")
+
+    # If user tried to advance and was blocked, show missing tasks here (not just sidebar)
+    if st.session_state.advance_missing_tasks:
+        st.warning("Missing tasks before you can advance:")
+        for m in st.session_state.advance_missing_tasks:
+            st.write(f"- {m}")
+
     st.markdown("---")
     st.markdown("### Situation overview")
 
@@ -1876,6 +1953,25 @@ def view_overview():
     st.markdown("### Map of Sidero Valley")
     map_fig = make_village_map(truth)
     st.plotly_chart(map_fig, use_container_width=True)
+
+
+    # Day 3: analysis happens outside the sim; confirm + summarize here
+    if st.session_state.current_day == 3:
+        st.markdown("---")
+        st.markdown("### 📊 Day 3: Confirm your analysis")
+        st.caption("Complete your analysis outside this simulation (e.g., in Excel/R/Stata) and summarize your key results here.")
+        with st.form("analysis_confirm_form"):
+            summary = st.text_area("Key results summary (2–6 bullets or short sentences)", value=st.session_state.decisions.get("analysis_summary", ""), height=140)
+            confirmed = st.checkbox("I completed analysis (outside the simulation) and the summary above reflects my main findings", value=st.session_state.analysis_confirmed)
+            if st.form_submit_button("Save analysis summary"):
+                st.session_state.decisions["analysis_summary"] = summary
+                st.session_state.analysis_confirmed = bool(confirmed)
+                if confirmed:
+                    log_decision("analysis_confirmed", {"chars": len(summary or "")})
+                    st.success("Saved. You can advance when ready.")
+                else:
+                    st.info("Saved as draft. Check the confirmation box when you are ready to advance.")
+                st.rerun()
     
     # Day 1: Case Definition and Initial Hypotheses
     if st.session_state.current_day == 1:
@@ -1903,6 +1999,7 @@ def view_overview():
                     st.session_state.decisions["case_definition_text"] = full_def
                     st.session_state.decisions["case_definition"] = {"clinical_AES": True}
                     st.session_state.case_definition_written = True
+                    log_decision("case_definition_saved", {"length": len(full_def)})
                     st.success("✅ Case definition saved!")
             
             if st.session_state.case_definition_written:
@@ -1923,6 +2020,7 @@ def view_overview():
                     if len(hypotheses) >= 1:
                         st.session_state.initial_hypotheses = hypotheses
                         st.session_state.hypotheses_documented = True
+                        log_decision("hypotheses_documented", {"n": len(hypotheses)})
                         st.success(f"✅ {len(hypotheses)} hypothesis(es) saved!")
                     else:
                         st.error("Please enter at least one hypothesis.")
@@ -2519,132 +2617,13 @@ def view_study_design():
         st.success("Case definition saved.")
 
     # Study design
-        st.markdown("### Step 2: Study Design")
-        sd_type = st.radio("Choose a study design:", ["Case-control", "Retrospective cohort"])
+    st.markdown("### Step 2: Study Design")
+    sd_type = st.radio("Choose a study design:", ["Case-control", "Retrospective cohort"])
+    if sd_type == "Case-control":
+        st.session_state.decisions["study_design"] = {"type": "case_control"}
+    else:
+        st.session_state.decisions["study_design"] = {"type": "cohort"}
 
-        truth = st.session_state.get("truth", {}) or {}
-        villages_df = truth.get("villages", None)
-        village_options = []
-        if villages_df is not None and hasattr(villages_df, "__len__") and len(villages_df) > 0:
-            village_options = villages_df["village_id"].astype(str).tolist()
-
-        if sd_type == "Case-control":
-            # Save study design
-            st.session_state.decisions["study_design"] = {"type": "case_control"}
-
-            with st.expander("Step 2b: Sampling plan (case-control)", expanded=True):
-                col1, col2 = st.columns(2)
-                with col1:
-                    n_cases = st.number_input("Target number of cases to enroll", min_value=5, max_value=200, value=int(st.session_state.decisions.get("sample_size", {}).get("cases", 15)), step=1)
-                with col2:
-                    controls_per_case = st.number_input("Controls per case", min_value=1, max_value=5, value=int(st.session_state.decisions.get("sample_size", {}).get("controls_per_case", 2)), step=1)
-
-                col3, col4 = st.columns(2)
-                with col3:
-                    case_source = st.selectbox(
-                        "Case source",
-                        ["Hospital line list (passive surveillance)", "Active case finding (community)"],
-                        index=0 if (st.session_state.decisions.get("sampling_plan", {}).get("case_source", "hospital") in {"hospital", "hospital_line_list", "passive"}) else 1,
-                    )
-                with col4:
-                    case_sampling = st.selectbox(
-                        "Case sampling approach",
-                        ["Simple random sample", "Consecutive recent cases", "Enroll all eligible (census)"],
-                        index=0,
-                    )
-
-                col5, col6 = st.columns(2)
-                with col5:
-                    control_source = st.selectbox(
-                        "Control source",
-                        ["Community controls", "Neighborhood controls (near cases)", "Hospital controls"],
-                        index=0,
-                    )
-                with col6:
-                    matching_type = st.selectbox(
-                        "Matching approach",
-                        ["Individual matching", "Frequency matching (age x village)"],
-                        index=0,
-                    )
-
-                st.markdown("**Matching variables**")
-                mcol1, mcol2, mcol3 = st.columns(3)
-                with mcol1:
-                    match_village = st.checkbox("Match on village", value=True)
-                with mcol2:
-                    match_age_group = st.checkbox("Match on age group", value=True)
-                with mcol3:
-                    match_sex = st.checkbox("Match on sex", value=False)
-
-                st.markdown("**Eligibility / exclusions**")
-                ecol1, ecol2, ecol3 = st.columns(3)
-                with ecol1:
-                    eligible_villages = st.multiselect(
-                        "Eligible villages for controls (leave blank = same villages as cases)",
-                        options=village_options,
-                        default=list(st.session_state.decisions.get("sampling_plan", {}).get("eligible_villages", [])),
-                    )
-                with ecol2:
-                    include_symptomatic_noncase = st.checkbox("Allow symptomatic non-cases as controls", value=bool(st.session_state.decisions.get("sampling_plan", {}).get("include_symptomatic_noncase", False)))
-                with ecol3:
-                    control_age_mode = st.selectbox("Control age range", ["Same as cases (default)", "Specify range"], index=0)
-
-                control_age_range = None
-                if control_age_mode == "Specify range":
-                    a1, a2 = st.columns(2)
-                    with a1:
-                        c_age_min = st.number_input("Control minimum age", min_value=0, max_value=100, value=0, step=1)
-                    with a2:
-                        c_age_max = st.number_input("Control maximum age", min_value=0, max_value=100, value=60, step=1)
-                    control_age_range = {"min": int(c_age_min), "max": int(c_age_max)}
-
-                # Persist decisions used by dataset generation
-                st.session_state.decisions["sample_size"] = {"cases": int(n_cases), "controls_per_case": int(controls_per_case)}
-                st.session_state.decisions["study_design"] = {"type": "case_control", "controls_per_case": int(controls_per_case)}
-
-                st.session_state.decisions["sampling_plan"] = {
-                    "case_source": "hospital" if "Hospital" in case_source else "active_case_finding",
-                    "case_sampling": "simple_random" if "Simple random" in case_sampling else ("consecutive_recent" if "Consecutive" in case_sampling else "all_eligible"),
-                    "control_source": "community" if "Community" in control_source else ("neighborhood" if "Neighborhood" in control_source else "hospital"),
-                    "matching_type": "individual" if "Individual" in matching_type else "frequency",
-                    "matching": {
-                        "match_village": bool(match_village),
-                        "match_age_group": bool(match_age_group),
-                        "match_sex": bool(match_sex),
-                    },
-                    "eligible_villages": eligible_villages,
-                    "include_symptomatic_noncase": bool(include_symptomatic_noncase),
-                    "control_age_range": control_age_range,
-                    "controls_per_case": int(controls_per_case),
-                    "n_cases": int(n_cases),
-                }
-
-        else:
-            st.session_state.decisions["study_design"] = {"type": "cohort"}
-
-            with st.expander("Step 2b: Sampling plan (retrospective cohort)", expanded=True):
-                cv1, cv2 = st.columns(2)
-                with cv1:
-                    cohort_villages = st.multiselect(
-                        "Cohort villages",
-                        options=village_options,
-                        default=st.session_state.decisions.get("cohort_plan", {}).get("villages", ["V1", "V2"]) if village_options else ["V1", "V2"],
-                    )
-                with cv2:
-                    age_max = st.number_input("Include people age ≤", min_value=1, max_value=80, value=int(st.session_state.decisions.get("cohort_plan", {}).get("age_max", 15)), step=1)
-
-                sampling_mode = st.selectbox("Cohort enrollment", ["Enroll all eligible (census)", "Random sample"], index=0)
-                total_n = None
-                if sampling_mode == "Random sample":
-                    total_n = st.number_input("Target cohort size", min_value=25, max_value=1500, value=int(st.session_state.decisions.get("cohort_plan", {}).get("total", 250)), step=25)
-
-                st.session_state.decisions["cohort_plan"] = {
-                    "villages": cohort_villages,
-                    "age_max": int(age_max),
-                    "sampling": "random" if sampling_mode == "Random sample" else "census",
-                    "total": int(total_n) if total_n else None,
-                    "source": "village_cohort",
-                }
     # Questionnaire
     st.markdown("### Step 3: Questionnaire")
 st.caption("Build your questionnaire in Kobo (or any XLSForm editor), then upload the XLSForm (.xlsx) here. Trainee question names and types will drive the simulated dataset.")
@@ -2695,11 +2674,7 @@ if uploaded is not None:
                     # Store in decisions for dataset generation
                     st.session_state.decisions["questionnaire_xlsform"] = questionnaire
                     st.session_state.questionnaire_submitted = True
-
-                    # Questionnaire is not constrained by interview "unlocks" in this version.
-
-                    st.session_state.decisions.pop("unlocked_domains", None)
-
+                    log_decision("questionnaire_submitted", {"n_questions": int(len(questionnaire.get('questions', []))) if isinstance(questionnaire, dict) else None})
                     st.success("Questionnaire uploaded, mapped, and saved. Your dataset will now be generated using your XLSForm question names and types.")
                 except Exception as e:
                     st.error(f"Failed to map/save questionnaire: {e}")
@@ -2732,106 +2707,186 @@ if isinstance(saved_q, dict) and saved_q.get("questions"):
         )
         st.session_state.generated_dataset = df
         st.session_state.descriptive_analysis_done = True  # simple proxy
+        st.session_state.dataset_generated = True
+        log_decision("dataset_generated", {"n_rows": int(len(df)), "n_cols": int(df.shape[1])})
         st.success("Dataset generated. Preview below; export for analysis as needed.")
         st.dataframe(df.head())
 
 
+
 def view_lab_and_environment():
-    st.header("🧪 Lab & Environment")
-    
-    # Resource display
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("💰 Budget", f"${st.session_state.budget}")
-    with col2:
-        st.metric("⏱️ Time Remaining", f"{st.session_state.time_remaining}h")
-    with col3:
-        st.metric("🧪 Lab Credits", st.session_state.lab_credits)
-
-    st.markdown("""
-    Collect and submit samples for laboratory testing. Each sample type has different 
-    time and budget costs for collection.
-    """)
-    
-    # Sample costs table
-    with st.expander("📋 Sample Collection Costs"):
-        cost_data = {
-            "Sample Type": ["Human CSF", "Human Serum", "Pig Serum", "Mosquito Pool"],
-            "Time (hours)": [1.0, 0.5, 1.0, 1.5],
-            "Budget ($)": [25, 25, 35, 40],
-            "Lab Credits": [3, 2, 2, 3]
-        }
-        st.dataframe(pd.DataFrame(cost_data), hide_index=True)
-
+    """Laboratory orders + environmental actions with turnaround time realism (Phase 4)."""
     truth = st.session_state.truth
-    villages = truth["villages"]
 
-    st.markdown("### Submit New Sample")
-    
+    st.header("🔬 Lab & Environment")
+    st.caption("Order tests and document environmental findings. Some results will be delayed or inconclusive—plan ahead.")
+
+    st.info(f"Current day: **Day {st.session_state.current_day}**. Lab turnaround is modeled in simulated days (place orders early if you want results back before Day 5).")
+
+    # -------------------------
+    # LAB ORDERS
+    # -------------------------
+    st.markdown("### Lab orders")
+
+    # Keep a small cost table in the UI so we can validate credits before placing
+    ui_costs = {
+        "JE_IgM_CSF": 2,
+        "JE_IgM_serum": 1,
+        "JE_PCR_CSF": 3,
+        "JE_PCR_mosquito": 2,
+        "JE_Ab_pig": 1,  # alias → pig IgG
+        "bacterial_culture": 1,
+        "water_quality": 1,
+    }
+
+    villages_df = truth.get("villages")
+    if villages_df is None or len(villages_df) == 0:
+        st.error("Villages table not found in truth data.")
+        return
+
+    village_options = {row["village_name"]: row["village_id"] for _, row in villages_df.iterrows()}
+
     col1, col2, col3 = st.columns(3)
     with col1:
         sample_type = st.selectbox(
             "Sample type",
-            ["human_CSF", "human_serum", "pig_serum", "mosquito_pool"],
+            ["human_CSF", "human_serum", "mosquito_pool", "pig_serum", "water"],
+            help="Choose what you are sending to the lab.",
         )
     with col2:
-        village_id = st.selectbox(
-            "Village",
-            villages["village_id"],
-            format_func=lambda vid: villages.set_index("village_id").loc[vid, "village_name"],
-        )
+        village_name = st.selectbox("Linked village", list(village_options.keys()))
+        village_id = village_options[village_name]
     with col3:
         test = st.selectbox(
             "Test",
-            ["JE_IgM_CSF", "JE_IgM_serum", "JE_PCR_mosquito", "JE_Ab_pig"],
+            list(ui_costs.keys()),
+            help="Some tests have longer turnaround times; consider ordering early.",
         )
 
-    source_description = st.text_input("Source description (e.g., 'Case from Nalu')", "")
-    
-    # Calculate costs based on sample type
-    sample_costs = {
-        "human_CSF": {"time": 1.0, "budget": 25, "credits": 3},
-        "human_serum": {"time": 0.5, "budget": 25, "credits": 2},
-        "pig_serum": {"time": 1.0, "budget": 35, "credits": 2},
-        "mosquito_pool": {"time": 1.5, "budget": 40, "credits": 3},
-    }
-    
-    costs = sample_costs.get(sample_type, {"time": 1.0, "budget": 25, "credits": 2})
-    
-    st.caption(f"This sample will cost: ⏱️ {costs['time']}h | 💰 ${costs['budget']} | 🧪 {costs['credits']} credits")
+    source_description = st.text_input("Source description (what/where/when was collected?)", value="")
 
-    if st.button("Submit lab order"):
-        # Check resources
-        can_proceed, msg = check_resources(costs['time'], costs['budget'])
-        if not can_proceed:
-            st.error(msg)
-        elif st.session_state.lab_credits < costs['credits']:
-            st.error(f"Not enough lab credits (need {costs['credits']}, have {st.session_state.lab_credits})")
+    est_cost = ui_costs.get(test, 1)
+    st.caption(f"Estimated lab credits: {est_cost}. Remaining credits: {st.session_state.lab_credits}")
+
+    if st.button("Submit lab order", use_container_width=True):
+        if st.session_state.lab_credits < est_cost:
+            st.error("Not enough lab credits for that test. Choose a lower-cost option or reduce orders.")
+        elif st.session_state.time_remaining <= 0:
+            st.error("No time remaining today. Advance the day or reprioritize.")
         else:
-            # Deduct resources
-            spend_time(costs['time'], f"Sample collection: {sample_type}")
-            spend_budget(costs['budget'], f"Sample collection: {sample_type}")
-            st.session_state.lab_credits -= costs['credits']
-            
+            # Backlog model: more than 3 orders in a day adds delay
+            today_orders = [o for o in (st.session_state.lab_orders or []) if int(o.get("placed_day", 0) or 0) == int(st.session_state.current_day)]
+            queue_delay = max(0, len(today_orders) - 2)  # 0 delay for first 3; +1 for 4th, etc.
+
             order = {
                 "sample_type": sample_type,
                 "village_id": village_id,
                 "test": test,
                 "source_description": source_description or "Unspecified source",
+                "placed_day": int(st.session_state.current_day),
+                "queue_delay_days": int(queue_delay),
             }
-            result = process_lab_order(order, truth["lab_samples"])
-            st.session_state.lab_results.append(result)
+
+            result_record = process_lab_order(order, truth.get("lab_samples"), random_seed=np.random.randint(1, 10_000_000))
+
+            # Deduct resources
+            st.session_state.lab_credits -= int(result_record.get("cost", est_cost) or est_cost)
+            st.session_state.time_remaining = max(0, float(st.session_state.time_remaining) - 0.5)
+
+            st.session_state.lab_orders.append(result_record)
             st.session_state.lab_samples_submitted.append(order)
-            
+
+            log_decision("lab_order_placed", {
+                "sample_type": sample_type,
+                "village_id": village_id,
+                "test": test,
+                "ready_day": int(result_record.get("ready_day", 99)),
+                "queue_delay_days": int(queue_delay),
+            })
+
             st.success(
-                f"Lab order submitted. Result: {result['result']} "
-                f"(turnaround {result['days_to_result']} days)."
+                f"Lab order submitted. Turnaround: {result_record.get('days_to_result')} day(s). "
+                f"Expected ready: Day {result_record.get('ready_day')}."
             )
             st.rerun()
 
-    if st.session_state.lab_results:
-        st.markdown("### Lab results so far")
-        st.dataframe(pd.DataFrame(st.session_state.lab_results))
+    # Display orders (pending vs final)
+    if st.session_state.lab_orders:
+        cur_day = int(st.session_state.current_day)
+        orders_df = pd.DataFrame(st.session_state.lab_orders)
+
+        # ensure key cols exist
+        for c in ["placed_day", "ready_day", "result", "sample_type", "village_id", "test"]:
+            if c not in orders_df.columns:
+                orders_df[c] = None
+
+        pending = orders_df[orders_df["result"].astype(str) == "PENDING"].copy()
+        final = orders_df[orders_df["result"].astype(str) != "PENDING"].copy()
+
+        st.markdown("#### Orders (pending)")
+        if len(pending) == 0:
+            st.caption("No pending orders.")
+        else:
+            st.dataframe(pending[["sample_id", "sample_type", "village_id", "test", "placed_day", "ready_day", "result"]])
+
+        st.markdown("#### Results returned")
+        if len(final) == 0:
+            st.caption("No results returned yet.")
+        else:
+            st.dataframe(final[["sample_id", "sample_type", "village_id", "test", "placed_day", "ready_day", "result"]])
+
+    # -------------------------
+    # ENVIRONMENTAL ACTIONS
+    # -------------------------
+    st.markdown("---")
+    st.markdown("### Environmental actions")
+
+    env_sites = truth.get("environment_sites")
+    if env_sites is None:
+        # try to load from repo root (for local runs)
+        try:
+            env_sites = pd.read_csv("environment_sites.csv")
+        except Exception:
+            env_sites = None
+
+    if env_sites is None or len(env_sites) == 0:
+        st.warning("No environment_sites table found. (Upload or ensure environment_sites.csv is present.)")
+        return
+
+    site_options = {f"{r['site_id']} ({r['site_type']} – {r['village_id']})": r['site_id'] for _, r in env_sites.iterrows()}
+    site_label = st.selectbox("Choose a site to inspect", list(site_options.keys()))
+    site_id = site_options[site_label]
+
+    note = st.text_input("Field note (optional)", value="")
+
+    if st.button("Record site inspection", use_container_width=True):
+        if st.session_state.time_remaining < 1:
+            st.error("Not enough time remaining today for a site visit (requires ~1 hour).")
+        else:
+            row = env_sites[env_sites["site_id"] == site_id].iloc[0].to_dict()
+
+            finding = {
+                "day": int(st.session_state.current_day),
+                "site_id": row.get("site_id"),
+                "site_type": row.get("site_type"),
+                "village_id": row.get("village_id"),
+                "breeding_index": row.get("breeding_index"),
+                "culex_present": bool(row.get("culex_present")),
+                "description": row.get("description"),
+                "note": note.strip(),
+            }
+            st.session_state.environment_findings.append(finding)
+            st.session_state.time_remaining = max(0, float(st.session_state.time_remaining) - 1.0)
+            st.session_state.budget = max(0, float(st.session_state.budget) - 50)
+
+            log_decision("environment_inspection", {k: finding[k] for k in ["site_id", "site_type", "village_id", "breeding_index", "culex_present"]})
+
+            st.success("Environmental inspection recorded.")
+            st.rerun()
+
+    if st.session_state.environment_findings:
+        st.markdown("#### Findings recorded so far")
+        st.dataframe(pd.DataFrame(st.session_state.environment_findings))
 
 
 def view_village_profiles():
@@ -3329,37 +3384,82 @@ def view_spot_map():
         """)
 
 
+
 def view_interventions_and_outcome():
     st.header("📉 Interventions & Outcome")
 
-    st.markdown("### Final Diagnosis")
+    # Day 4: draft interventions (required output to advance to Day 5)
+    if st.session_state.current_day == 4:
+        st.subheader("Day 4: Draft your intervention ideas (pre-brief)")
+        st.caption("Draft ideas now; you’ll finalize and brief the MOH Director on Day 5.")
+
+        draft_text = st.text_area(
+            "Draft interventions (one per line)",
+            value="\n".join(st.session_state.decisions.get("draft_interventions", []) or []),
+            height=160,
+        )
+        if st.button("Save draft interventions"):
+            st.session_state.decisions["draft_interventions"] = [ln.strip() for ln in draft_text.splitlines() if ln.strip()]
+            log_decision("draft_interventions_saved", {"n": len(st.session_state.decisions["draft_interventions"])})
+            st.success("Saved.")
+            st.rerun()
+
+        if st.session_state.decisions.get("analysis_summary"):
+            with st.expander("Your Day 3 analysis summary (for reference)"):
+                st.write(st.session_state.decisions.get("analysis_summary"))
+
+        st.info("When ready, advance to Day 5 to finalize the diagnosis and submit recommendations.")
+
+        return
+
+    # Day 5: final briefing
+    if st.session_state.current_day < 5:
+        st.info("This section is for Day 4–5. Use earlier tabs to complete the day’s required outputs.")
+        return
+
+    st.subheader("Day 5: Final briefing to the MOH Director")
+
     dx = st.text_input(
-        "What is your final diagnosis?",
+        "Final diagnosis",
         value=st.session_state.decisions.get("final_diagnosis", ""),
+        help="State your best final diagnosis based on epi + lab + environment + One Health information.",
     )
     st.session_state.decisions["final_diagnosis"] = dx
 
-    st.markdown("### Recommendations")
     rec_text = st.text_area(
-        "List your main recommendations:",
-        value="\n".join(st.session_state.decisions.get("recommendations", [])),
-        height=160,
+        "Recommendations (one per line)",
+        value="\n".join(st.session_state.decisions.get("recommendations", []) or []),
+        height=180,
+        help="Focus on feasible interventions aligned with transmission (vector/pigs/vaccination/risk communication/surveillance).",
     )
-    st.session_state.decisions["recommendations"] = [
-        ln for ln in rec_text.splitlines() if ln.strip()
-    ]
+    st.session_state.decisions["recommendations"] = [ln.strip() for ln in rec_text.splitlines() if ln.strip()]
 
-    if st.button("Evaluate Outcome"):
-        outcome = evaluate_interventions(
-            st.session_state.decisions, st.session_state.interview_history
-        )
+    if st.button("Submit briefing and evaluate outcome", use_container_width=True):
+        log_decision("recommendations_submitted", {"n": len(st.session_state.decisions.get("recommendations", []))})
+        if dx.strip():
+            log_decision("final_diagnosis_set", {"dx": dx.strip()})
+
+        decisions_plus = dict(st.session_state.decisions)
+        decisions_plus["_decision_log"] = st.session_state.decision_log
+        decisions_plus["_lab_orders"] = st.session_state.lab_orders
+        decisions_plus["_environment_findings"] = st.session_state.environment_findings
+
+        outcome = evaluate_interventions(decisions_plus, st.session_state.interview_history)
+
         st.subheader(f"Outcome: {outcome['status']}")
         st.markdown(outcome["narrative"])
+
         st.markdown("### Factors considered")
-        for line in outcome["outcomes"]:
+        for line in outcome.get("outcomes", []):
             st.write(line)
-        st.write(f"Score: {outcome['score']}")
-        st.write(f"Estimated additional cases: {outcome['new_cases']}")
+
+        colA, colB, colC = st.columns(3)
+        with colA:
+            st.metric("Score", outcome.get("score", 0))
+        with colB:
+            st.metric("Max score", outcome.get("max_score", 100))
+        with colC:
+            st.metric("Projected additional cases", outcome.get("new_cases", 0))
 
 
 # =========================
@@ -3374,6 +3474,7 @@ def main():
         initial_sidebar_state="expanded",
     )
     init_session_state()
+    refresh_lab_orders_for_current_day()
     sidebar_navigation()
 
     # If alert hasn't been acknowledged yet, always show alert screen
