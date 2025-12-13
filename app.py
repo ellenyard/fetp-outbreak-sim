@@ -6,8 +6,15 @@ import plotly.graph_objects as go
 import plotly.express as px
 import io
 
+# --- Minimal session-state bootstrap (prevents first-load AttributeErrors) ---
+st.session_state.setdefault('decisions', {})
+st.session_state.setdefault('decision_log', [])
+st.session_state.setdefault('day', 1)
+st.session_state.setdefault('language', 'en')
+
+
 try:
-    from je_logic_updated import (
+    from je_logic import (
         load_truth_data,
         generate_full_population,
         generate_study_dataset,
@@ -2651,7 +2658,7 @@ st.caption("Build your questionnaire in Kobo (or any XLSForm editor), then uploa
 uploaded = st.file_uploader("Upload XLSForm (.xlsx)", type=["xlsx"], key="xlsform_upload")
 
 if parse_xlsform is None:
-    st.warning("XLSForm support is not available (missing je_logic_updated). Using legacy questionnaire mode.")
+    st.warning("XLSForm support is not available (missing XLSForm functions in je_logic). Using legacy questionnaire mode.")
     uploaded = None
 
 if uploaded is not None:
