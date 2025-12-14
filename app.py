@@ -12,8 +12,11 @@ try:
 except Exception as e:
     st.error(
         "Failed to import je_logic.py. "
-        "This usually means the file is missing from the repo, not committed/pushed, "
-        "or it has an import/syntax error.
+        msg = (
+    "This usually means the file is missing from the repo, not committed/pushed, "
+    "or it has an import/syntax error."
+)
+
 
 "
         f"Error: {e!r}"
