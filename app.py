@@ -424,8 +424,8 @@ def load_truth_and_population(data_dir: str = ".", _version: int = 3):
 
 def init_session_state():
     if "truth" not in st.session_state:
-        # CSV/JSON files are in the repo root right now
-        st.session_state.truth = load_truth_and_population(data_dir=".")
+        # CSV/JSON files are in the 'data' subdirectory
+        st.session_state.truth = load_truth_and_population(data_dir="data")
 
     # Alert page logic (Day 0)
     st.session_state.setdefault("alert_acknowledged", False)

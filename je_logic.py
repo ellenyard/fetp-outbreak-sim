@@ -87,8 +87,28 @@ def load_truth_data(data_dir: str = "data"):
     """
     Load all truth tables from CSV/JSON files.
     Returns a dictionary of DataFrames and the NPC truth dict.
+    
+    Args:
+        data_dir: Directory containing CSV/JSON files. Default is "data" subdirectory.
     """
     data_path = Path(data_dir)
+    
+    required_files = [
+        "villages.csv",
+        "households_seed.csv",
+        "individuals_seed.csv",
+        "lab_samples.csv",
+        "environment_sites.csv",
+        "npc_truth.json"
+    ]
+    
+    # Check all files exist before loading
+    missing = [f for f in required_files if not (data_path / f).exists()]
+    if missing:
+        raise FileNotFoundError(
+            f"Missing required data files in '{data_path.absolute()}': {missing}\n"
+            f"Make sure these files are in your repository's 'data' folder."
+        )
     
     truth = {
         'villages': pd.read_csv(data_path / "villages.csv"),
