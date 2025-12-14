@@ -12,13 +12,8 @@ try:
 except Exception as e:
     st.error(
         "Failed to import je_logic.py. "
-        msg = (
-    "This usually means the file is missing from the repo, not committed/pushed, "
-    "or it has an import/syntax error."
-)
-
-
-"
+        "This usually means the file is missing from the repo, not committed/pushed, "
+        "or it has an import/syntax error.\n\n"
         f"Error: {e!r}"
     )
     st.stop()
@@ -40,13 +35,9 @@ for _name in [
 
 if _missing_required:
     st.error(
-        "Your je_logic.py is missing required functions expected by app.py:
-"
-        + "
-".join(f"- {_n}" for _n in _missing_required)
-        + "
-
-Fix: make sure you replaced je_logic.py with the updated version and pushed it to Streamlit Cloud."
+        "Your je_logic.py is missing required functions expected by app.py:\n"
+        + "\n".join(f"- {_n}" for _n in _missing_required)
+        + "\n\nFix: make sure you replaced je_logic.py with the updated version and pushed it to Streamlit Cloud."
     )
     st.stop()
 
@@ -412,8 +403,12 @@ in the foothills away from the main rice-growing areas.
 # =========================
 
 @st.cache_data
-def load_truth_and_population(data_dir: str = "."):
-    """Load truth data and generate a full population."""
+def load_truth_and_population(data_dir: str = ".", _version: int = 3):
+    """Load truth data and generate a full population.
+    
+    _version parameter is used to bust the cache when logic changes.
+    Increment when risk model or data generation logic is modified.
+    """
     truth = load_truth_data(data_dir=data_dir)
     villages_df = truth["villages"]
     households_seed = truth["households_seed"]
@@ -1660,6 +1655,8 @@ def make_epi_curve(truth: dict) -> go.Figure:
         go.Bar(
             x=counts["onset_date"],
             y=counts["cases"],
+            marker_color='#e74c3c',
+            width=0.9  # Make bars touch (histogram style)
         )
     )
     fig.update_layout(
@@ -1668,6 +1665,7 @@ def make_epi_curve(truth: dict) -> go.Figure:
         yaxis_title="Number of cases",
         height=300,
         margin=dict(l=10, r=10, t=40, b=10),
+        bargap=0  # No gap between bars (histogram style)
     )
     return fig
 

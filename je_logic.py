@@ -256,12 +256,17 @@ def assign_infections(individuals_df, households_df):
     Assign JE infections based on risk model.
     Preserves seed individual status.
     
-    JE attack rates in outbreaks: typically 1-10 per 10,000 population
-    In high-risk endemic areas: up to 50 per 10,000
-    We target ~15-25 symptomatic cases total for the scenario
+    JE epidemiology:
+    - Only ~1 in 250-1000 infections become symptomatic (encephalitis)
+    - Attack rates in outbreaks: 1-10 per 10,000 population
+    - We have ~5 seed symptomatic cases
+    - Target: ~10-15 additional symptomatic cases (15-20 total)
+    
+    With ~1400 population and ~5% average infection rate, we'd get ~70 infections.
+    We compress the ratio for teaching purposes but keep it realistic.
     """
-    # Base risk by village (reduced for realistic attack rates)
-    base_risk = {'V1': 0.06, 'V2': 0.025, 'V3': 0.005}
+    # Base infection risk by village (very low - most infections are asymptomatic)
+    base_risk = {'V1': 0.025, 'V2': 0.010, 'V3': 0.002}
     
     # Create household lookup
     hh_lookup = households_df.set_index('hh_id').to_dict('index')
@@ -272,35 +277,37 @@ def assign_infections(individuals_df, households_df):
             if len(row['person_id']) <= 5:  # P0001, P1001, etc.
                 return row['true_je_infection']
         
-        risk = base_risk.get(row['village_id'], 0.005)
+        risk = base_risk.get(row['village_id'], 0.002)
         
         hh = hh_lookup.get(row['hh_id'], {})
         if hh:
-            # Risk factors (reduced for realism)
+            # Risk factors (small increments)
             if hh.get('pigs_owned', 0) >= 3:
-                risk += 0.03
-            if pd.notna(hh.get('pig_pen_distance_m')) and hh.get('pig_pen_distance_m', 100) < 20:
-                risk += 0.02
-            if not hh.get('uses_mosquito_nets', True):
-                risk += 0.02
-            if hh.get('rice_field_distance_m', 200) < 100:
                 risk += 0.015
+            if pd.notna(hh.get('pig_pen_distance_m')) and hh.get('pig_pen_distance_m', 100) < 20:
+                risk += 0.010
+            if not hh.get('uses_mosquito_nets', True):
+                risk += 0.010
+            if hh.get('rice_field_distance_m', 200) < 100:
+                risk += 0.008
         
         if row.get('JE_vaccinated', False):
             risk *= 0.15
         
-        return np.random.random() < min(risk, 0.15)
+        return np.random.random() < min(risk, 0.08)
     
     individuals_df['true_je_infection'] = individuals_df.apply(calculate_risk, axis=1)
     
-    # Symptomatic AES
+    # Symptomatic AES - only a fraction of infections become encephalitis
+    # Real rate is ~1/250, but we use higher for teaching purposes
     def assign_symptomatic(row):
         if row['person_id'].startswith('P0') or row['person_id'].startswith('P1') or row['person_id'].startswith('P2'):
             if len(row['person_id']) <= 5:
                 return row['symptomatic_AES']
         if not row['true_je_infection']:
             return False
-        p_symp = 0.15 if row['age'] < 15 else 0.05
+        # Children much more likely to be symptomatic
+        p_symp = 0.08 if row['age'] < 15 else 0.02
         return np.random.random() < p_symp
     
     individuals_df['symptomatic_AES'] = individuals_df.apply(assign_symptomatic, axis=1)
@@ -359,6 +366,42 @@ def assign_infections(individuals_df, households_df):
 # ============================================================================
 # CASE DEFINITION & DATASET GENERATION
 # ============================================================================
+
+def apply_case_definition(individuals_df: pd.DataFrame, case_criteria: dict) -> pd.DataFrame:
+    """
+    Apply case definition criteria to filter individuals.
+    
+    Args:
+        individuals_df: DataFrame with individual records
+        case_criteria: Dictionary with criteria, e.g. {"clinical_AES": True}
+    
+    Returns:
+        DataFrame filtered to individuals meeting case definition
+    """
+    df = individuals_df.copy()
+    
+    # Default: use symptomatic_AES as proxy for clinical AES criteria
+    if case_criteria.get("clinical_AES", False):
+        df = df[df["symptomatic_AES"] == True]
+    
+    # Additional filters can be added based on case_criteria
+    if "village_ids" in case_criteria and case_criteria["village_ids"]:
+        df = df[df["village_id"].isin(case_criteria["village_ids"])]
+    
+    if "min_age" in case_criteria:
+        df = df[df["age"] >= case_criteria["min_age"]]
+    
+    if "max_age" in case_criteria:
+        df = df[df["age"] <= case_criteria["max_age"]]
+    
+    if "onset_after" in case_criteria:
+        df = df[pd.to_datetime(df["onset_date"]) >= pd.to_datetime(case_criteria["onset_after"])]
+    
+    if "onset_before" in case_criteria:
+        df = df[pd.to_datetime(df["onset_date"]) <= pd.to_datetime(case_criteria["onset_before"])]
+    
+    return df
+
 
 # ============================================================================
 # XLSFORM PARSING + MAPPING + RENDERING
