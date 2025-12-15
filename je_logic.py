@@ -2650,37 +2650,37 @@ def check_day_prerequisites(current_day, session_state):
 
     if day == 1:
         if not get_val("case_definition_written", False):
-            missing.append("Save a working case definition (Overview).")
+            missing.append("prereq.day1.case_definition")
         if not get_val("hypotheses_documented", False):
-            missing.append("Document at least one hypothesis (Overview).")
+            missing.append("prereq.day1.hypothesis")
         interview_history = get_val("interview_history", {}) or {}
         if len(interview_history) < 2:
-            missing.append("Complete at least 2 hypothesis-generating interviews (Interviews).")
+            missing.append("prereq.day1.interviews")
 
     elif day == 2:
         if not decisions.get("study_design"):
-            missing.append("Select a study design (Data & Study Design).")
+            missing.append("prereq.day2.study_design")
         if not get_val("questionnaire_submitted", False):
-            missing.append("Upload and save your questionnaire (XLSForm) (Data & Study Design).")
+            missing.append("prereq.day2.questionnaire")
         if get_val("generated_dataset", None) is None:
-            missing.append("Generate your simulated dataset for analysis (Data & Study Design).")
+            missing.append("prereq.day2.dataset")
 
     elif day == 3:
         if not get_val("analysis_confirmed", False):
-            missing.append("Confirm you completed analysis and summarize key results (Overview / Day 3).")
+            missing.append("prereq.day3.analysis")
 
     elif day == 4:
         # Require at least one lab order (can be pending)
         lab_orders = get_val("lab_orders", []) or []
         if len(lab_orders) < 1:
-            missing.append("Place at least one lab order (Lab & Environment).")
+            missing.append("prereq.day4.lab_order")
 
         env_findings = get_val("environment_findings", []) or []
         if len(env_findings) < 1:
-            missing.append("Record at least one environmental action (Lab & Environment).")
+            missing.append("prereq.day4.environment")
 
         draft = decisions.get("draft_interventions") or []
         if not draft:
-            missing.append("Record draft interventions (Outcome tab, draft section).")
+            missing.append("prereq.day4.draft_interventions")
 
     return (len(missing) == 0), missing

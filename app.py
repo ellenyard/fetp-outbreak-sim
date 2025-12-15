@@ -5,6 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 import io
+import re
 
 # Robust import: avoid hard failures from `from je_logic import ...` if the deployed module is stale/mismatched.
 try:
@@ -65,12 +66,35 @@ XLSFORM_AVAILABLE = all([
     callable(prepare_question_render_plan),
 ])
 # =========================
-# TRANSLATION SYSTEM
+# TRANSLATION SYSTEM (i18n)
 # =========================
+#
+# Design goals:
+# - Keep UI and scenario text out of logic as much as possible.
+# - Support multiple languages via JSON locale bundles:
+#     locales/<lang>/ui.json
+#     locales/<lang>/story.json
+# - Provide a safe fallback to minimal in-code English defaults when files are missing.
+#
+# NOTE: This is an incremental migration. Not every string in the app uses `t()` yet.
+#       New/edited UI strings should always use `t()`.
 
-TRANSLATIONS = {
+import json
+from pathlib import Path
+
+DEFAULT_LANG = "en"
+SUPPORTED_LANGS = ["en", "es", "fr", "pt"]
+
+# Minimal fallback strings (UI)
+_FALLBACK_UI = {
     "en": {
         "title": "AES Outbreak Investigation – Sidero Valley",
+        "language_header": "Language",
+        "language_select": "Select language:",
+        "facilitator_header": "Facilitator",
+        "facilitator_mode": "Facilitator mode",
+        "facilitator_code": "Facilitator code",
+        "facilitator_bad_code": "Incorrect facilitator code.",
         "day": "Day",
         "budget": "Budget",
         "time_remaining": "Time remaining",
@@ -89,27 +113,56 @@ TRANSLATIONS = {
         "villages": "Village Profiles",
         "notebook": "Investigation Notebook",
         "advance_day": "Advance to Day",
-        "key_tasks": "Key tasks for today",
-        "key_outputs": "Key outputs for today",
-        "day1_briefing": "Day 1 focuses on understanding the current situation. Review the cases that have been reported, search for additional cases that may have been missed, and characterize the outbreak by person, place, and time. Talk to key informants to generate hypotheses about potential causes. By the end of the day, you should have a working case definition and at least one hypothesis to test.",
-        "day2_briefing": "Day 2 focuses on hypothesis generation and study design. You will design an analytic study and develop a questionnaire to collect data.",
-        "day3_briefing": "Day 3 is dedicated to data collection and cleaning. You will administer your questionnaire and prepare your dataset for analysis.",
-        "day4_briefing": "Day 4 focuses on analysis and laboratory investigations. You will analyze your data and collect samples for testing.",
-        "day5_briefing": "Day 5 focuses on recommendations and communication. You will integrate all evidence and present your findings.",
-        "review_line_list": "Review the line list",
-        "review_clinic_records": "Review clinic records for additional cases",
-        "describe_cases": "Describe the cases (person, place, time)",
-        "conduct_interviews": "Conduct hypothesis-generating interviews",
-        "find_additional_cases": "Find additional cases",
-        "develop_case_def": "Develop working case definition",
-        "develop_hypotheses": "Develop 1 or more hypotheses",
-        "begin_investigation": "Begin investigation",
+        "cannot_advance": "Cannot advance yet. See missing tasks on Overview.",
+        "missing_tasks_title": "Missing tasks before you can advance:",
+        "locked_until_day": "Locked until Day {day}.",
+        "chat_prompt": "Ask your question...",
         "save": "Save",
         "submit": "Submit",
         "download": "Download",
+        "begin_investigation": "Begin investigation",
+
+"day1_briefing": "Day 1: Situation Assessment",
+"day2_briefing": "Day 2: Study Design",
+"day3_briefing": "Day 3: Data Collection",
+"day4_briefing": "Day 4: Analysis & Laboratory",
+"day5_briefing": "Day 5: Recommendations",
+"key_tasks": "Key tasks",
+"key_outputs": "Key outputs",
+"review_line_list": "Review initial line list and epi curve",
+"review_clinic_records": "Search clinic records for additional cases",
+"describe_cases": "Describe cases by person, place, and time",
+"conduct_interviews": "Conduct hypothesis-generating interviews",
+"find_additional_cases": "Expand case finding",
+"develop_case_def": "Refine the case definition",
+"develop_hypotheses": "Document hypotheses and plan next steps",
+"output_updated_line_list": "Updated line list",
+"output_working_case_def": "Working case definition",
+"output_initial_hypotheses": "Initial hypotheses",
+
+"prereq.day1.case_definition": "Save a working case definition (Overview).",
+"prereq.day1.hypothesis": "Document at least one hypothesis (Overview).",
+"prereq.day1.interviews": "Complete at least 2 hypothesis-generating interviews (Interviews).",
+"prereq.day2.study_design": "Select a study design (Data & Study Design).",
+"prereq.day2.questionnaire": "Upload and save your questionnaire (XLSForm) (Data & Study Design).",
+"prereq.day2.dataset": "Generate your simulated dataset for analysis (Data & Study Design).",
+"prereq.day3.analysis": "Confirm you completed analysis and summarize key results (Overview / Day 3).",
+"prereq.day4.lab_order": "Place at least one lab order (Lab & Environment).",
+"prereq.day4.environment": "Record at least one environmental action (Lab & Environment).",
+"prereq.day4.draft_interventions": "Record draft interventions (Outcome tab, draft section).",
+        # Lab labels (anti-spoiler)
+        "lab_test": "Test",
+        "lab_results": "Lab results",
+        "lab_pending": "PENDING",
     },
     "es": {
-        "title": "Investigación de Brote de EJ – Valle de Sidero",
+        "title": "Investigación de Brote de AES – Valle de Sidero",
+        "language_header": "Idioma",
+        "language_select": "Seleccionar idioma:",
+        "facilitator_header": "Facilitador",
+        "facilitator_mode": "Modo facilitador",
+        "facilitator_code": "Código de facilitador",
+        "facilitator_bad_code": "Código incorrecto.",
         "day": "Día",
         "budget": "Presupuesto",
         "time_remaining": "Tiempo restante",
@@ -118,81 +171,155 @@ TRANSLATIONS = {
         "progress": "Progreso",
         "go_to": "Ir a",
         "overview": "Resumen / Briefing",
-        "casefinding": "Búsqueda de Casos",
-        "descriptive": "Epi Descriptiva",
+        "casefinding": "Búsqueda de casos",
+        "descriptive": "Epi descriptiva",
         "interviews": "Entrevistas",
-        "spotmap": "Mapa de Puntos",
-        "study": "Datos y Diseño",
-        "lab": "Lab y Ambiente",
+        "spotmap": "Mapa de puntos",
+        "study": "Datos y diseño",
+        "lab": "Laboratorio y ambiente",
         "outcome": "Intervenciones",
-        "villages": "Perfiles de Aldeas",
-        "notebook": "Cuaderno de Investigación",
-        "advance_day": "Avanzar al Día",
-        "key_tasks": "Tareas clave para hoy",
-        "key_outputs": "Productos clave para hoy",
-        "day1_briefing": "El Día 1 se enfoca en revisar lo que se conoce sobre la situación.",
-        "day2_briefing": "El Día 2 se enfoca en la generación de hipótesis y el diseño del estudio.",
-        "day3_briefing": "El Día 3 está dedicado a la recolección y limpieza de datos.",
-        "day4_briefing": "El Día 4 se enfoca en el análisis y las investigaciones de laboratorio.",
-        "day5_briefing": "El Día 5 se enfoca en recomendaciones y comunicación.",
-        "review_line_list": "Revisar el listado de casos",
-        "review_clinic_records": "Revisar registros clínicos para casos adicionales",
-        "describe_cases": "Describir los casos (persona, lugar, tiempo)",
-        "conduct_interviews": "Realizar entrevistas generadoras de hipótesis",
-        "find_additional_cases": "Encontrar casos adicionales",
-        "develop_case_def": "Desarrollar definición de caso",
-        "develop_hypotheses": "Desarrollar 1 o más hipótesis",
-        "begin_investigation": "Iniciar investigación",
+        "villages": "Perfiles de aldeas",
+        "notebook": "Cuaderno",
+        "advance_day": "Avanzar al día",
+        "cannot_advance": "Aún no puede avanzar. Consulte las tareas pendientes en Resumen.",
+        "missing_tasks_title": "Tareas pendientes antes de avanzar:",
+        "locked_until_day": "Bloqueado hasta el Día {day}.",
+        "chat_prompt": "Escribe tu pregunta...",
         "save": "Guardar",
         "submit": "Enviar",
         "download": "Descargar",
+        "begin_investigation": "Iniciar investigación",
+        "lab_test": "Prueba",
+        "lab_results": "Resultados de laboratorio",
+        "lab_pending": "PENDIENTE",
     },
     "fr": {
-        "title": "Investigation d'Épidémie d'EJ – Vallée de Sidero",
+        "title": "Investigation d'épidémie AES – Vallée de Sidero",
+        "language_header": "Langue",
+        "language_select": "Choisir la langue :",
+        "facilitator_header": "Facilitateur",
+        "facilitator_mode": "Mode facilitateur",
+        "facilitator_code": "Code facilitateur",
+        "facilitator_bad_code": "Code incorrect.",
         "day": "Jour",
         "budget": "Budget",
         "time_remaining": "Temps restant",
         "hours": "heures",
-        "lab_credits": "Crédits de labo",
+        "lab_credits": "Crédits labo",
         "progress": "Progrès",
         "go_to": "Aller à",
         "overview": "Aperçu / Briefing",
-        "casefinding": "Recherche de Cas",
-        "descriptive": "Épi Descriptive",
+        "casefinding": "Recherche de cas",
+        "descriptive": "Épi descriptive",
         "interviews": "Entretiens",
-        "spotmap": "Carte des Points",
-        "study": "Données et Conception",
-        "lab": "Labo et Environnement",
+        "spotmap": "Carte des points",
+        "study": "Données et conception",
+        "lab": "Labo et environnement",
         "outcome": "Interventions",
-        "villages": "Profils des Villages",
-        "notebook": "Carnet d'Investigation",
-        "advance_day": "Passer au Jour",
-        "key_tasks": "Tâches clés pour aujourd'hui",
-        "key_outputs": "Produits clés pour aujourd'hui",
-        "day1_briefing": "Le Jour 1 se concentre sur l'examen de ce qui est connu sur la situation.",
-        "day2_briefing": "Le Jour 2 se concentre sur la génération d'hypothèses et la conception de l'étude.",
-        "day3_briefing": "Le Jour 3 est consacré à la collecte et au nettoyage des données.",
-        "day4_briefing": "Le Jour 4 se concentre sur l'analyse et les investigations de laboratoire.",
-        "day5_briefing": "Le Jour 5 se concentre sur les recommandations et la communication.",
-        "review_line_list": "Examiner la liste des cas",
-        "review_clinic_records": "Examiner les dossiers cliniques pour des cas supplémentaires",
-        "describe_cases": "Décrire les cas (personne, lieu, temps)",
-        "conduct_interviews": "Mener des entretiens générateurs d'hypothèses",
-        "find_additional_cases": "Trouver des cas supplémentaires",
-        "develop_case_def": "Développer une définition de cas",
-        "develop_hypotheses": "Développer 1 ou plusieurs hypothèses",
-        "begin_investigation": "Commencer l'investigation",
+        "villages": "Profils des villages",
+        "notebook": "Carnet",
+        "advance_day": "Passer au jour",
+        "cannot_advance": "Impossible d'avancer. Voir les tâches manquantes dans Aperçu.",
+        "missing_tasks_title": "Tâches manquantes avant d'avancer :",
+        "locked_until_day": "Bloqué jusqu'au Jour {day}.",
+        "chat_prompt": "Posez votre question...",
         "save": "Enregistrer",
         "submit": "Soumettre",
         "download": "Télécharger",
-    }
+        "begin_investigation": "Commencer l'investigation",
+        "lab_test": "Test",
+        "lab_results": "Résultats de laboratoire",
+        "lab_pending": "EN ATTENTE",
+    },
+    "pt": {
+        "title": "Investigação de Surto de AES – Vale de Sidero",
+        "language_header": "Idioma",
+        "language_select": "Selecionar idioma:",
+        "facilitator_header": "Facilitador",
+        "facilitator_mode": "Modo facilitador",
+        "facilitator_code": "Código do facilitador",
+        "facilitator_bad_code": "Código incorreto.",
+        "day": "Dia",
+        "budget": "Orçamento",
+        "time_remaining": "Tempo restante",
+        "hours": "horas",
+        "lab_credits": "Créditos de laboratório",
+        "progress": "Progresso",
+        "go_to": "Ir para",
+        "overview": "Visão geral / briefing",
+        "casefinding": "Busca de casos",
+        "descriptive": "Epi descritiva",
+        "interviews": "Entrevistas",
+        "spotmap": "Mapa de pontos",
+        "study": "Dados e desenho",
+        "lab": "Laboratório e ambiente",
+        "outcome": "Intervenções",
+        "villages": "Perfis das aldeias",
+        "notebook": "Caderno",
+        "advance_day": "Avançar para o dia",
+        "cannot_advance": "Ainda não é possível avançar. Veja as tarefas pendentes em Visão geral.",
+        "missing_tasks_title": "Tarefas pendentes antes de avançar:",
+        "locked_until_day": "Bloqueado até o Dia {day}.",
+        "chat_prompt": "Digite sua pergunta...",
+        "save": "Salvar",
+        "submit": "Enviar",
+        "download": "Baixar",
+        "begin_investigation": "Iniciar investigação",
+        "lab_test": "Teste",
+        "lab_results": "Resultados laboratoriais",
+        "lab_pending": "PENDENTE",
+    },
 }
 
+@st.cache_data(show_spinner=False)
+def _load_locale_bundle(lang: str, bundle: str) -> dict:
+    # Locale files live next to app.py in Streamlit Cloud
+    base = Path(__file__).resolve().parent / "locales" / lang
+    fp = base / f"{bundle}.json"
+    if fp.exists():
+        try:
+            return json.loads(fp.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
 
-def t(key: str) -> str:
-    """Get translated string for current language."""
-    lang = st.session_state.get("language", "en")
-    return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
+def _get_from_dict(d: dict, key: str):
+    # Supports both flat keys and dotted paths
+    if key in d:
+        return d[key]
+    cur = d
+    for part in key.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return None
+        cur = cur[part]
+    return cur
+
+def t(key: str, default: str = None, bundle: str = "ui", **kwargs) -> str:
+    """Translate key using the current session language.
+
+    - Falls back to English and then to provided `default` and finally to the key itself.
+    - Supports `.format(**kwargs)` interpolation.
+    """
+    lang = st.session_state.get("language", DEFAULT_LANG) or DEFAULT_LANG
+    if lang not in SUPPORTED_LANGS:
+        lang = DEFAULT_LANG
+
+    # Try file-based bundle first
+    data = _load_locale_bundle(lang, bundle) or {}
+    val = _get_from_dict(data, key)
+
+    # Fallback to minimal in-code strings
+    if val is None:
+        val = _FALLBACK_UI.get(lang, {}).get(key)
+    if val is None:
+        val = _FALLBACK_UI.get(DEFAULT_LANG, {}).get(key)
+    if val is None:
+        val = default if default is not None else key
+
+    try:
+        return str(val).format(**kwargs)
+    except Exception:
+        return str(val)
 
 
 # =========================
@@ -471,6 +598,10 @@ def init_session_state():
 
     st.session_state.setdefault("generated_dataset", None)
     st.session_state.setdefault("lab_results", [])
+    st.session_state.setdefault("lab_orders", [])
+    st.session_state.setdefault("environment_findings", [])
+    st.session_state.setdefault("analysis_confirmed", False)
+    st.session_state.setdefault("etiology_revealed", False)
     st.session_state.setdefault("lab_samples_submitted", [])
     st.session_state.setdefault("interview_history", {})
     st.session_state.setdefault("revealed_clues", {})
@@ -827,6 +958,119 @@ def check_npc_unlock_triggers(user_input: str) -> str:
     return notification
 
 
+# =========================
+# ANTI-SPOILER / DISCLOSURE HELPERS
+# =========================
+
+def investigation_stage() -> str:
+    """Return 'confirmed' when the etiology has been earned/revealed, else 'pre_confirmation'."""
+    if st.session_state.get("etiology_revealed", False):
+        return "confirmed"
+    # If a final diagnosis has been explicitly recorded, treat as confirmed.
+    if bool((st.session_state.get("decisions", {}) or {}).get("final_diagnosis")):
+        return "confirmed"
+    return "pre_confirmation"
+
+
+_SPOILER_PATTERNS = [
+    (re.compile(r"\bJapanese\s+Encephalitis\b", re.IGNORECASE), "a mosquito-borne viral encephalitis"),
+    (re.compile(r"\bJEV\b", re.IGNORECASE), "the suspected encephalitis virus"),
+    # Avoid replacing words like 'project' etc; keep JE replacement conservative.
+    (re.compile(r"\bJE\b", re.IGNORECASE), "encephalitis"),
+]
+
+def redact_spoilers(text: str, stage: str) -> str:
+    if stage == "confirmed" or not text:
+        return text
+    out = str(text)
+    for rgx, repl in _SPOILER_PATTERNS:
+        out = rgx.sub(repl, out)
+    return out
+
+
+def sanitize_npc_truth_for_prompt(npc_truth: dict, stage: str) -> dict:
+    """Return a copy of npc_truth safe to include in prompts before confirmation."""
+    if not isinstance(npc_truth, dict):
+        return npc_truth
+    safe = dict(npc_truth)
+
+    # Simple string fields
+    for k in ["name", "role", "personality"]:
+        if k in safe:
+            safe[k] = redact_spoilers(safe[k], stage)
+
+    # List fields
+    for k in ["always_reveal", "red_herrings", "unknowns"]:
+        if k in safe and isinstance(safe[k], list):
+            safe[k] = [redact_spoilers(x, stage) for x in safe[k]]
+
+    # Dict fields
+    if isinstance(safe.get("conditional_clues"), dict):
+        safe["conditional_clues"] = {kk: redact_spoilers(vv, stage) for kk, vv in safe["conditional_clues"].items()}
+
+    return safe
+
+
+def npc_style_hint(npc_key: str, question_count: int, npc_state: str) -> str:
+    """Small deterministic style variation to reduce robotic feel."""
+    # Keep hints short so they don't dominate the system prompt.
+    if npc_state in ("annoyed", "offended"):
+        return "Keep it short. One point per sentence. No extra context unless asked."
+    if npc_key in ("nurse_joy", "clinic_nurse"):
+        if question_count < 2:
+            return "Sound busy and slightly stressed. Ask one clarifying question if needed."
+        return "Be helpful but time-pressed. Occasionally mention workload."
+    if npc_key in ("dr_chen", "hospital_director"):
+        return "Use a calm, clinical tone. Avoid speculation; distinguish observed vs assumed."
+    if npc_key in ("chief_musa", "district_officer"):
+        return "Be formal and concise. Focus on actions, constraints, and coordination."
+    if npc_key in ("vet_amina",):
+        return "Use One Health framing. Mention animal/veterinary context only when relevant."
+    if npc_key in ("mr_osei",):
+        return "Use practical environmental language. Mention mosquitoes/water management if asked."
+    return "Speak naturally. If unsure, say so."
+
+
+# =========================
+# LAB LABELS (anti-spoiler)
+# =========================
+
+LAB_TEST_CATALOG = {
+    # The keys match je_logic.LAB_TESTS / aliases; labels are trainee-facing.
+    "JE_IgM_CSF": {"generic": "Arbovirus IgM (CSF)", "confirmed": "Japanese Encephalitis IgM (CSF)"},
+    "JE_IgM_serum": {"generic": "Arbovirus IgM (serum)", "confirmed": "Japanese Encephalitis IgM (serum)"},
+    "JE_PCR_mosquito": {"generic": "Arbovirus PCR (mosquito pool)", "confirmed": "Japanese Encephalitis PCR (mosquito pool)"},
+    "JE_Ab_pig": {"generic": "Arbovirus antibodies (pig serum)", "confirmed": "Japanese Encephalitis antibodies (pig serum)"},
+}
+
+def lab_test_label(test_code: str) -> str:
+    stage = investigation_stage()
+    entry = LAB_TEST_CATALOG.get(test_code, {})
+    if stage == "confirmed":
+        return entry.get("confirmed", test_code)
+    return entry.get("generic", test_code)
+
+
+def refresh_lab_queue_for_day(day: int) -> None:
+    """Promote PENDING lab results to final result when day >= ready_day."""
+    if "lab_results" not in st.session_state or not st.session_state.lab_results:
+        return
+
+    stage_before = investigation_stage()
+
+    for r in st.session_state.lab_results:
+        ready_day = int(r.get("ready_day", 9999))
+        if str(r.get("result", "")).upper() == "PENDING" and day >= ready_day:
+            r["result"] = r.get("final_result_hidden", r.get("result", "PENDING"))
+
+    # Reveal etiology if an arbovirus test returns POSITIVE (only after Day 4)
+    if day >= 4 and stage_before != "confirmed":
+        for r in st.session_state.lab_results:
+            if str(r.get("result", "")).upper() == "POSITIVE" and str(r.get("test", "")).startswith("JE_"):
+                st.session_state.etiology_revealed = True
+                break
+
+
 def get_npc_response(npc_key: str, user_input: str) -> str:
     """Call Anthropic using npc_truth + epidemiologic context, with memory & emotional state."""
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
@@ -835,6 +1079,8 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
 
     truth = st.session_state.truth
     npc_truth = truth["npc_truth"][npc_key]
+    stage = investigation_stage()
+    npc_truth_safe = sanitize_npc_truth_for_prompt(npc_truth, stage)
 
     # Conversation history = memory
     history = st.session_state.interview_history.get(npc_key, [])
@@ -847,20 +1093,24 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
     emotional_description = describe_emotional_state(npc_state)
 
     epi_context = build_npc_data_context(npc_key, truth)
+    epi_context = redact_spoilers(epi_context, stage)
 
     if npc_key not in st.session_state.revealed_clues:
         st.session_state.revealed_clues[npc_key] = []
 
     system_prompt = f"""
-You are {npc_truth['name']}, the {npc_truth['role']} in Sidero Valley.
+You are {npc_truth_safe['name']}, the {npc_truth_safe['role']} in Sidero Valley.
 
 Personality:
-{npc_truth['personality']}
+{npc_truth_safe['personality']}
 
 Your current emotional state toward the investigation team:
 {emotional_description}
 
 The investigator has asked about {meaningful_questions} meaningful questions so far in this conversation.
+
+STYLE GUIDANCE:
+{npc_style_hint(npc_key, meaningful_questions, npc_state)}
 
 Outbreak context (for your awareness; DO NOT recite this unless directly asked about those details):
 {epi_context}
@@ -893,20 +1143,20 @@ QUESTION SCOPE:
 - If the user asks a broad question like "what do you know" or "tell me everything", you may answer in more detail (up to about 5–7 sentences) and provide a thoughtful overview.
 
 ALWAYS REVEAL (gradually, not all at once):
-{npc_truth['always_reveal']}
+{npc_truth_safe['always_reveal']}
 
 CONDITIONAL CLUES:
 - Reveal a conditional clue ONLY when the user's question clearly relates to that topic.
 - Work clues into natural speech; do NOT list them as bullet points.
-{npc_truth['conditional_clues']}
+{npc_truth_safe['conditional_clues']}
 
 RED HERRINGS:
 - You may mention these occasionally, but do NOT contradict the core truth:
-{npc_truth['red_herrings']}
+{npc_truth_safe['red_herrings']}
 
 UNKNOWN:
 - If the user asks about these topics, you must say you do not know:
-{npc_truth['unknowns']}
+{npc_truth_safe['unknowns']}
 
 INFORMATION RULES:
 - Never invent new outbreak details (case counts, test results, locations) beyond what is implied in the context.
@@ -919,7 +1169,7 @@ INFORMATION RULES:
     for keyword, clue in npc_truth.get("conditional_clues", {}).items():
         # Require keyword substring AND a question mark for a clearer "ask"
         if keyword.lower() in lower_q and "?" in lower_q and clue not in st.session_state.revealed_clues[npc_key]:
-            conditional_to_use.append(clue)
+            conditional_to_use.append(redact_spoilers(clue, stage))
             st.session_state.revealed_clues[npc_key].append(clue)
 
     # For narrow questions, keep at most 1 new conditional clue
@@ -946,6 +1196,7 @@ INFORMATION RULES:
     )
 
     text = resp.content[0].text
+    text = redact_spoilers(text, stage)
 
     # Unlock flags (One Health unlocks)
     unlock_flag = npc_truth.get("unlocks")
@@ -1676,21 +1927,37 @@ def make_epi_curve(truth: dict) -> go.Figure:
 
 def sidebar_navigation():
     # Language selector at very top
-    st.sidebar.markdown("### 🌐 Language")
-    lang_options = {"en": "English", "es": "Español", "fr": "Français"}
+    st.sidebar.markdown(f"### 🌐 {t('language_header')}")
+    lang_options = {"en": "English", "es": "Español", "fr": "Français", "pt": "Português"}
     selected_lang = st.sidebar.selectbox(
-        "Select language:",
+        t("language_select"),
         options=list(lang_options.keys()),
-        format_func=lambda x: lang_options[x],
-        index=list(lang_options.keys()).index(st.session_state.get("language", "en")),
+        format_func=lambda x: lang_options.get(x, x),
+        index=list(lang_options.keys()).index(st.session_state.get("language", "en") if st.session_state.get("language", "en") in lang_options else "en"),
         key="lang_selector"
     )
     if selected_lang != st.session_state.language:
         st.session_state.language = selected_lang
         st.rerun()
-    
+
+    # Facilitator mode (hides spoiler-prone UI like variable mappings)
+    # To enable on Streamlit Cloud, set FACILITATOR_CODE in secrets.
+    fac_code = st.secrets.get("FACILITATOR_CODE", "")
+    st.session_state.setdefault("facilitator_mode", False)
+    if fac_code:
+        st.sidebar.markdown(f"### 🧭 {t('facilitator_header')}")
+        with st.sidebar.expander(t("facilitator_mode"), expanded=False):
+            entered = st.text_input(t("facilitator_code"), type="password", key="facilitator_code_input")
+            if entered:
+                if entered == fac_code:
+                    st.session_state.facilitator_mode = True
+                    st.success("OK")
+                else:
+                    st.session_state.facilitator_mode = False
+                    st.error(t("facilitator_bad_code"))
+
     st.sidebar.markdown("---")
-    st.sidebar.title("AES Investigation – Sidero Valley")
+    st.sidebar.title(t("title"))
 
     if not st.session_state.alert_acknowledged:
         # Before the alert is acknowledged, keep sidebar simple
@@ -1766,11 +2033,12 @@ def sidebar_navigation():
             if can_advance:
                 st.session_state.current_day += 1
                 st.session_state.time_remaining = 8  # Reset time for new day
+                refresh_lab_queue_for_day(int(st.session_state.current_day))
                 st.session_state.advance_missing_tasks = []
                 st.rerun()
             else:
                 st.session_state.advance_missing_tasks = missing
-                st.sidebar.warning("Cannot advance yet. See missing tasks on Overview.")
+                st.sidebar.warning(t("cannot_advance"))
     else:
         st.sidebar.success("📋 Final Day - Complete your briefing!")
 
@@ -1877,7 +2145,7 @@ Your team has been asked to investigate, using a One Health approach.
         "When you’re ready, begin the investigation. You’ll move through the steps of an outbreak investigation over five simulated days."
     )
 
-    if st.button("Begin investigation"):
+    if st.button(t("begin_investigation")):
         st.session_state.alert_acknowledged = True
         st.session_state.current_day = 1
         st.session_state.current_view = "overview"
@@ -1892,6 +2160,18 @@ def view_overview():
     st.markdown(day_briefing_text(st.session_state.current_day))
 
     day_task_list(st.session_state.current_day)
+
+
+# If the user tried to advance but prerequisites are missing, show them here.
+if st.session_state.get("advance_missing_tasks"):
+    st.warning(t("missing_tasks_title", default="Missing tasks before you can advance:"))
+    for item in st.session_state.advance_missing_tasks:
+        # Support both legacy plain-English strings and new i18n keys
+        if isinstance(item, str) and (" " not in item) and ("." in item):
+            st.markdown(f"- {t(item, default=item)}")
+        else:
+            st.markdown(f"- {item}")
+    st.session_state.advance_missing_tasks = []
 
     st.markdown("---")
     st.markdown("### Situation overview")
@@ -2803,9 +3083,11 @@ def view_study_design():
                         except Exception as e:
                             st.error(f"Failed to map/save questionnaire: {e}")
 
-        # Facilitator mapping review (optional)
-        saved_q = st.session_state.decisions.get("questionnaire_xlsform")
-        if isinstance(saved_q, dict) and saved_q.get("questions"):
+
+    # Facilitator mapping review (optional)
+    saved_q = st.session_state.decisions.get("questionnaire_xlsform")
+    if isinstance(saved_q, dict) and saved_q.get("questions"):
+        if st.session_state.get("facilitator_mode", False):
             with st.expander("Facilitator mapping review (optional)", expanded=False):
                 rows = []
                 for q in saved_q.get("questions", []):
@@ -2822,7 +3104,6 @@ def view_study_design():
                     })
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-    # -------------------------
     # Step 4: Generate dataset (requires questionnaire + selections)
     # -------------------------
     st.markdown("### Step 4: Generate simulated study dataset")
@@ -2864,7 +3145,11 @@ def view_study_design():
 
 
 def view_lab_and_environment():
-    st.header("🧪 Lab & Environment")
+    st.header("🧪 " + t("lab", default="Lab & Environment"))
+    if int(st.session_state.get("current_day", 1)) < 4:
+        st.info(t("locked_until_day", day=4))
+        return
+    refresh_lab_queue_for_day(int(st.session_state.get("current_day", 1)))
     
     # Resource display
     col1, col2, col3 = st.columns(3)
@@ -2909,8 +3194,9 @@ def view_lab_and_environment():
         )
     with col3:
         test = st.selectbox(
-            "Test",
-            ["JE_IgM_CSF", "JE_IgM_serum", "JE_PCR_mosquito", "JE_Ab_pig"],
+            t("lab_test", default="Test"),
+            list(LAB_TEST_CATALOG.keys()),
+            format_func=lab_test_label,
         )
 
     source_description = st.text_input("Source description (e.g., 'Case from Nalu')", "")
@@ -2956,9 +3242,34 @@ def view_lab_and_environment():
             )
             st.rerun()
 
-    if st.session_state.lab_results:
-        st.markdown("### Lab results so far")
-        st.dataframe(pd.DataFrame(st.session_state.lab_results))
+
+if st.session_state.lab_results:
+    st.markdown(f"### {t('lab_results', default='Lab results')}")
+    df = pd.DataFrame(st.session_state.lab_results).copy()
+
+    villages_lookup = truth["villages"].set_index("village_id")["village_name"].to_dict()
+    if "village_id" in df.columns:
+        df["village"] = df["village_id"].map(villages_lookup).fillna(df["village_id"])
+
+    if "test_display" not in df.columns:
+        df["test_display"] = df.get("test", "").map(lab_test_label) if "test" in df.columns else ""
+
+    day_now = int(st.session_state.get("current_day", 1))
+    if "ready_day" in df.columns:
+        df["days_remaining"] = df.apply(
+            lambda r: max(0, int(r.get("ready_day", day_now)) - day_now)
+            if str(r.get("result", "")).upper() == "PENDING"
+            else 0,
+            axis=1,
+        )
+
+    show_cols = [
+        "sample_id", "sample_type", "village", "test_display",
+        "source_description", "placed_day", "ready_day",
+        "days_remaining", "result"
+    ]
+    show_cols = [c for c in show_cols if c in df.columns]
+    st.dataframe(df[show_cols], use_container_width=True, hide_index=True)
 
 
 def view_village_profiles():
