@@ -3,6 +3,7 @@ import anthropic
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+# Village photos loaded from assets/Nalu directory
 import plotly.express as px
 import io
 import re
