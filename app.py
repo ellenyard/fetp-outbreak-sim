@@ -435,7 +435,7 @@ LOCATIONS = {
     "nalu_health_center": {
         "name": "Nalu Health Center",
         "area": "Nalu Village",
-        "description": "A small health center staffed by Nurse Joy and community health workers. The building has a faded paint exterior and a long queue of waiting patients.",
+        "description": "A small health center staffed by Nurse Mai and community health workers. The building has a faded paint exterior and a long queue of waiting patients.",
         "image_path": "assets/Nalu/nalu_04_health_center_exterior.png",
         "npcs": ["nurse_joy"],
         "available_actions": ["review_clinic_records", "view_hospital_records"],
@@ -519,7 +519,7 @@ LOCATIONS = {
     "hospital_office": {
         "name": "Hospital Administration",
         "area": "District Hospital",
-        "description": "Dr. Chen's office. Charts and reports are pinned to the walls. A window overlooks the hospital courtyard.",
+        "description": "Dr. Tran's office. Charts and reports are pinned to the walls. A window overlooks the hospital courtyard.",
         "image_path": None,
         "npcs": ["dr_chen"],
         "available_actions": ["review_hospital_records"],
@@ -559,7 +559,7 @@ LOCATIONS = {
     "healer_clinic": {
         "name": "Traditional Healer's Clinic",
         "area": "Nalu Village",
-        "description": "A small private clinic run by Healer Marcus. He saw some of the earliest cases before they went to the hospital.",
+        "description": "A small private clinic run by Healer Somchai. He saw some of the earliest cases before they went to the hospital.",
         "image_path": None,
         "npcs": ["healer_marcus"],
         "available_actions": ["review_healer_records"],
@@ -1128,7 +1128,7 @@ def check_npc_unlock_triggers(user_input: str) -> str:
             st.session_state.one_health_triggered = True
             if 'vet_amina' not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append('vet_amina')
-            notification = "🔓 **New Contact Unlocked:** Vet Amina (District Veterinary Officer) - Your question about animals opened a One Health perspective!"
+            notification = "🔓 **New Contact Unlocked:** Vet Supatra (District Veterinary Officer) - Your question about animals opened a One Health perspective!"
     
     # Mosquito/environment triggers → unlock Mr. Osei
     env_triggers = ['mosquito', 'mosquitoes', 'vector', 'breeding', 'standing water', 'environment', 'rice paddy', 'irrigation', 'wetland']
@@ -1139,7 +1139,7 @@ def check_npc_unlock_triggers(user_input: str) -> str:
             st.session_state.one_health_triggered = True
             if 'mr_osei' not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append('mr_osei')
-            notification = "🔓 **New Contact Unlocked:** Mr. Osei (Environmental Health Officer) - Your question about environmental factors opened a new perspective!"
+            notification = "🔓 **New Contact Unlocked:** Mr. Nguyen (Environmental Health Officer) - Your question about environmental factors opened a new perspective!"
     
     # Healer triggers (for earlier cases)
     healer_triggers = ['traditional', 'healer', 'clinic', 'private', 'early case', 'first case', 'before hospital']
@@ -1147,7 +1147,7 @@ def check_npc_unlock_triggers(user_input: str) -> str:
         st.session_state.questions_asked_about.add('traditional')
         if 'healer_marcus' not in st.session_state.npcs_unlocked:
             st.session_state.npcs_unlocked.append('healer_marcus')
-            notification = "🔓 **New Contact Unlocked:** Healer Marcus (Private Clinic) - You discovered there may be unreported cases!"
+            notification = "🔓 **New Contact Unlocked:** Healer Somchai (Private Clinic) - You discovered there may be unreported cases!"
     
     return notification
 
@@ -4502,7 +4502,7 @@ def view_travel_map():
         with st.expander("📋 Day 1 Briefing - Situation Assessment", expanded=True):
             st.markdown("""
             **Your tasks today:**
-            - Visit the **District Hospital** to meet Dr. Chen and review cases
+            - Visit the **District Hospital** to meet Dr. Tran and review cases
             - Travel to **Nalu Village** to interview residents and review clinic records
             - Document your initial hypotheses about the outbreak source
 
@@ -4618,7 +4618,7 @@ def view_area_map(area: str):
         """)
     elif area == "District Hospital":
         st.markdown("""
-        **District Hospital** is where the AES cases have been admitted. Dr. Chen oversees
+        **District Hospital** is where the AES cases have been admitted. Dr. Tran oversees
         patient care and the laboratory can process some samples.
         """)
     elif area == "District Office":

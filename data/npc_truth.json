@@ -1,6 +1,6 @@
 {
   "dr_chen": {
-    "name": "Dr. Chen",
+    "name": "Dr. Tran",
     "role": "Hospital Director",
     "avatar": "👨‍⚕️",
     "cost": 0,
@@ -44,7 +44,7 @@
     "unlocks": null
   },
   "nurse_joy": {
-    "name": "Nurse Joy",
+    "name": "Nurse Mai",
     "role": "Triage Nurse",
     "avatar": "🩺",
     "cost": 50,
@@ -79,7 +79,7 @@
     "unlocks": null
   },
   "healer_marcus": {
-    "name": "Healer Marcus",
+    "name": "Healer Somchai",
     "role": "Private Clinic Practitioner",
     "avatar": "🌿",
     "cost": 150,
@@ -115,7 +115,7 @@
     "unlocks": "health_center_nalu_unlocked"
   },
   "mama_kofi": {
-    "name": "Mama Kofi",
+    "name": "Grandma Linh",
     "role": "Mother of Sick Child",
     "avatar": "👵",
     "cost": 50,
@@ -149,7 +149,7 @@
     "unlocks": null
   },
   "teacher_grace": {
-    "name": "Teacher Grace",
+    "name": "Teacher Ratana",
     "role": "School Principal",
     "avatar": "📚",
     "cost": 50,
@@ -181,7 +181,7 @@
     "unlocks": null
   },
   "foreman_rex": {
-    "name": "Foreman Rex",
+    "name": "Foreman Prasert",
     "role": "Mine Manager",
     "avatar": "⛏️",
     "cost": 200,
@@ -212,7 +212,7 @@
     "unlocks": null
   },
   "auntie_ama": {
-    "name": "Auntie Ama",
+    "name": "Auntie Phuong",
     "role": "Market Vendor",
     "avatar": "🍎",
     "cost": 50,
@@ -244,7 +244,7 @@
     "unlocks": null
   },
   "vet_amina": {
-    "name": "Vet Amina",
+    "name": "Vet Supatra",
     "role": "District Veterinary Officer",
     "avatar": "🐄",
     "cost": 150,
@@ -275,7 +275,7 @@
     "unlocks": "vet_data_unlocked"
   },
   "mr_osei": {
-    "name": "Mr. Osei",
+    "name": "Mr. Nguyen",
     "role": "Environmental Health Officer",
     "avatar": "🌊",
     "cost": 150,
@@ -309,7 +309,7 @@
     "unlocks": "entomology_data_unlocked"
   },
   "mayor_simon": {
-    "name": "Mayor Simon",
+    "name": "Mayor Budi",
     "role": "District Politician",
     "avatar": "🏛️",
     "cost": 100,
