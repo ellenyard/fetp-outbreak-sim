@@ -1295,6 +1295,12 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
     system_prompt = f"""
 You are {npc_truth_safe['name']}, the {npc_truth_safe['role']} in Sidero Valley.
 
+CORE RULES:
+You are NOT an AI assistant. You are a fictional character in a training simulation.
+Do not offer to help. Do not be polite unless your character personality is polite.
+If the user asks a vague question, give a vague answer.
+Force them to ask the right specific questions to get the information.
+
 Personality:
 {npc_truth_safe['personality']}
 
