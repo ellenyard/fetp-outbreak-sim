@@ -481,13 +481,13 @@ LOCATIONS = {
         "available_actions": ["review_attendance_records"],
         "travel_time": 0.5,
     },
-    "nalu_irrigation_canal": {
+    "nalu_canal": {
         "name": "Irrigation Canal",
         "area": "Nalu Village",
-        "description": "Large pumps move water from the river. Signs of recent construction.",
-        "image_path": "assets/Nalu/nalu_canal.png",
+        "description": "Large pumps move water. You see many water birds and mosquitoes.",
+        "image_path": "assets/Nalu/canal.png",
         "icon": "💧",
-        "available_actions": ["inspect_environment", "collect_water_sample"],
+        "available_actions": ["inspect_environment"],
         "travel_time": 0.5,
     },
     # === KABWE VILLAGE ===
@@ -534,6 +534,15 @@ LOCATIONS = {
         "available_actions": ["review_kabwe_records"],
         "travel_time": 0.2,
     },
+    "kabwe_paddies": {
+        "name": "Kabwe Rice Fields",
+        "area": "Kabwe Village",
+        "description": "Smaller fields than Nalu. Farmers use buffalo here. Not many pigs.",
+        "image_path": "assets/Kabwe/fields.png",
+        "icon": "🌾",
+        "available_actions": ["inspect_environment"],
+        "travel_time": 0.5,
+    },
     # === TAMU VILLAGE ===
     "tamu_remote_upland": {
         "name": "Tamu Remote Upland",
@@ -557,11 +566,11 @@ LOCATIONS = {
         "available_actions": ["inspect_environment", "collect_mosquito_sample"],
         "travel_time": 1.0,
     },
-    "tamu_forest_path": {
-        "name": "Forest Path",
+    "tamu_forest": {
+        "name": "Upland Forest",
         "area": "Tamu Village",
-        "description": "Path leading into the uplands. You see goats grazing and wild birds.",
-        "image_path": "assets/Tamu/forest_path.png",
+        "description": "Dry and cool. Goats are grazing on the hills. Very few mosquitoes.",
+        "image_path": "assets/Tamu/forest.png",
         "icon": "🌲",
         "available_actions": ["inspect_environment"],
         "travel_time": 0.5,
@@ -661,9 +670,9 @@ LOCATIONS = {
 
 # Map areas to their sub-locations
 AREA_LOCATIONS = {
-    "Nalu Village": ["nalu_village_center", "nalu_health_center", "nalu_pig_coop", "nalu_rice_paddies", "nalu_school", "nalu_irrigation_canal", "central_market", "healer_clinic"],
-    "Kabwe Village": ["kabwe_village_center", "kabwe_school_path", "kabwe_school", "kabwe_health_post"],
-    "Tamu Village": ["tamu_remote_upland", "tamu_forest_edge", "tamu_forest_path", "tamu_health_post"],
+    "Nalu Village": ["nalu_village_center", "nalu_health_center", "nalu_pig_coop", "nalu_rice_paddies", "nalu_school", "nalu_canal", "central_market", "healer_clinic"],
+    "Kabwe Village": ["kabwe_village_center", "kabwe_school_path", "kabwe_school", "kabwe_health_post", "kabwe_paddies"],
+    "Tamu Village": ["tamu_remote_upland", "tamu_forest_edge", "tamu_forest", "tamu_health_post"],
     "District Hospital": ["hospital_ward", "hospital_lab", "hospital_office"],
     "District Office": ["district_office"],
     "Mining Area": ["mining_area"],
@@ -2946,6 +2955,98 @@ def view_overview():
 
             if st.session_state.hypotheses_documented:
                 st.info(f"✓ {len(st.session_state.initial_hypotheses)} hypothesis(es) recorded")
+
+
+def view_hospital_triage():
+    st.markdown("## 🏥 District Hospital Triage")
+
+    # Intro Text
+    st.info("Dr. Tran: 'Here are the patients admitted in the last 48 hours. Please review them. "
+            "Mark the ones that fit your Case Definition to add them to your Line List.'")
+
+    # Initialize State
+    if 'line_list' not in st.session_state:
+        st.session_state.line_list = []
+    if 'parents_interviewed' not in st.session_state:
+        st.session_state.parents_interviewed = []
+
+    triage_data = jl.get_hospital_triage_list()
+
+    # --- SECTION 1: THE CHECKLIST ---
+    with st.container(border=True):
+        st.markdown("### 📋 Patient Admission Log")
+
+        # Grid Header
+        c1, c2, c3, c4 = st.columns([1, 1, 1, 3])
+        c1.write("**Add?**")
+        c2.write("**ID/Age**")
+        c3.write("**Village**")
+        c4.write("**Clinical Notes**")
+
+        # Grid Rows
+        for patient in triage_data:
+            c1, c2, c3, c4 = st.columns([1, 1, 1, 3])
+
+            # Checkbox
+            is_selected = patient['id'] in st.session_state.line_list
+            if c1.checkbox("Select", key=f"chk_{patient['id']}", value=is_selected, label_visibility="collapsed"):
+                if patient['id'] not in st.session_state.line_list:
+                    st.session_state.line_list.append(patient['id'])
+            else:
+                if patient['id'] in st.session_state.line_list:
+                    st.session_state.line_list.remove(patient['id'])
+
+            c2.write(f"**{patient['id']}** ({patient['age']}/{patient['sex']})")
+            c3.write(patient['village'])
+            # Highlight Fever to rule out toxin
+            if "Fever" in patient['symptom']:
+                c4.markdown(f"**{patient['symptom']}** - *{patient['notes']}*")
+            else:
+                c4.write(f"{patient['symptom']} - *{patient['notes']}*")
+            st.divider()
+
+    # --- SECTION 2: PARENT INTERVIEWS ---
+    if len(st.session_state.line_list) > 0:
+        st.markdown("### 🗣️ Investigation")
+        st.write(f"**Budget:** You can interview parents for **{2 - len(st.session_state.parents_interviewed)}** more cases.")
+
+        cols = st.columns(3)
+        for i, patient_id in enumerate(st.session_state.line_list):
+            patient = next(p for p in triage_data if p['id'] == patient_id)
+
+            with cols[i % 3]:
+                with st.container(border=True):
+                    st.write(f"**{patient_id}** ({patient['village']})")
+
+                    if patient_id in st.session_state.parents_interviewed:
+                        st.success("✅ Interviewed")
+                    elif len(st.session_state.parents_interviewed) >= 2:
+                        st.caption("⛔ No Budget")
+                    else:
+                        if st.button(f"Interview Parents", key=f"btn_{patient_id}"):
+                            st.session_state.parents_interviewed.append(patient_id)
+                            # TRIGGER THE INTERVIEW
+                            st.session_state.current_npc = patient['parent_type']
+                            st.rerun()
+
+    # --- SECTION 3: THE DIALOGUE (Pop-up) ---
+    if 'current_npc' in st.session_state and st.session_state.current_npc in ['parent_tamu', 'parent_general']:
+        npc_key = st.session_state.current_npc
+        # Load the text from truth data
+        npc_data = jl.load_truth_data().get(npc_key)
+
+        st.markdown("---")
+        st.warning(f"🎙️ Interviewing: {npc_data['name']}")
+        st.write(f"**{npc_data['name']}:** \"{npc_data['always_reveal'][0]}\"")
+        st.write(f"**{npc_data['name']}:** \"{npc_data['always_reveal'][2]}\"")
+
+        # Special logic for Tamu
+        if npc_key == 'parent_tamu':
+            st.error("❗ **KEY FINDING:** Family traveled to Nalu 2 weeks ago!")
+
+        if st.button("End Interview"):
+            del st.session_state.current_npc
+            st.rerun()
 
 
 def view_interviews():
