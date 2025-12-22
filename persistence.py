@@ -47,6 +47,9 @@ PERSISTENT_KEYS = {
 
     # Found cases from case finding (persisted separately to restore after truth regeneration)
     'found_case_individuals', 'found_case_households', 'clinic_records',
+
+    # Medical Records workflow (Day 1)
+    'line_list_cols', 'my_case_def', 'manual_cases',
 }
 
 
