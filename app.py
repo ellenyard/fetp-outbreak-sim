@@ -5826,6 +5826,15 @@ def view_travel_map():
             *Click on a location below to travel there.*
             """)
 
+    # About Sidero District
+    with st.expander("ℹ️ About Sidero District"):
+        st.markdown("""
+        Sidero District is a rural agricultural region known for extensive rice farming.
+        Recent irrigation projects have expanded the paddy fields closer to residential areas.
+        The population is approximately 15,000, spread across 3 main villages (Nalu, Tamu, Kabwe).
+        Livestock farming (pigs, ducks) is common in backyard settings.
+        """)
+
     # Render the interactive satellite map for destination selection
     render_interactive_map()
 
