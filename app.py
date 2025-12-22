@@ -987,6 +987,11 @@ def init_session_state():
     # Descriptive epidemiology
     st.session_state.setdefault("descriptive_epi_viewed", False)
 
+    # Medical Records workflow (Day 1)
+    st.session_state.setdefault("line_list_cols", [])
+    st.session_state.setdefault("my_case_def", {})
+    st.session_state.setdefault("manual_cases", [])
+
     # Restore found cases from session persistence (if loading a saved session)
     # This is needed because truth is regenerated from CSV files, losing found cases
     if st.session_state.get('found_cases_added', False):
@@ -2658,6 +2663,46 @@ def sidebar_navigation():
         f"**{t('lab_credits')}:** {st.session_state.lab_credits}"
     )
 
+    # Investigation Hub (Day 1 specific)
+    if st.session_state.current_day == 1:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### Investigation Hub")
+
+        # My Line List
+        with st.sidebar.expander("My Line List", expanded=False):
+            if st.session_state.line_list_cols:
+                st.caption(f"Selected columns: {', '.join(st.session_state.line_list_cols)}")
+
+                if st.session_state.manual_cases:
+                    st.caption(f"Cases added: {len(st.session_state.manual_cases)}")
+
+                    # Show a preview of the line list
+                    if st.session_state.get('clinic_records'):
+                        records = st.session_state.clinic_records
+                        selected_records = [r for r in records if r['record_id'] in st.session_state.manual_cases]
+
+                        if selected_records:
+                            st.markdown("**Preview:**")
+                            for rec in selected_records[:3]:  # Show first 3
+                                st.caption(f"- {rec['record_id']}: {rec['patient']}")
+                            if len(selected_records) > 3:
+                                st.caption(f"... and {len(selected_records) - 3} more")
+                else:
+                    st.caption("No cases added yet")
+            else:
+                st.caption("No line list structure defined yet")
+                st.caption("Visit Medical Records to define your structure")
+
+        # My Case Definition
+        with st.sidebar.expander("My Case Definition", expanded=False):
+            if st.session_state.my_case_def:
+                for key, value in st.session_state.my_case_def.items():
+                    st.caption(f"**{key}:** {value}")
+            else:
+                st.caption("No case definition saved yet")
+                if st.session_state.get('decisions', {}).get('case_definition_text'):
+                    st.caption("See Overview tab for case definition")
+
     # Session Management - Save/Load functionality
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Session Management")
@@ -2949,7 +2994,7 @@ def view_overview():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### 📝 Case Definition")
+            st.markdown("### Case Definition")
 
             with st.form("case_definition_form"):
                 st.markdown("**Clinical criteria:**")
@@ -2974,7 +3019,7 @@ def view_overview():
                 st.info("✓ Case definition recorded")
 
         with col2:
-            st.markdown("### 💡 Initial Hypotheses")
+            st.markdown("### Initial Hypotheses")
             st.caption("Based on what you know so far, what might be causing this outbreak? (At least 1 required)")
 
             with st.form("hypotheses_form"):
@@ -3458,6 +3503,206 @@ def view_case_finding():
         
         if record_choice:
             render_hospital_record(hospital_records[record_choice])
+
+
+def view_medical_records():
+    """Day 1: Medical Records view - The Hub for building case definition and line list variables."""
+
+    st.title("Medical Records")
+    st.caption("Day 1: Review initial cases and build your field log structure")
+
+    # Back button
+    if st.button("Return to Map", key="return_from_medical_records"):
+        st.session_state.current_view = "map"
+        st.rerun()
+
+    st.markdown("---")
+
+    # STEP 1: Display 2 "Clipboards" side-by-side
+    st.markdown("### Step 1: Review Initial Cases")
+    st.caption("These are two of the cases reported to the district hospital. Review their clinical information.")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        with st.expander("Case 1: Index Case (First Reported)", expanded=True):
+            st.markdown("**ID:** HOSP-01")
+            st.markdown("**Age/Sex:** 6 years / Male")
+            st.markdown("**Village:** Nalu")
+            st.markdown("**Clinical Presentation:**")
+            st.markdown("- Fever: Yes (39.5°C)")
+            st.markdown("- Seizures: Yes (multiple episodes)")
+            st.markdown("- Altered consciousness: Yes")
+            st.markdown("- Vomiting: Yes")
+            st.markdown("- Rash: No")
+            st.markdown("**Status:** Hospitalized")
+
+    with col2:
+        with st.expander("Case 2: Panya (Deceased)", expanded=True):
+            st.markdown("**ID:** HOSP-04")
+            st.markdown("**Name:** Panya")
+            st.markdown("**Age/Sex:** 7 years / Female")
+            st.markdown("**Village:** Tamu")
+            st.markdown("**Clinical Presentation:**")
+            st.markdown("- Fever: Yes (40.1°C)")
+            st.markdown("- Seizures: Yes (severe)")
+            st.markdown("- Altered consciousness: Yes (coma)")
+            st.markdown("- Vomiting: Yes")
+            st.markdown("- Rash: No")
+            st.markdown("**Status:** Deceased")
+
+    st.markdown("---")
+
+    # STEP 2: Build Line List Variables
+    st.markdown("### Step 2: Build Line List Variables")
+    st.caption("Select which columns you want to include in your field investigation log.")
+
+    # Available options - including traps
+    all_options = [
+        "Age",
+        "Sex",
+        "Village",
+        "Fever",
+        "Seizure",
+        "Rash",
+        "Vomiting",
+        "Pig Contact",  # Trap!
+        "Rice Field",   # Trap!
+    ]
+
+    selected_cols = st.multiselect(
+        "Select columns for your field log:",
+        options=all_options,
+        default=st.session_state.line_list_cols if st.session_state.line_list_cols else [],
+        key="line_list_cols_select"
+    )
+
+    # Check for traps
+    traps = []
+    if "Pig Contact" in selected_cols:
+        traps.append("Pig Contact")
+    if "Rice Field" in selected_cols:
+        traps.append("Rice Field")
+
+    if traps:
+        st.warning(f"⚠️ **Medical records do not typically contain exposure information like {', '.join(traps)}. Consider sticking to clinical signs and demographic information that would be documented in hospital records.**")
+
+    if st.button("Save Line List Structure", type="primary"):
+        st.session_state.line_list_cols = selected_cols
+        st.success(f"✅ Line list structure saved with {len(selected_cols)} columns!")
+        st.rerun()
+
+    if st.session_state.line_list_cols:
+        st.info(f"Current line list columns: {', '.join(st.session_state.line_list_cols)}")
+
+    st.markdown("---")
+
+    # Navigation hint
+    st.markdown("### Next Steps")
+    st.caption("Once you've defined your line list structure, proceed to the Clinic Register Scan to review additional cases.")
+    if st.button("Go to Clinic Register Scan"):
+        st.session_state.current_view = "clinic_register"
+        st.rerun()
+
+
+def view_clinic_register_scan():
+    """Day 1: Clinic Register Scan - Review logbook and select suspect cases."""
+
+    st.title("Clinic Register Scan")
+    st.caption("Day 1: Review the clinic logbook and identify potential cases")
+
+    # Back button
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        if st.button("Return to Map", key="return_from_clinic_register"):
+            st.session_state.current_view = "map"
+            st.rerun()
+
+    st.markdown("---")
+
+    st.markdown("### Raw Logbook from Nalu Health Center")
+    st.caption("Review these handwritten records and check any that you suspect might be AES cases.")
+
+    # Generate clinic records if not already done
+    if 'clinic_records' not in st.session_state:
+        st.session_state.clinic_records = generate_clinic_records()
+
+    records = st.session_state.clinic_records
+
+    # Create a dataframe for display
+    display_df = pd.DataFrame(records)
+
+    # Add a suspect case checkbox column
+    st.markdown("#### Patient Register (June 2025)")
+
+    # Initialize manual_cases if needed
+    if not isinstance(st.session_state.manual_cases, list):
+        st.session_state.manual_cases = []
+
+    # Display records with checkboxes
+    for i, record in enumerate(records):
+        with st.container():
+            col1, col2, col3, col4, col5 = st.columns([1, 2, 1, 1, 5])
+
+            # Checkbox
+            is_checked = record['record_id'] in st.session_state.manual_cases
+            check = col1.checkbox(
+                "Suspect?",
+                key=f"suspect_{record['record_id']}",
+                value=is_checked,
+                label_visibility="collapsed"
+            )
+
+            if check and not is_checked:
+                st.session_state.manual_cases.append(record['record_id'])
+                st.rerun()
+            elif not check and is_checked:
+                st.session_state.manual_cases.remove(record['record_id'])
+                st.rerun()
+
+            # Record details
+            col2.write(f"**{record['record_id']}**")
+            col3.write(record['date'])
+            col4.write(record['age'])
+            col5.write(f"{record['patient']} - {record['village']}")
+
+            # Complaint and notes in full width
+            st.caption(f"**Complaint:** {record['complaint']}")
+            st.caption(f"**Notes:** {record['notes']}")
+            st.divider()
+
+    st.markdown("---")
+
+    # Summary and action button
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        st.markdown(f"**Checked records:** {len(st.session_state.manual_cases)}")
+        if st.session_state.manual_cases:
+            st.caption(f"IDs: {', '.join(st.session_state.manual_cases)}")
+
+    with col2:
+        if st.button("Add Checked to Line List", type="primary"):
+            if st.session_state.manual_cases:
+                # Calculate scoring
+                true_positives = sum(1 for rid in st.session_state.manual_cases
+                                   for r in records if r['record_id'] == rid and r.get('is_aes'))
+                false_positives = len(st.session_state.manual_cases) - true_positives
+                total_aes = sum(1 for r in records if r.get('is_aes'))
+                false_negatives = total_aes - true_positives
+
+                st.success(f"✅ Added {len(st.session_state.manual_cases)} records to your line list!")
+                st.info(f"📊 You identified {true_positives} of {total_aes} true AES cases.")
+
+                if false_positives > 0:
+                    st.warning(f"⚠️ {false_positives} selected record(s) may not be AES.")
+                if false_negatives > 0:
+                    st.caption(f"💡 {false_negatives} potential AES case(s) were not selected.")
+
+                # Mark as reviewed
+                st.session_state.clinic_records_reviewed = True
+            else:
+                st.error("No records selected!")
 
 
 def view_descriptive_epi():
@@ -6350,7 +6595,7 @@ def adventure_sidebar():
 
 def view_sitrep():
     """Daily situation report - blocking view before advancing to next day."""
-    st.title(f"📋 Day {st.session_state.current_day} SITREP")
+    st.title(f"Day {st.session_state.current_day} SITREP")
 
     st.markdown(f"""
     ### Situation Report - Day {st.session_state.current_day}
@@ -6554,6 +6799,10 @@ def main():
             st.session_state.current_view = "map"
             st.rerun()
         view_interventions_and_outcome()
+    elif view == "medical_records":
+        view_medical_records()
+    elif view == "clinic_register":
+        view_clinic_register_scan()
     else:
         view_travel_map()
 
