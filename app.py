@@ -1085,6 +1085,16 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
 
     epi_context = build_epidemiologic_context(truth)
 
+    # Override for Dr. Tran - restrict his knowledge to prevent omniscience
+    if npc_key == "dr_chen":
+        return (
+            "You are aware of 2 severe pediatric cases admitted in the last 48 hours. "
+            "One has died. You recall seeing maybe 2-3 other similar cases over the "
+            "last month, but you do not have the files in front of you. "
+            "You DO NOT know the total case count in the district. "
+            "You believe the mine is responsible."
+        )
+
     if data_access == "hospital_cases":
         cases = merged[merged["symptomatic_AES"] == True]
         summary = cases.groupby("village_name").size().to_dict()
