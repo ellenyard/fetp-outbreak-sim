@@ -143,13 +143,13 @@ SUPPORTED_XLSFORM_BASE_TYPES = {"text", "integer", "decimal", "date", "select_on
 # DATA LOADING
 # ============================================================================
 
-def load_truth_data(data_dir: str = "data"):
+def load_truth_data(data_dir: str = "scenarios/aes_sidero_valley/data"):
     """
     Load all truth tables from CSV/JSON files.
     Returns a dictionary of DataFrames and the NPC truth dict.
-    
+
     Args:
-        data_dir: Directory containing CSV/JSON files. Default is "data" subdirectory.
+        data_dir: Directory containing CSV/JSON files. Default is "scenarios/aes_sidero_valley/data".
     """
     data_path = Path(data_dir)
     
@@ -167,7 +167,7 @@ def load_truth_data(data_dir: str = "data"):
     if missing:
         raise FileNotFoundError(
             f"Missing required data files in '{data_path.absolute()}': {missing}\n"
-            f"Make sure these files are in your repository's 'data' folder."
+            f"Make sure these files are in your scenario's data folder."
         )
 
     truth = {}
