@@ -31,15 +31,21 @@ def merge_npc_files(input_files, output_file):
                 # Handle both array format and object format
                 if isinstance(data, list):
                     merged_npcs.extend(data)
+                    count = len(data)
                 elif isinstance(data, dict):
                     # If it's a dict, check if there's a key containing the NPC list
                     if 'npcs' in data:
                         merged_npcs.extend(data['npcs'])
+                        count = len(data['npcs'])
                     else:
-                        # Otherwise, treat it as a single NPC
-                        merged_npcs.append(data)
+                        # Dict with NPC IDs as keys - extract the values (NPC objects)
+                        npc_objects = list(data.values())
+                        merged_npcs.extend(npc_objects)
+                        count = len(npc_objects)
+                else:
+                    count = 0
 
-            print(f"  Added {len(data) if isinstance(data, list) else 1} NPC(s)")
+            print(f"  Added {count} NPC(s)")
         except Exception as e:
             print(f"Error reading {input_file}: {e}")
             sys.exit(1)
