@@ -927,7 +927,7 @@ def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
 def init_session_state():
     if "truth" not in st.session_state:
         # CSV/JSON files are in the scenario's data subdirectory
-        st.session_state.truth = load_truth_and_population(data_dir="scenarios/aes_sidero_valley/data")
+        st.session_state.truth = load_truth_and_population(data_dir="scenarios/lepto_maharlika/data")
 
     # Game state initialization (Serious Mode)
     if init_game_state:
