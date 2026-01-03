@@ -838,16 +838,22 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
             
             # Children
             n_children = min(np.random.poisson(1.8), 5)
-            
-            # Child vaccination
-            vacc_coverage = village_row['JE_vacc_coverage']
-            vacc_probs = [
-                1 - vacc_coverage,  # none
-                vacc_coverage * 0.4,  # low
-                vacc_coverage * 0.35,  # medium
-                vacc_coverage * 0.25   # high
-            ]
-            child_vacc = np.random.choice(['none', 'low', 'medium', 'high'], p=vacc_probs)
+
+            # Scenario-specific vaccination attributes
+            if scenario_type == "je":
+                # JE vaccination coverage
+                vacc_coverage = village_row.get('JE_vacc_coverage', 0.0)
+                vacc_probs = [
+                    1 - vacc_coverage,  # none
+                    vacc_coverage * 0.4,  # low
+                    vacc_coverage * 0.35,  # medium
+                    vacc_coverage * 0.25   # high
+                ]
+                child_vacc = np.random.choice(['none', 'low', 'medium', 'high'], p=vacc_probs)
+            else:
+                # Lepto or other scenarios: no vaccination data
+                vacc_coverage = 0.0
+                child_vacc = 'none'
             
             all_households.append(pd.DataFrame([{
                 'hh_id': hh_id,
