@@ -925,9 +925,15 @@ def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
 
 
 def init_session_state():
-    if "truth" not in st.session_state:
-        # CSV/JSON files are in the scenario's data subdirectory
-        st.session_state.truth = load_truth_and_population(data_dir="scenarios/lepto_maharlika/data")
+    # Scenario tracking
+    if 'current_scenario' not in st.session_state:
+        st.session_state.current_scenario = None
+    if 'current_scenario_name' not in st.session_state:
+        st.session_state.current_scenario_name = None
+    if 'current_scenario_type' not in st.session_state:
+        st.session_state.current_scenario_type = None
+
+    # Note: truth data is now loaded in main() based on scenario selection
 
     # Game state initialization (Serious Mode)
     if init_game_state:
@@ -7321,6 +7327,81 @@ def main():
         initial_sidebar_state="collapsed",  # Minimal sidebar in adventure mode
     )
     init_session_state()
+
+    # Scenario selector in sidebar
+    with st.sidebar:
+        st.title("📋 Scenario Selection")
+
+        scenario_options = [
+            ("aes_sidero_valley", "🦟 Japanese Encephalitis - Sidero Valley"),
+            ("lepto_maharlika", "🌊 Leptospirosis - San Isidro, Maharlika")
+        ]
+
+        # Find current selection index
+        current_idx = 0
+        if st.session_state.current_scenario:
+            for i, (sid, _) in enumerate(scenario_options):
+                if sid == st.session_state.current_scenario:
+                    current_idx = i
+                    break
+
+        scenario_choice = st.selectbox(
+            "Select outbreak scenario:",
+            options=scenario_options,
+            format_func=lambda x: x[1],
+            key="scenario_selector",
+            index=current_idx,
+            help="Choose which outbreak scenario to investigate"
+        )
+
+        scenario_id = scenario_choice[0]
+        scenario_name = scenario_choice[1]
+
+        if st.session_state.current_scenario:
+            st.caption(f"**Active:** {st.session_state.current_scenario_name}")
+        st.markdown("---")
+
+    # Determine scenario type and data directory
+    if "lepto" in scenario_id:
+        scenario_type = "lepto"
+        data_dir = f"scenarios/{scenario_id}/data"
+    else:
+        scenario_type = "je"
+        # JE scenario has files directly in scenario folder (no /data subdirectory)
+        data_dir = f"scenarios/{scenario_id}"
+
+    # Check if we need to load or reload data
+    need_reload = (
+        "truth" not in st.session_state or
+        st.session_state.get("current_scenario") != scenario_id
+    )
+
+    if need_reload:
+        with st.spinner(f"Loading {scenario_name}..."):
+            st.session_state.current_scenario = scenario_id
+            st.session_state.current_scenario_name = scenario_name
+            st.session_state.current_scenario_type = scenario_type
+
+            # Load truth data for selected scenario
+            st.session_state.truth = load_truth_and_population(
+                data_dir=data_dir,
+                scenario_type=scenario_type
+            )
+
+            # Reset investigation progress when switching scenarios
+            st.session_state.current_day = 1
+            st.session_state.current_view = "alert"
+            st.session_state.alert_acknowledged = False
+            st.session_state.decisions = {}
+            if 'interview_history' in st.session_state:
+                st.session_state.interview_history = {}
+            # Reset game state for fresh start
+            if 'game_state' in st.session_state:
+                st.session_state.game_state = 'INTRO'
+
+        st.success(f"✅ Loaded: {scenario_name}")
+        time.sleep(0.5)  # Brief pause to show success message
+        st.rerun()
 
     # Check game state for Serious Mode
     game_state = st.session_state.get('game_state', 'INTRO')
