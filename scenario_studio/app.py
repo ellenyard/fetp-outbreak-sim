@@ -716,7 +716,7 @@ def collect_scenario_files(base_path: Path) -> Dict[str, str]:
     # Check for common scenario files
     file_patterns = {
         "app.py": "Main simulation code",
-        "je_logic.py": "Backend logic",
+        "outbreak_logic.py": "Backend logic",
         "npc_truth.json": "NPC personalities & knowledge",
         "villages.csv": "Village data",
         "households_seed.csv": "Household seed data",

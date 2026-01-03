@@ -1,5 +1,5 @@
 """
-je_logic.py - Japanese Encephalitis Outbreak Simulation Logic
+outbreak_logic.py - Multi-Scenario Outbreak Simulation Logic
 
 This module contains the core logic for:
 - Loading truth data
@@ -7,6 +7,10 @@ This module contains the core logic for:
 - Case definition → dataset generation
 - Lab test simulation
 - Consequence engine
+
+Supported scenarios:
+- JE (Japanese Encephalitis) - AES in Sidero Valley
+- Lepto (Leptospirosis) - Post-flood outbreak in San Isidro, Maharlika
 
 Separating logic from UI enables:
 - Easier testing
@@ -771,15 +775,27 @@ def check_case_definition(criteria, patient=None):
     }
 
 
-def generate_full_population(villages_df, households_seed, individuals_seed, random_seed=42):
+def generate_full_population(villages_df, households_seed, individuals_seed, random_seed=42, scenario_type="je"):
     """
     Generate a complete population from seed data + generation rules.
-    INCLUDES: Injection of specific 'Story Cases' (e.g. Tamu outlier).
+    INCLUDES: Injection of specific 'Story Cases' (e.g. Tamu outlier for JE).
 
-    Uses:
+    Args:
+        villages_df: DataFrame with village data
+        households_seed: DataFrame with seed households
+        individuals_seed: DataFrame with seed individuals
+        random_seed: Random seed for reproducibility (default: 42)
+        scenario_type: Type of outbreak scenario - "je" or "lepto" (default: "je")
+
+    Uses (JE scenario):
     - Poisson distribution for pig ownership (λ=3 Nalu, λ=1 Kabwe, 0-1 Tamu)
     - Village-specific net use rates (30%, 50%, 70%)
     - Risk-based infection assignment
+
+    Uses (Lepto scenario):
+    - Flood depth, cleanup participation, rat sightings as risk factors
+    - Male adults 18-60 at highest risk
+    - Post-flood onset dates starting 2024-10-10
     """
     np.random.seed(random_seed)
     
@@ -915,44 +931,53 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
     households_df = pd.concat(all_households, ignore_index=True)
     individuals_df = pd.concat(all_individuals, ignore_index=True)
 
-    # === MANUALLY INJECT "TAMU OUTLIER" CASE ===
-    # Find a child in Tamu (V3)
-    tamu_kids = individuals_df[
-        (individuals_df['village_id'] == 'V3') &
-        (individuals_df['age'] > 4) &
-        (individuals_df['age'] < 10)
-    ]
+    # === Scenario-specific infection assignment ===
+    if scenario_type == "je":
+        # === MANUALLY INJECT "TAMU OUTLIER" CASE (JE only) ===
+        # Find a child in Tamu (V3)
+        tamu_kids = individuals_df[
+            (individuals_df['village_id'] == 'V3') &
+            (individuals_df['age'] > 4) &
+            (individuals_df['age'] < 10)
+        ]
 
-    if not tamu_kids.empty:
-        # Pick one to be the "Story Case"
-        idx = tamu_kids.index[0]
-        # Make them sick
-        individuals_df.at[idx, 'true_je_infection'] = True
-        individuals_df.at[idx, 'symptomatic_AES'] = True
-        individuals_df.at[idx, 'severe_neuro'] = True
-        individuals_df.at[idx, 'outcome'] = 'recovered'
-        individuals_df.at[idx, 'has_sequelae'] = True
-        # Add the 'Secret' column that only appears if you dig
-        individuals_df.at[idx, 'travel_history_note'] = "Visited Nalu 2 weeks ago."
-        individuals_df.at[idx, 'name_hint'] = "Panya"
+        if not tamu_kids.empty:
+            # Pick one to be the "Story Case"
+            idx = tamu_kids.index[0]
+            # Make them sick
+            individuals_df.at[idx, 'true_je_infection'] = True
+            individuals_df.at[idx, 'symptomatic_AES'] = True
+            individuals_df.at[idx, 'severe_neuro'] = True
+            individuals_df.at[idx, 'outcome'] = 'recovered'
+            individuals_df.at[idx, 'has_sequelae'] = True
+            # Add the 'Secret' column that only appears if you dig
+            individuals_df.at[idx, 'travel_history_note'] = "Visited Nalu 2 weeks ago."
+            individuals_df.at[idx, 'name_hint'] = "Panya"
 
-    # Assign infections using risk model (skip seed individuals)
-    individuals_df = assign_infections(individuals_df, households_df)
-    
+        # Assign JE infections using risk model (skip seed individuals)
+        individuals_df = assign_je_infections(individuals_df, households_df)
+
+    elif scenario_type == "lepto":
+        # Assign Leptospirosis infections using risk model
+        individuals_df = assign_lepto_infections(individuals_df, households_df)
+
+    else:
+        raise ValueError(f"Unknown scenario_type: {scenario_type}. Supported: 'je', 'lepto'")
+
     return households_df, individuals_df
 
 
-def assign_infections(individuals_df, households_df):
+def assign_je_infections(individuals_df, households_df):
     """
-    Assign JE infections based on risk model.
+    Assign JE (Japanese Encephalitis) infections based on risk model.
     Preserves seed individual status.
-    
+
     JE epidemiology:
     - Only ~1 in 250-1000 infections become symptomatic (encephalitis)
     - Attack rates in outbreaks: 1-10 per 10,000 population
     - We have ~5 seed symptomatic cases
     - Target: ~10-15 additional symptomatic cases (15-20 total)
-    
+
     With ~1400 population and ~5% average infection rate, we'd get ~70 infections.
     We compress the ratio for teaching purposes but keep it realistic.
     """
@@ -1080,7 +1105,191 @@ def assign_infections(individuals_df, households_df):
 
     individuals_df['outcome'] = individuals_df.apply(assign_outcome, axis=1)
     individuals_df['has_sequelae'] = individuals_df.apply(assign_sequelae, axis=1)
-    
+
+    return individuals_df
+
+
+def assign_lepto_infections(individuals_df, households_df):
+    """
+    Assign Leptospirosis infections based on post-flood risk model.
+    Preserves seed individual status.
+
+    Leptospirosis epidemiology (post-flood outbreak):
+    - Transmission via contact with contaminated floodwater/soil (rat urine)
+    - Incubation: 2-30 days (median ~10 days, lognormal distribution)
+    - Symptomatic rate: ~15% of infections
+    - Severe cases (Weil's disease): ~25% of symptomatic
+    - CFR: ~10% of severe cases (jaundice + renal failure)
+
+    Risk factors:
+    - Flood depth (deep > moderate > shallow > minimal)
+    - Cleanup participation (heavy > moderate > light > none)
+    - Rat sightings post-flood (very_many > many > some > few > rare > none)
+    - Poor sanitation (none > pit_latrine > flush_toilet)
+    - Unsafe water source (river > irrigation_canal > well > municipal > spring)
+    - Demographics: males 18-60 at highest risk (occupational exposure)
+
+    Target case counts:
+    - V1 (Malinao): ~28 cases (epicenter)
+    - V2 (San Rafael): ~4 cases
+    - V3 (Riverside): ~2 cases
+    - V4 (Malinis): 0 cases (control, upland)
+    """
+    # Base infection risk by village
+    base_risk = {
+        'V1': 0.035,  # Epicenter - severe flooding
+        'V2': 0.005,  # Moderate risk
+        'V3': 0.003,  # Low risk
+        'V4': 0.000   # Control - no flooding
+    }
+
+    # Risk multipliers for household factors
+    flood_depth_risk = {
+        'deep': 1.5,
+        'moderate': 1.0,
+        'shallow': 0.5,
+        'minimal': 0.1
+    }
+
+    cleanup_risk = {
+        'heavy': 1.5,
+        'moderate': 1.0,
+        'light': 0.6,
+        'none': 0.3
+    }
+
+    rat_sightings_risk = {
+        'very_many': 1.8,
+        'many': 1.4,
+        'some': 1.0,
+        'few': 0.6,
+        'rare': 0.3,
+        'none': 0.1
+    }
+
+    sanitation_risk = {
+        'none': 1.5,
+        'pit_latrine': 1.0,
+        'flush_toilet': 0.5
+    }
+
+    water_source_risk = {
+        'river': 1.6,
+        'irrigation_canal': 1.4,
+        'well': 1.0,
+        'municipal': 0.6,
+        'spring': 0.4
+    }
+
+    # Create household lookup
+    hh_lookup = households_df.set_index('hh_id').to_dict('index')
+
+    def calculate_lepto_risk(row):
+        # Seed individuals keep their status (preserve seed cases)
+        if row['person_id'].startswith('P0') or row['person_id'].startswith('P1') or row['person_id'].startswith('P2'):
+            if len(row['person_id']) <= 5:  # P0001, P1001, etc.
+                # For lepto, check if they have symptoms (seed cases are already assigned)
+                return row.get('symptoms_fever', False) or row.get('true_lepto_infection', False)
+
+        # V4 has no cases (control area)
+        if row['village_id'] == 'V4':
+            return False
+
+        risk = base_risk.get(row['village_id'], 0.0)
+
+        hh = hh_lookup.get(row['hh_id'], {})
+        if hh:
+            # Apply household risk multipliers
+            risk *= flood_depth_risk.get(hh.get('flood_depth_category', 'minimal'), 0.5)
+            risk *= cleanup_risk.get(hh.get('cleanup_participation', 'none'), 0.5)
+            risk *= rat_sightings_risk.get(hh.get('rat_sightings_post_flood', 'few'), 0.5)
+            risk *= sanitation_risk.get(hh.get('sanitation_type', 'flush_toilet'), 0.5)
+            risk *= water_source_risk.get(hh.get('water_source', 'municipal'), 0.5)
+
+        # Demographic risk: males 18-60 have highest exposure (cleanup work, outdoor labor)
+        if row['sex'] == 'M' and 18 <= row['age'] <= 60:
+            risk *= 1.8
+        elif row['sex'] == 'M':
+            risk *= 1.2
+        # Women have lower occupational exposure
+        elif row['sex'] == 'F' and 18 <= row['age'] <= 60:
+            risk *= 0.8
+
+        # Cap risk at reasonable level
+        return np.random.random() < min(risk, 0.15)
+
+    # Initialize lepto-specific columns if they don't exist
+    if 'true_lepto_infection' not in individuals_df.columns:
+        individuals_df['true_lepto_infection'] = False
+    if 'symptomatic_lepto' not in individuals_df.columns:
+        individuals_df['symptomatic_lepto'] = False
+    if 'severe_lepto' not in individuals_df.columns:
+        individuals_df['severe_lepto'] = False
+
+    individuals_df['true_lepto_infection'] = individuals_df.apply(calculate_lepto_risk, axis=1)
+
+    # Symptomatic cases - ~15% of infections become symptomatic
+    def assign_lepto_symptomatic(row):
+        # Preserve seed case status
+        if row['person_id'].startswith('P0') or row['person_id'].startswith('P1') or row['person_id'].startswith('P2'):
+            if len(row['person_id']) <= 5:
+                return row.get('symptoms_fever', False)
+        if not row['true_lepto_infection']:
+            return False
+        return np.random.random() < 0.15
+
+    individuals_df['symptomatic_lepto'] = individuals_df.apply(assign_lepto_symptomatic, axis=1)
+
+    # Severe cases (Weil's disease) - ~25% of symptomatic
+    def assign_lepto_severe(row):
+        # Preserve seed case status
+        if row['person_id'].startswith('P0') or row['person_id'].startswith('P1') or row['person_id'].startswith('P2'):
+            if len(row['person_id']) <= 5:
+                severity = row.get('clinical_severity', '')
+                return severity in ['severe', 'critical']
+        if not row['symptomatic_lepto']:
+            return False
+        return np.random.random() < 0.25
+
+    individuals_df['severe_lepto'] = individuals_df.apply(assign_lepto_severe, axis=1)
+
+    # Onset dates - lognormal distribution, median 10 days post-flood
+    # Flood ended 2024-10-10
+    def assign_lepto_onset(row):
+        if pd.notna(row.get('onset_date')):
+            return row['onset_date']
+        if not row['symptomatic_lepto']:
+            return None
+
+        # Lognormal incubation: median 10 days, range 2-30 days
+        # lognormal params: mu=log(10), sigma=0.5 gives median ~10, range ~3-30
+        incubation_days = int(np.random.lognormal(mean=np.log(10), sigma=0.5))
+        incubation_days = max(2, min(30, incubation_days))  # Clamp to 2-30 days
+
+        # Flood end date: 2024-10-10
+        flood_end = datetime(2024, 10, 10)
+        onset = flood_end + timedelta(days=incubation_days)
+        return onset.strftime('%Y-%m-%d')
+
+    individuals_df['onset_date'] = individuals_df.apply(assign_lepto_onset, axis=1)
+
+    # Outcomes
+    def assign_lepto_outcome(row):
+        if pd.notna(row.get('outcome')):
+            return row['outcome']
+        if not row['symptomatic_lepto']:
+            return None
+        if row['severe_lepto']:
+            # CFR ~10% of severe cases
+            if np.random.random() < 0.10:
+                return 'died'
+            # Remaining severe cases hospitalized or recovering
+            return np.random.choice(['hospitalized', 'recovering'], p=[0.6, 0.4])
+        # Non-severe symptomatic cases mostly recover
+        return np.random.choice(['recovered', 'recovering'], p=[0.7, 0.3])
+
+    individuals_df['outcome'] = individuals_df.apply(assign_lepto_outcome, axis=1)
+
     return individuals_df
 
 
