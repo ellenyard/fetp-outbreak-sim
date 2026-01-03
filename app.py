@@ -2930,7 +2930,15 @@ def sidebar_navigation():
 
 
 def day_briefing_text(day: int) -> str:
-    return t(f"day{day}_briefing")
+    """Load scenario-specific day briefing."""
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    briefing_content = load_scenario_content(scenario_id, f"day{day}_briefing")
+
+    # Fallback to translation system if content file not found
+    if briefing_content.startswith("⚠️"):
+        return t(f"day{day}_briefing")
+
+    return briefing_content
 
 
 def day_task_list(day: int):
@@ -3180,6 +3188,12 @@ def view_overview():
         with col1:
             st.markdown("### Case Definition")
 
+            # Show scenario-specific case definition template
+            scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+            with st.expander("📋 Case Definition Guidelines", expanded=False):
+                template_content = load_scenario_content(scenario_id, "case_definition_template")
+                st.markdown(template_content)
+
             with st.form("case_definition_form"):
                 st.markdown("**Clinical criteria:**")
                 clinical = st.text_area("What symptoms/signs define a case?", height=80)
@@ -3205,6 +3219,11 @@ def view_overview():
         with col2:
             st.markdown("### Initial Hypotheses")
             st.caption("Based on what you know so far, what might be causing this outbreak? (At least 1 required)")
+
+            # Show scenario-specific hypothesis examples
+            with st.expander("💡 Hypothesis Development Guide", expanded=False):
+                hypothesis_content = load_scenario_content(scenario_id, "hypothesis_examples")
+                st.markdown(hypothesis_content)
 
             with st.form("hypotheses_form"):
                 h1 = st.text_input("Hypothesis 1 (required):")
@@ -5657,6 +5676,13 @@ def view_interventions_and_outcome():
     st.session_state.decisions["final_diagnosis"] = dx
 
     st.markdown("### Recommendations")
+
+    # Show scenario-specific intervention recommendations
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    with st.expander("📚 Evidence-Based Intervention Guide", expanded=False):
+        intervention_content = load_scenario_content(scenario_id, "interventions")
+        st.markdown(intervention_content)
+
     rec_text = st.text_area(
         "List your main recommendations:",
         value="\n".join(st.session_state.decisions.get("recommendations", [])),
