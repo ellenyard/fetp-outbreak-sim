@@ -895,6 +895,23 @@ def detect_scenario_type(data_dir: str) -> str:
     return "je"
 
 
+def load_scenario_content(scenario_id: str, content_type: str) -> str:
+    """Load scenario-specific content file.
+
+    Args:
+        scenario_id: Scenario identifier (e.g., 'aes_sidero_valley', 'lepto_maharlika')
+        content_type: Type of content file to load (e.g., 'alert', 'day1_briefing')
+
+    Returns:
+        Content as markdown string, or error message if file not found
+    """
+    content_path = Path(f"scenarios/{scenario_id}/content/{content_type}.md")
+    if content_path.exists():
+        return content_path.read_text()
+    else:
+        return f"⚠️ Content file not found: {content_path}"
+
+
 def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
     """Load truth data and generate a full population.
 
@@ -3077,26 +3094,15 @@ def view_intro():
 
 def view_alert():
     """Day 0: Alert call intro screen."""
-    st.title("📞 Outbreak Alert – Sidero Valley")
+    # Load scenario-specific alert content
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    alert_content = load_scenario_content(scenario_id, "alert")
 
-    st.markdown(
-        """
-You are on duty at the District Health Office when a call comes in from the regional hospital.
-
-> **"We’ve admitted several children with sudden fever, seizures, and confusion.  
-> Most are from the rice-growing villages in Sidero Valley. We’re worried this might be the start of something bigger."**
-
-Within the last 48 hours:
-- Multiple children with acute encephalitis syndrome (AES) have been hospitalized  
-- Most are from Nalu and Kabwe villages  
-- No obvious foodborne event or large gathering has been identified  
-
-Your team has been asked to investigate, using a One Health approach.
-"""
-    )
+    st.title("📞 Outbreak Alert")
+    st.markdown(alert_content)
 
     st.info(
-        "When you’re ready, begin the investigation. You’ll move through the steps of an outbreak investigation over five simulated days."
+        "When you're ready, begin the investigation. You'll move through the steps of an outbreak investigation over five simulated days."
     )
 
     if st.button(t("begin_investigation")):
