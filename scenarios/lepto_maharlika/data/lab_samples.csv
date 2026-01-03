@@ -1,0 +1,37 @@
+sample_id,sample_type,linked_person_id,linked_village_id,collection_date,available_tests,true_lepto_positive,MAT_result,ELISA_IgM_result,PCR_result,culture_result,RDT_result,notes
+S001,blood,P0001,V1,2024-10-16,MAT;ELISA_IgM;PCR;culture,TRUE,positive,positive,positive,positive,positive,Renato Bautista - severe case with renal failure
+S002,blood,P0002,V1,2024-10-16,MAT;ELISA_IgM;RDT,TRUE,positive,positive,,negative,positive,Luz Fernandez - moderate case recovered
+S003,blood,P0003,V1,2024-10-18,MAT;ELISA_IgM;PCR,TRUE,positive,positive,positive,pending,,Tomas Fernandez - severe case hospitalized
+S004,blood,P0004,V1,2024-10-20,ELISA_IgM;RDT,TRUE,,positive,,negative,positive,Mario Cruz - moderate case
+S005,blood,P0005,V1,2024-10-17,MAT;ELISA_IgM,TRUE,positive,positive,,negative,,Luis Cruz - moderate case
+S006,blood,P0006,V1,2024-10-13,MAT;ELISA_IgM;PCR;culture,TRUE,positive,positive,positive,positive,positive,Tatay Aquino - severe jaundice
+S007,blood,P0007,V1,2024-10-18,ELISA_IgM,TRUE,,positive,,negative,,Ramon Magat - moderate case
+S008,blood,P0008,V1,2024-10-17,RDT,TRUE,,,,,positive,Joel Soriano - mild case field test only
+S009,blood,P0009,V1,2024-10-18,MAT;ELISA_IgM,TRUE,positive,positive,,negative,,Pedro Santos - moderate case
+S010,urine,P0001,V1,2024-10-18,PCR,TRUE,,,,positive,,Renato Bautista - urine sample high bacterial load
+S011,urine,P0003,V1,2024-10-20,PCR,TRUE,,,positive,pending,,Tomas Fernandez - urine sample
+S012,urine,P0006,V1,2024-10-15,PCR,TRUE,,,positive,negative,,Tatay Aquino - urine sample
+S013,blood,P0010,V1,2024-10-19,ELISA_IgM;RDT,TRUE,,positive,,negative,positive,Carlos Valdez - fisher mild case
+S014,blood,P0011,V1,2024-10-22,MAT;ELISA_IgM;PCR,TRUE,positive,positive,negative,negative,,Maria Reyes - severe case vendor
+S015,blood,P0012,V2,2024-10-19,MAT;ELISA_IgM,TRUE,positive,positive,,negative,,Roberto Tan - San Rafael case
+S016,blood,P0013,V2,2024-10-21,RDT,TRUE,,,,,positive,Diego Sanchez - San Rafael mild case
+S017,blood,P0014,V3,2024-10-21,MAT;ELISA_IgM;PCR,TRUE,positive,positive,positive,pending,,Emmanuel Ramos - Riverside severe case
+S018,blood,P0015,V1,2024-10-16,MAT;ELISA_IgM;PCR;culture,TRUE,positive,positive,positive,positive,positive,Gregorio Mercado - died severe case
+S019,blood,P1234,V1,2024-10-18,MAT;ELISA_IgM,FALSE,negative,negative,,negative,,Control - dengue case
+S020,blood,P2345,V2,2024-10-17,ELISA_IgM;RDT,FALSE,,negative,,,negative,Control - malaria case
+S021,blood,P3456,V4,2024-10-20,MAT,FALSE,negative,,,negative,,Control - Malinis resident no exposure
+E001,environmental_water,,,2024-10-23,PCR;culture,TRUE,,,positive,positive,,Malinao river water - Leptospira detected
+E002,environmental_water,,,2024-10-23,PCR;culture,TRUE,,,positive,positive,,Malinao irrigation canal - high contamination
+E003,environmental_water,,,2024-10-23,PCR,TRUE,,,positive,,,Malinao well water (HH001 area)
+E004,environmental_water,,,2024-10-23,PCR;culture,TRUE,,,positive,positive,,Floodwater pooled area Sitio Riverside
+E005,environmental_water,,,2024-10-23,PCR,FALSE,,,negative,negative,,San Rafael municipal water - negative
+E006,environmental_water,,,2024-10-23,PCR,FALSE,,,negative,negative,,Malinis spring water - negative (control)
+E007,environmental_soil,,,2024-10-24,PCR;culture,TRUE,,,positive,positive,,Malinao cleanup debris pile soil
+E008,environmental_soil,,,2024-10-24,PCR,TRUE,,,positive,negative,,Riverside flooded rice field soil
+R001,rodent_kidney,,,2024-10-25,PCR;culture,TRUE,,,positive,positive,,Rat trapped near rice granary Malinao
+R002,rodent_kidney,,,2024-10-25,PCR;culture,TRUE,,,positive,positive,,Rat trapped in flood debris Malinao
+R003,rodent_kidney,,,2024-10-25,PCR,TRUE,,,positive,,,Rat from pig pen area HH007
+R004,rodent_kidney,,,2024-10-26,PCR;culture,FALSE,,,negative,negative,,Rat from Malinis (control area)
+A001,animal_serum,,,2024-10-24,MAT,TRUE,positive,,,,,"Pig serum, HH001 - exposed to contaminated water"
+A002,animal_serum,,,2024-10-24,MAT,TRUE,positive,,,,,"Pig serum, HH007 - high exposure area"
+A003,animal_serum,,,2024-10-24,MAT,FALSE,negative,,,,,Dog serum San Rafael - negative
