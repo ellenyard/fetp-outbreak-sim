@@ -14,12 +14,12 @@ from PIL import Image
 # Session persistence
 import persistence
 
-# Robust import: avoid hard failures from `from je_logic import ...` if the deployed module is stale/mismatched.
+# Robust import: avoid hard failures from `from outbreak_logic import ...` if the deployed module is stale/mismatched.
 try:
-    import je_logic as jl
+    import outbreak_logic as jl
 except Exception as e:
     st.error(
-        "Failed to import je_logic.py. "
+        "Failed to import outbreak_logic.py. "
         "This usually means the file is missing from the repo, not committed/pushed, "
         "or it has an import/syntax error.\n\n"
         f"Error: {e!r}"
@@ -43,9 +43,9 @@ for _name in [
 
 if _missing_required:
     st.error(
-        "Your je_logic.py is missing required functions expected by app.py:\n"
+        "Your outbreak_logic.py is missing required functions expected by app.py:\n"
         + "\n".join(f"- {_n}" for _n in _missing_required)
-        + "\n\nFix: make sure you replaced je_logic.py with the updated version and pushed it to Streamlit Cloud."
+        + "\n\nFix: make sure you replaced outbreak_logic.py with the updated version and pushed it to Streamlit Cloud."
     )
     st.stop()
 
@@ -879,23 +879,48 @@ in the foothills away from the main rice-growing areas.
 # INITIALIZATION
 # =========================
 
-@st.cache_data
-def load_truth_and_population(data_dir: str = ".", _version: int = 3):
-    """Load truth data and generate a full population.
-    
-    _version parameter is used to bust the cache when logic changes.
-    Increment when risk model or data generation logic is modified.
+def detect_scenario_type(data_dir: str) -> str:
+    """Detect scenario type from data directory path.
+
+    Args:
+        data_dir: Path to scenario data directory
+
+    Returns:
+        Scenario type string: "je" or "lepto"
     """
+    data_dir_lower = data_dir.lower()
+    if "lepto" in data_dir_lower or "maharlika" in data_dir_lower:
+        return "lepto"
+    # Default to JE for AES/Sidero Valley or unrecognized scenarios
+    return "je"
+
+
+def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
+    """Load truth data and generate a full population.
+
+    Args:
+        data_dir: Path to scenario data directory
+        scenario_type: Type of outbreak scenario ("je" or "lepto").
+                      If None, auto-detected from data_dir path.
+
+    Returns:
+        Dictionary containing truth data with generated population.
+    """
+    # Auto-detect scenario type if not provided
+    if scenario_type is None:
+        scenario_type = detect_scenario_type(data_dir)
+
     truth = load_truth_data(data_dir=data_dir)
     villages_df = truth["villages"]
     households_seed = truth["households_seed"]
     individuals_seed = truth["individuals_seed"]
 
     households_full, individuals_full = generate_full_population(
-        villages_df, households_seed, individuals_seed
+        villages_df, households_seed, individuals_seed, scenario_type=scenario_type
     )
     truth["households"] = households_full
     truth["individuals"] = individuals_full
+    truth["scenario_type"] = scenario_type
     return truth
 
 
@@ -1426,7 +1451,7 @@ def npc_style_hint(npc_key: str, question_count: int, npc_state: str) -> str:
 # =========================
 
 LAB_TEST_CATALOG = {
-    # The keys match je_logic.LAB_TESTS / aliases; labels are trainee-facing.
+    # The keys match outbreak_logic.LAB_TESTS / aliases; labels are trainee-facing.
     "JE_IgM_CSF": {"generic": "Arbovirus IgM (CSF)", "confirmed": "Japanese Encephalitis IgM (CSF)"},
     "JE_IgM_serum": {"generic": "Arbovirus IgM (serum)", "confirmed": "Japanese Encephalitis IgM (serum)"},
     "JE_PCR_mosquito": {"generic": "Arbovirus PCR (mosquito pool)", "confirmed": "Japanese Encephalitis PCR (mosquito pool)"},
@@ -3854,7 +3879,7 @@ def view_clinic_register_scan():
 
 def view_nalu_child_register():
     """View Nalu Health Center Child Register - 38 entries with new cases."""
-    from je_logic import get_nalu_child_register, get_nalu_medical_record
+    from outbreak_logic import get_nalu_child_register, get_nalu_medical_record
 
     st.title("Nalu Health Center - Child Register")
     st.caption("Review the child health register to identify potential cases")
@@ -4562,7 +4587,7 @@ def view_study_design():
                 pool = pool[(pool["age"] >= int(control_age_range["min"])) & (pool["age"] <= int(control_age_range["max"]))].copy()
             if control_source == "clinic":
                 pool = pool[pool.get("reported_to_hospital", False).astype(bool) == True].copy()
-            # neighborhood handled in je_logic with weights; here we just show same-village candidates
+            # neighborhood handled in outbreak_logic with weights; here we just show same-village candidates
             return pool
 
         controls_pool = _build_control_pool()
@@ -6905,7 +6930,7 @@ def execute_location_action(action: str, config: dict, loc_key: str):
         st.rerun()
     elif handler == "nalu_child_register":
         # Check if nurse permits access
-        from je_logic import check_nurse_rapport
+        from outbreak_logic import check_nurse_rapport
         if check_nurse_rapport(st.session_state):
             st.session_state.current_view = "nalu_child_register"
             st.rerun()
@@ -6952,8 +6977,8 @@ def render_npc_chat(npc_key: str, npc: dict):
 
     # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
     if npc_key == "nurse_joy":
-        # Import je_logic for rapport functions
-        from je_logic import update_nurse_rapport, check_nurse_rapport
+        # Import outbreak_logic for rapport functions
+        from outbreak_logic import update_nurse_rapport, check_nurse_rapport
 
         # Initialize rapport and show current status
         if 'nurse_rapport' not in st.session_state:
@@ -7016,7 +7041,7 @@ def render_npc_chat(npc_key: str, npc: dict):
 
         # Track animal questions for nurse_joy
         if npc_key == "nurse_joy":
-            from je_logic import update_nurse_rapport
+            from outbreak_logic import update_nurse_rapport
             animal_keywords = ['pig', 'pigs', 'livestock', 'animal', 'animals', 'abortion', 'abortions', 'sow', 'sows', 'litter', 'litters']
             if any(keyword in user_q.lower() for keyword in animal_keywords):
                 update_nurse_rapport('animals', st.session_state)

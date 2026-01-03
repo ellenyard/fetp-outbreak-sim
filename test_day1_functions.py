@@ -7,15 +7,15 @@ import sys
 from unittest.mock import MagicMock
 sys.modules['streamlit'] = MagicMock()
 
-# Now import je_logic
-import je_logic
+# Now import outbreak_logic
+import outbreak_logic
 
 def test_get_medical_chart():
     """Test that medical charts exclude exposure data"""
     print("\n=== Testing get_medical_chart ===")
 
     # Test valid patient
-    chart = je_logic.get_medical_chart("HOSP-01")
+    chart = outbreak_logic.get_medical_chart("HOSP-01")
 
     if chart:
         print(f"✓ Retrieved chart for {chart['Name']}")
@@ -36,7 +36,7 @@ def test_get_medical_chart():
         print("✗ Failed to retrieve chart")
 
     # Test invalid patient
-    invalid_chart = je_logic.get_medical_chart("INVALID-99")
+    invalid_chart = outbreak_logic.get_medical_chart("INVALID-99")
     assert invalid_chart is None, "Should return None for invalid patient"
     print("✓ Returns None for invalid patient ID")
 
@@ -46,7 +46,7 @@ def test_get_clinic_log():
     print("\n=== Testing get_clinic_log ===")
 
     for village_id in ['V1', 'V2', 'V3']:
-        log = je_logic.get_clinic_log(village_id)
+        log = outbreak_logic.get_clinic_log(village_id)
         print(f"\n✓ Retrieved {len(log)} entries for village {village_id}")
 
         # Show first 3 entries
@@ -67,7 +67,7 @@ def test_get_clinic_log():
     print("\n✓ All clinic logs use natural language complaints")
 
     # Test village name input
-    log_by_name = je_logic.get_clinic_log("Nalu")
+    log_by_name = outbreak_logic.get_clinic_log("Nalu")
     assert len(log_by_name) > 0, "Should accept village name"
     print("✓ Accepts village names (e.g., 'Nalu')")
 
@@ -84,7 +84,7 @@ def test_check_case_definition():
         'onset_date': 'June 2025'
     }
 
-    result = je_logic.check_case_definition(valid_criteria)
+    result = outbreak_logic.check_case_definition(valid_criteria)
     assert result['valid'] == True, "Should accept clinical criteria"
     print("✓ Valid: Clinical/Person/Place/Time criteria accepted")
     print(f"  Message: {result['message']}")
@@ -95,7 +95,7 @@ def test_check_case_definition():
         'exposure': 'contact with pigs'
     }
 
-    result = je_logic.check_case_definition(invalid_criteria_pigs)
+    result = outbreak_logic.check_case_definition(invalid_criteria_pigs)
     assert result['valid'] == False, "Should reject pig exposure criteria"
     print("\n✓ Invalid: Rejected criteria with 'pigs'")
     print(f"  Message: {result['message']}")
@@ -106,7 +106,7 @@ def test_check_case_definition():
         'risk_factor': 'mosquito exposure'
     }
 
-    result = je_logic.check_case_definition(invalid_criteria_mosquitoes)
+    result = outbreak_logic.check_case_definition(invalid_criteria_mosquitoes)
     assert result['valid'] == False, "Should reject mosquito exposure criteria"
     print("\n✓ Invalid: Rejected criteria with 'mosquitoes'")
     print(f"  Message: {result['message']}")
@@ -117,7 +117,7 @@ def test_check_case_definition():
         'exposure': 'rice paddy water'
     }
 
-    result = je_logic.check_case_definition(invalid_criteria_water)
+    result = outbreak_logic.check_case_definition(invalid_criteria_water)
     assert result['valid'] == False, "Should reject water exposure criteria"
     print("\n✓ Invalid: Rejected criteria with 'water/rice paddy'")
 
