@@ -895,6 +895,23 @@ def detect_scenario_type(data_dir: str) -> str:
     return "je"
 
 
+def load_scenario_content(scenario_id: str, content_type: str) -> str:
+    """Load scenario-specific content file.
+
+    Args:
+        scenario_id: Scenario identifier (e.g., 'aes_sidero_valley', 'lepto_maharlika')
+        content_type: Type of content file to load (e.g., 'alert', 'day1_briefing')
+
+    Returns:
+        Content as markdown string, or error message if file not found
+    """
+    content_path = Path(f"scenarios/{scenario_id}/content/{content_type}.md")
+    if content_path.exists():
+        return content_path.read_text()
+    else:
+        return f"⚠️ Content file not found: {content_path}"
+
+
 def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
     """Load truth data and generate a full population.
 
@@ -2913,7 +2930,15 @@ def sidebar_navigation():
 
 
 def day_briefing_text(day: int) -> str:
-    return t(f"day{day}_briefing")
+    """Load scenario-specific day briefing."""
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    briefing_content = load_scenario_content(scenario_id, f"day{day}_briefing")
+
+    # Fallback to translation system if content file not found
+    if briefing_content.startswith("⚠️"):
+        return t(f"day{day}_briefing")
+
+    return briefing_content
 
 
 def day_task_list(day: int):
@@ -3077,26 +3102,15 @@ def view_intro():
 
 def view_alert():
     """Day 0: Alert call intro screen."""
-    st.title("📞 Outbreak Alert – Sidero Valley")
+    # Load scenario-specific alert content
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    alert_content = load_scenario_content(scenario_id, "alert")
 
-    st.markdown(
-        """
-You are on duty at the District Health Office when a call comes in from the regional hospital.
-
-> **"We’ve admitted several children with sudden fever, seizures, and confusion.  
-> Most are from the rice-growing villages in Sidero Valley. We’re worried this might be the start of something bigger."**
-
-Within the last 48 hours:
-- Multiple children with acute encephalitis syndrome (AES) have been hospitalized  
-- Most are from Nalu and Kabwe villages  
-- No obvious foodborne event or large gathering has been identified  
-
-Your team has been asked to investigate, using a One Health approach.
-"""
-    )
+    st.title("📞 Outbreak Alert")
+    st.markdown(alert_content)
 
     st.info(
-        "When you’re ready, begin the investigation. You’ll move through the steps of an outbreak investigation over five simulated days."
+        "When you're ready, begin the investigation. You'll move through the steps of an outbreak investigation over five simulated days."
     )
 
     if st.button(t("begin_investigation")):
@@ -3109,7 +3123,9 @@ Your team has been asked to investigate, using a One Health approach.
 def view_overview():
     truth = st.session_state.truth
 
-    st.title("AES Outbreak Investigation – Sidero Valley")
+    # Use scenario-specific title
+    scenario_name = st.session_state.get("current_scenario_name", "Outbreak Investigation")
+    st.title(f"{scenario_name}")
     st.subheader(f"Day {st.session_state.current_day} briefing")
 
     st.markdown(day_briefing_text(st.session_state.current_day))
@@ -3161,7 +3177,7 @@ def view_overview():
         epi_fig = make_epi_curve(truth)
         st.plotly_chart(epi_fig, use_container_width=True)
 
-    st.markdown("### Map of Sidero Valley")
+    st.markdown("### Geographic Distribution of Cases")
     map_fig = make_village_map(truth)
     st.plotly_chart(map_fig, use_container_width=True)
 
@@ -3173,6 +3189,12 @@ def view_overview():
 
         with col1:
             st.markdown("### Case Definition")
+
+            # Show scenario-specific case definition template
+            scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+            with st.expander("📋 Case Definition Guidelines", expanded=False):
+                template_content = load_scenario_content(scenario_id, "case_definition_template")
+                st.markdown(template_content)
 
             with st.form("case_definition_form"):
                 st.markdown("**Clinical criteria:**")
@@ -3199,6 +3221,11 @@ def view_overview():
         with col2:
             st.markdown("### Initial Hypotheses")
             st.caption("Based on what you know so far, what might be causing this outbreak? (At least 1 required)")
+
+            # Show scenario-specific hypothesis examples
+            with st.expander("💡 Hypothesis Development Guide", expanded=False):
+                hypothesis_content = load_scenario_content(scenario_id, "hypothesis_examples")
+                st.markdown(hypothesis_content)
 
             with st.form("hypotheses_form"):
                 h1 = st.text_input("Hypothesis 1 (required):")
@@ -4041,23 +4068,24 @@ def view_descriptive_epi():
             download_df['case_source'] = 'initial_report'
         csv_buffer = io.StringIO()
         download_df.to_csv(csv_buffer, index=False)
-        
+
+        scenario_id = st.session_state.get("current_scenario", "outbreak")
         st.download_button(
             label="📊 Download Line List (CSV)",
             data=csv_buffer.getvalue(),
-            file_name="sidero_valley_line_list.csv",
+            file_name=f"{scenario_id}_line_list.csv",
             mime="text/csv"
         )
-    
+
     with col2:
         # Tab-separated download as alternative
         tsv_buffer = io.StringIO()
         download_df.to_csv(tsv_buffer, index=False, sep='\t')
-        
+
         st.download_button(
             label="📊 Download Line List (TSV)",
             data=tsv_buffer.getvalue(),
-            file_name="sidero_valley_line_list.tsv",
+            file_name=f"{scenario_id}_line_list.tsv",
             mime="text/tab-separated-values"
         )
     
@@ -5651,6 +5679,13 @@ def view_interventions_and_outcome():
     st.session_state.decisions["final_diagnosis"] = dx
 
     st.markdown("### Recommendations")
+
+    # Show scenario-specific intervention recommendations
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    with st.expander("📚 Evidence-Based Intervention Guide", expanded=False):
+        intervention_content = load_scenario_content(scenario_id, "interventions")
+        st.markdown(intervention_content)
+
     rec_text = st.text_area(
         "List your main recommendations:",
         value="\n".join(st.session_state.decisions.get("recommendations", [])),
@@ -5698,10 +5733,11 @@ def view_interventions_and_outcome():
         with st.expander("Preview Field Briefing Note", expanded=True):
             st.markdown(st.session_state.field_briefing_note)
 
+        scenario_id = st.session_state.get("current_scenario", "outbreak")
         st.download_button(
             label="Download Field Briefing Note (.md)",
             data=st.session_state.field_briefing_note,
-            file_name=f"field_briefing_sidero_valley_day{st.session_state.current_day}.md",
+            file_name=f"field_briefing_{scenario_id}_day{st.session_state.current_day}.md",
             mime="text/markdown",
             help="Download the field briefing as a Markdown file"
         )
