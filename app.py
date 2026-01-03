@@ -3123,7 +3123,9 @@ def view_alert():
 def view_overview():
     truth = st.session_state.truth
 
-    st.title("AES Outbreak Investigation – Sidero Valley")
+    # Use scenario-specific title
+    scenario_name = st.session_state.get("current_scenario_name", "Outbreak Investigation")
+    st.title(f"{scenario_name}")
     st.subheader(f"Day {st.session_state.current_day} briefing")
 
     st.markdown(day_briefing_text(st.session_state.current_day))
@@ -3175,7 +3177,7 @@ def view_overview():
         epi_fig = make_epi_curve(truth)
         st.plotly_chart(epi_fig, use_container_width=True)
 
-    st.markdown("### Map of Sidero Valley")
+    st.markdown("### Geographic Distribution of Cases")
     map_fig = make_village_map(truth)
     st.plotly_chart(map_fig, use_container_width=True)
 
@@ -4066,23 +4068,24 @@ def view_descriptive_epi():
             download_df['case_source'] = 'initial_report'
         csv_buffer = io.StringIO()
         download_df.to_csv(csv_buffer, index=False)
-        
+
+        scenario_id = st.session_state.get("current_scenario", "outbreak")
         st.download_button(
             label="📊 Download Line List (CSV)",
             data=csv_buffer.getvalue(),
-            file_name="sidero_valley_line_list.csv",
+            file_name=f"{scenario_id}_line_list.csv",
             mime="text/csv"
         )
-    
+
     with col2:
         # Tab-separated download as alternative
         tsv_buffer = io.StringIO()
         download_df.to_csv(tsv_buffer, index=False, sep='\t')
-        
+
         st.download_button(
             label="📊 Download Line List (TSV)",
             data=tsv_buffer.getvalue(),
-            file_name="sidero_valley_line_list.tsv",
+            file_name=f"{scenario_id}_line_list.tsv",
             mime="text/tab-separated-values"
         )
     
@@ -5730,10 +5733,11 @@ def view_interventions_and_outcome():
         with st.expander("Preview Field Briefing Note", expanded=True):
             st.markdown(st.session_state.field_briefing_note)
 
+        scenario_id = st.session_state.get("current_scenario", "outbreak")
         st.download_button(
             label="Download Field Briefing Note (.md)",
             data=st.session_state.field_briefing_note,
-            file_name=f"field_briefing_sidero_valley_day{st.session_state.current_day}.md",
+            file_name=f"field_briefing_{scenario_id}_day{st.session_state.current_day}.md",
             mime="text/markdown",
             help="Download the field briefing as a Markdown file"
         )
