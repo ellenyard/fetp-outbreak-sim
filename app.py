@@ -607,7 +607,7 @@ LOCATIONS = {
         "image_path": "assets/Hospital/hospital_ward.png",
         "image_thumb": "assets/Hospital/hospital_ward.png",
         "icon": "🏥",
-        "npcs": ["parent_ward", "parent_general"],
+        "npcs": ["dr_reyes", "parent_ward", "parent_general"],
         "available_actions": ["review_hospital_records", "collect_csf_sample", "collect_serum_sample", "view_ward_registry"],
         "travel_time": 0.5,
     },
@@ -746,6 +746,7 @@ AREA_METADATA = {
 # Map NPC keys to their primary location
 NPC_LOCATIONS = {
     "dr_chen": "hospital_ward",
+    "dr_reyes": "hospital_ward",  # Leptospirosis scenario
     "patient_parent": "hospital_ward",
     "ward_parent": "hospital_ward",
     "nurse_joy": "nalu_health_center",
@@ -3334,9 +3335,9 @@ def view_interviews():
             if npc_key in st.session_state.npcs_unlocked and npc_key in npc_truth:
                 context_npcs.append((npc_key, npc_truth[npc_key]))
 
-    # If there's exactly one NPC at the context location and no active conversation,
+    # If there's exactly one NPC at the context location and no active modal,
     # start the conversation immediately
-    if len(context_npcs) == 1 and not st.session_state.current_npc:
+    if len(context_npcs) == 1 and not st.session_state.get("action_modal"):
         npc_key, npc = context_npcs[0]
         interviewed = npc_key in st.session_state.interview_history
         time_cost = TIME_COSTS["interview_followup"] if interviewed else TIME_COSTS["interview_initial"]
@@ -3349,6 +3350,7 @@ def view_interviews():
                 spend_budget(budget_cost, f"Interview: {npc['name']}")
             st.session_state.current_npc = npc_key
             st.session_state.interview_history.setdefault(npc_key, [])
+            st.session_state.action_modal = "interview"
             # Clear context after auto-selecting
             st.session_state.interview_context_location = None
             st.rerun()
@@ -3414,6 +3416,7 @@ def view_interviews():
 
                     st.session_state.current_npc = npc_key
                     st.session_state.interview_history.setdefault(npc_key, [])
+                    st.session_state.action_modal = "interview"
                     st.rerun()
                 else:
                     st.error(msg)
@@ -3429,51 +3432,11 @@ def view_interviews():
                 st.caption(f"{npc['role']}")
                 st.caption("*Not yet available*")
 
-    # Active conversation
-    npc_key = st.session_state.current_npc
-    if npc_key and npc_key in npc_truth:
-        npc = npc_truth[npc_key]
+    # Handle interview modal
+    action_modal = st.session_state.get("action_modal")
+    if action_modal == "interview":
         st.markdown("---")
-        st.subheader(f"Talking to {npc['name']} ({npc['role']})")
-
-        col1, col2 = st.columns([1, 5])
-        with col1:
-            if st.button("🔙 End Interview"):
-                st.session_state.current_npc = None
-                st.rerun()
-
-        history = st.session_state.interview_history.get(npc_key, [])
-        for msg in history:
-            if msg["role"] == "user":
-                with st.chat_message("user"):
-                    st.write(msg["content"])
-            else:
-                with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-                    st.write(msg["content"])
-
-        user_q = st.chat_input("Ask your question...")
-        if user_q:
-            # Check for NPC unlock triggers BEFORE getting response
-            unlock_notification = check_npc_unlock_triggers(user_q)
-            
-            history.append({"role": "user", "content": user_q})
-            st.session_state.interview_history[npc_key] = history
-
-            with st.chat_message("user"):
-                st.write(user_q)
-
-            with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-                with st.spinner("..."):
-                    reply = get_npc_response(npc_key, user_q)
-                st.write(reply)
-            
-            history.append({"role": "assistant", "content": reply})
-            st.session_state.interview_history[npc_key] = history
-            
-            # Show unlock notification if any
-            if unlock_notification:
-                st.success(unlock_notification)
-                st.rerun()
+        render_interview_modal()
 
 
 def view_case_finding():
@@ -6565,6 +6528,7 @@ def view_location(loc_key: str):
                         if st.button(btn_label, key=f"talk_{npc_key}"):
                             st.session_state.current_npc = npc_key
                             st.session_state.interview_history.setdefault(npc_key, [])
+                            st.session_state.action_modal = "interview"
                             st.rerun()
         else:
             st.info("No one is here to talk to right now.")
@@ -6578,14 +6542,7 @@ def view_location(loc_key: str):
         if actions:
             render_location_actions(loc_key, actions)
 
-    # If we have an active NPC conversation, show it
-    if st.session_state.current_npc:
-        npc_key = st.session_state.current_npc
-        if npc_key in npc_truth:
-            st.markdown("---")
-            render_npc_chat(npc_key, npc_truth[npc_key])
-
-    # Handle action modals
+    # Handle action modals (including interview modal)
     action_modal = st.session_state.get("action_modal")
     if action_modal:
         st.markdown("---")
@@ -6595,6 +6552,8 @@ def view_location(loc_key: str):
             render_hospital_charts_modal()
         elif action_modal == "deep_dive_charts":
             render_deep_dive_charts_modal()
+        elif action_modal == "interview":
+            render_interview_modal()
 
 
 def render_ward_registry_modal():
@@ -6724,6 +6683,141 @@ def render_deep_dive_charts_modal():
     st.markdown("---")
 
     st.info("🚧 Deep-dive charts feature coming soon. This will show aggregate patterns across hospitalized cases.")
+
+
+def render_interview_modal():
+    """Render interview modal for NPC conversations."""
+    npc_key = st.session_state.get("current_npc")
+    if not npc_key:
+        st.session_state.action_modal = None
+        st.rerun()
+        return
+
+    npc_truth = st.session_state.truth.get("npc_truth", {})
+    if npc_key not in npc_truth:
+        st.error("NPC not found!")
+        st.session_state.action_modal = None
+        st.session_state.current_npc = None
+        st.rerun()
+        return
+
+    npc = npc_truth[npc_key]
+
+    # Modal header
+    st.markdown(f"### {npc.get('avatar', '👤')} Interview: {npc.get('name', 'Unknown')}")
+    st.caption(f"*{npc.get('role', '')}*")
+
+    # Close button
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        if st.button("✖ Close", key="close_interview"):
+            st.session_state.action_modal = None
+            st.session_state.current_npc = None
+            st.rerun()
+
+    st.markdown("---")
+
+    # Show conversation history
+    history = st.session_state.interview_history.get(npc_key, [])
+
+    for msg in history:
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.write(msg["content"])
+        else:
+            with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
+                st.write(msg["content"])
+
+    # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
+    if npc_key == "nurse_joy":
+        # Import outbreak_logic for rapport functions
+        from outbreak_logic import update_nurse_rapport, check_nurse_rapport
+
+        # Initialize rapport and show current status
+        if 'nurse_rapport' not in st.session_state:
+            st.session_state['nurse_rapport'] = 0
+        if 'nurse_initial_dialogue_shown' not in st.session_state:
+            st.session_state['nurse_initial_dialogue_shown'] = False
+
+        # Show rapport status
+        rapport = st.session_state['nurse_rapport']
+        animal_q = st.session_state.get('nurse_animal_questions', 0)
+
+        st.info(f"**Nurse Rapport:** {rapport} | **Animal Questions Asked:** {animal_q}/3")
+
+        # Show initial dialogue choices if first interaction
+        if not st.session_state['nurse_initial_dialogue_shown'] and len(history) == 0:
+            st.markdown("---")
+            st.markdown("**Nurse Mai looks up from her paperwork, clearly stressed and overwhelmed.**")
+            st.markdown('"Why are you here now? I have so many patients to see..."')
+            st.markdown("---")
+            st.markdown("**How do you respond?**")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚨 'Show me the records. Now.'", key="nurse_demand", use_container_width=True):
+                    result = update_nurse_rapport('demand', st.session_state)
+                    history.append({"role": "user", "content": "'Show me the records. Now.'"})
+                    history.append({"role": "assistant", "content": result['message']})
+                    st.session_state.interview_history[npc_key] = history
+                    st.session_state['nurse_initial_dialogue_shown'] = True
+                    st.rerun()
+
+            with col2:
+                if st.button("💚 'It looks busy here. Thank you for your work.'", key="nurse_empathize", use_container_width=True):
+                    result = update_nurse_rapport('empathize', st.session_state)
+                    history.append({"role": "user", "content": "'It looks busy here. Thank you for your work.'"})
+                    history.append({"role": "assistant", "content": result['message']})
+                    st.session_state.interview_history[npc_key] = history
+                    st.session_state['nurse_initial_dialogue_shown'] = True
+                    st.rerun()
+
+            st.markdown("---")
+            return  # Don't show chat input yet
+
+        # Show pig clue if unlocked
+        if (rapport > 20 or animal_q >= 3) and 'nurse_pig_clue_shown' not in st.session_state:
+            st.success("**🐷 Nurse Mai sighs:** 'Fine. A few pig litters had abortions recently. Young farmers are careless.'")
+            st.session_state['nurse_pig_clue_shown'] = True
+
+        # Show records access status
+        if rapport > 10:
+            st.success("✅ **Records Access Granted** - You may now review the child register.")
+        else:
+            st.warning("🔒 **Records Access Denied** - Improve your rapport to access clinic records.")
+
+    # Chat input
+    user_q = st.chat_input(f"Ask {npc.get('name', 'NPC')} a question...")
+    if user_q:
+        # Check for NPC unlock triggers
+        unlock_notification = check_npc_unlock_triggers(user_q)
+
+        # Track animal questions for nurse_joy
+        if npc_key == "nurse_joy":
+            from outbreak_logic import update_nurse_rapport
+            animal_keywords = ['pig', 'pigs', 'livestock', 'animal', 'animals', 'abortion', 'abortions', 'sow', 'sows', 'litter', 'litters']
+            if any(keyword in user_q.lower() for keyword in animal_keywords):
+                update_nurse_rapport('animals', st.session_state)
+
+        history.append({"role": "user", "content": user_q})
+        st.session_state.interview_history[npc_key] = history
+
+        with st.chat_message("user"):
+            st.write(user_q)
+
+        with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
+            with st.spinner("..."):
+                reply = get_npc_response(npc_key, user_q)
+            st.write(reply)
+
+        history.append({"role": "assistant", "content": reply})
+        st.session_state.interview_history[npc_key] = history
+
+        # Show unlock notification
+        if unlock_notification:
+            st.success(unlock_notification)
+
+        st.rerun()
 
 
 def render_location_actions(loc_key: str, actions: list):
