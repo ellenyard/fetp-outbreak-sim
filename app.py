@@ -607,7 +607,7 @@ LOCATIONS = {
         "image_path": "assets/Hospital/hospital_ward.png",
         "image_thumb": "assets/Hospital/hospital_ward.png",
         "icon": "🏥",
-        "npcs": ["parent_ward", "parent_general"],
+        "npcs": ["parent_ward", "parent_general", "dr_reyes", "nurse_maricel"],
         "available_actions": ["review_hospital_records", "collect_csf_sample", "collect_serum_sample", "view_ward_registry"],
         "travel_time": 0.5,
     },
@@ -618,7 +618,7 @@ LOCATIONS = {
         "image_path": "assets/Hospital/hospital_admin.png",
         "image_thumb": "assets/Hospital/hospital_admin.png",
         "icon": "📋",
-        "npcs": ["dr_chen"],
+        "npcs": ["dr_chen", "dr_reyes"],
         "available_actions": ["review_hospital_records", "view_deep_dive_charts"],
         "travel_time": 0.0,
         "max_deep_dive_charts": 2,
@@ -699,6 +699,12 @@ AREA_LOCATIONS = {
     "Mining Area": ["mining_area"],
 }
 
+# Scenario-specific initial NPCs (unlocked at start)
+SCENARIO_INITIAL_NPCS = {
+    "aes_sidero_valley": ["dr_chen", "nurse_joy", "mama_kofi", "foreman_rex", "teacher_grace"],
+    "lepto_maharlika": ["dr_reyes", "nurse_maricel", "kapitana_gloria", "dr_mendoza"],
+}
+
 # Area metadata for visual rendering (hero images, descriptions)
 AREA_METADATA = {
     "Admin Office": {
@@ -745,6 +751,7 @@ AREA_METADATA = {
 
 # Map NPC keys to their primary location
 NPC_LOCATIONS = {
+    # JE scenario NPCs
     "dr_chen": "hospital_ward",
     "patient_parent": "hospital_ward",
     "ward_parent": "hospital_ward",
@@ -760,6 +767,19 @@ NPC_LOCATIONS = {
     "mayor_simon": "district_office",
     "nurse_kabwe": "kabwe_health_center",
     "chv_tamu": "tamu_health_center",
+    # Lepto scenario NPCs
+    "dr_reyes": "hospital_ward",
+    "nurse_maricel": "hospital_ward",
+    "kapitana_gloria": "nalu_village_center",
+    "dr_mendoza": "district_office",
+    "dr_villareal": "district_office",
+    "mang_tonyo": "nalu_village_center",
+    "luz_fernandez": "nalu_village_center",
+    "pastor_elijah": "healer_clinic",
+    "mayor_villanueva": "district_office",
+    "engr_ramon": "district_office",
+    "mr_chen_wei": "mining_area",
+    "dr_lacson": "district_office",
 }
 
 
@@ -1042,9 +1062,10 @@ def init_session_state():
     
     # Investigation notebook
     st.session_state.setdefault("notebook_entries", [])
-    
+
     # NPC unlocking system (One Health)
-    st.session_state.setdefault("npcs_unlocked", ["dr_chen", "nurse_joy", "mama_kofi", "foreman_rex", "teacher_grace"])
+    # Note: Initial NPCs are now set when scenario is loaded (see main() scenario loading section)
+    st.session_state.setdefault("npcs_unlocked", [])
     st.session_state.setdefault("one_health_triggered", False)
     st.session_state.setdefault("vet_unlocked", False)
     st.session_state.setdefault("env_officer_unlocked", False)
@@ -7385,6 +7406,13 @@ def main():
             # Reset game state for fresh start
             if 'game_state' in st.session_state:
                 st.session_state.game_state = 'INTRO'
+
+            # Reset and set scenario-specific NPCs
+            initial_npcs = SCENARIO_INITIAL_NPCS.get(scenario_id, [])
+            st.session_state.npcs_unlocked = initial_npcs.copy()
+            st.session_state.one_health_triggered = False
+            st.session_state.vet_unlocked = False
+            st.session_state.env_officer_unlocked = False
 
         st.success(f"✅ Loaded: {scenario_name}")
         time.sleep(0.5)  # Brief pause to show success message
