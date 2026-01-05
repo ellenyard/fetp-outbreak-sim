@@ -811,11 +811,15 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
     }
     
     target_households = 350
-    hh_counter = 300
-    person_counter = 3000
-    
-    # Track existing IDs
+
+    # Track existing IDs and find max household/person numbers to avoid collisions
     existing_hh_ids = set(households_seed['hh_id'].tolist())
+    max_hh_num = max([int(hh_id[2:]) for hh_id in existing_hh_ids]) if existing_hh_ids else 0
+    hh_counter = max_hh_num + 1
+
+    existing_person_ids = set(individuals_seed['person_id'].tolist())
+    max_person_num = max([int(pid[1:]) for pid in existing_person_ids]) if existing_person_ids else 0
+    person_counter = max(max_person_num + 1, 3000)  # Start at 3000 minimum for generated IDs
     
     # Generate additional households
     for village_id, params in village_params.items():
@@ -823,8 +827,13 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
         village_row = villages_df[villages_df['village_id'] == village_id].iloc[0]
         
         for _ in range(n_hh):
+            # Generate unique household ID (skip if already exists)
             hh_id = f'HH{hh_counter:03d}'
+            while hh_id in existing_hh_ids:
+                hh_counter += 1
+                hh_id = f'HH{hh_counter:03d}'
             hh_counter += 1
+            existing_hh_ids.add(hh_id)
             
             # Pig ownership (Poisson)
             pigs = min(np.random.poisson(params['pig_lambda']), 12)
