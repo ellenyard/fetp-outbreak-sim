@@ -13,19 +13,19 @@ ENV011,river_water,V2,medium,TRUE,low,Cagayan River at San Rafael - downstream f
 ENV012,municipal_water,V2,low,FALSE,none,San Rafael municipal water system - chlorinated protected source,17.6318,121.8534,low
 ENV013,well_water,V2,medium,TRUE,low,Private well San Rafael low area - minor contamination,17.6305,121.8518,medium
 ENV014,market_drainage,V2,medium,TRUE,medium,San Rafael market drainage system - rat activity observed,17.6315,121.8529,medium
-ENV015,river_water,V3,medium,TRUE,medium,Riverside fishing area - stilt house community,17.6198,121.8512,medium
-ENV016,communal_well,V3,medium,TRUE,low,Riverside communal well - elevated but some contamination,17.6203,121.8507,medium
-ENV017,fishing_dock,V3,low,FALSE,low,Fishing dock area - good water flow minimal contamination,17.6195,121.8515,low
-ENV018,spring_water,V4,none,FALSE,none,Malinis protected spring - primary water source control area,17.6456,121.8634,control
-ENV019,municipal_water,V4,none,FALSE,none,Malinis municipal system - spring-fed no contamination,17.6461,121.8641,control
-ENV020,evacuation_site,V4,none,FALSE,none,Barangay hall Malinis - served as evacuation center,17.6458,121.8637,control
+ENV015,river_water,V3,medium,TRUE,medium,Bagong Silang fishing area - stilt house community,17.6198,121.8512,medium
+ENV016,communal_well,V3,medium,TRUE,low,Bagong Silang communal well - elevated but some contamination,17.6203,121.8507,medium
+ENV017,fishing_dock,V3,low,FALSE,low,Bagong Silang fishing dock area - good water flow minimal contamination,17.6195,121.8515,low
+ENV018,spring_water,V4,none,FALSE,none,Santa Cruz protected spring - primary water source control area,17.6456,121.8634,control
+ENV019,municipal_water,V4,none,FALSE,none,Santa Cruz municipal system - spring-fed no contamination,17.6461,121.8641,control
+ENV020,evacuation_site,V4,none,FALSE,none,Barangay hall Santa Cruz - served as evacuation center,17.6458,121.8637,control
 RAT001,rat_trap_site,V1,very_high,TRUE,very_high,Rat trapping grid Zone 1 - near granary (10 traps),17.6240,121.8463,critical
 RAT002,rat_trap_site,V1,high,TRUE,very_high,Rat trapping grid Zone 2 - residential Sitio Riverside (10 traps),17.6241,121.8443,critical
 RAT003,rat_trap_site,V1,high,TRUE,high,Rat trapping grid Zone 3 - pig pen area (8 traps),17.6243,121.8454,high
 RAT004,rat_trap_site,V2,medium,TRUE,medium,Rat trapping grid Zone 4 - San Rafael market (6 traps),17.6315,121.8529,medium
-RAT005,rat_trap_site,V3,low,FALSE,low,Rat trapping grid Zone 5 - Riverside docks (4 traps),17.6198,121.8512,low
-RAT006,rat_trap_site,V4,none,FALSE,none,Rat trapping grid Zone 6 - Malinis control (4 traps),17.6458,121.8637,control
+RAT005,rat_trap_site,V3,low,FALSE,low,Rat trapping grid Zone 5 - Bagong Silang docks (4 traps),17.6198,121.8512,low
+RAT006,rat_trap_site,V4,none,FALSE,none,Rat trapping grid Zone 6 - Santa Cruz control (4 traps),17.6458,121.8637,control
 SOIL001,soil_sample_site,V1,high,TRUE,high,Flooded residential area soil - Sitio Riverside,17.6241,121.8443,high
 SOIL002,soil_sample_site,V1,medium,TRUE,medium,Rice field soil - post-harvest flood damage,17.6232,121.8472,medium
 SOIL003,soil_sample_site,V2,low,FALSE,low,San Rafael residential soil - minimal flooding,17.6318,121.8534,low
-SOIL004,soil_sample_site,V4,none,FALSE,none,Malinis upland soil - control area no flooding,17.6456,121.8634,control
+SOIL004,soil_sample_site,V4,none,FALSE,none,Santa Cruz upland soil - control area no flooding,17.6456,121.8634,control

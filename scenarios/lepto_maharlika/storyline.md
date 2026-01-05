@@ -11,7 +11,7 @@ The municipality of San Isidro sits in a wide river valley in the Cagayan provin
 
 The town center—a cluster of concrete buildings around a modest plaza with a Spanish-era church—serves as the commercial hub for the surrounding barangays. A district hospital, built in the 1980s and perpetually understaffed, handles everything from difficult births to motorcycle accidents to the steady stream of hypertension and diabetes cases that have become the province's quiet epidemic.
 
-The four barangays that comprise rural San Isidro spread outward from the town center like fingers reaching toward the mountains: Malinao to the north, where the river bends and floods first; Riverside to the east, perched slightly higher on ancient river terraces; Santa Cruz to the south, prosperous with its irrigated rice fields and small dairy cooperative; and Kagubatan to the west, where the land rises toward the forested foothills and farmers grow corn and vegetables on sloped terrain.
+The four barangays that comprise rural San Isidro spread outward from the town center like fingers reaching toward the mountains: Malinao to the north, where the river bends and floods first; San Rafael to the east, perched slightly higher on ancient river terraces; Bagong Silang to the south, with its fishing community and stilt houses; and Santa Cruz to the west, where the land rises toward the forested foothills, serving as an evacuation site during the typhoon.
 
 The people here are Ilocano, practical and hardworking, known throughout the Philippines for their frugality and resilience. They have weathered typhoons before—many times. This is what they tell themselves as the rains begin.
 
@@ -23,7 +23,7 @@ For three days—October 8th through 10th, 2024—the storm sat over the Cagayan
 
 Barangay Malinao bore the worst of it. The river jumped its banks on the morning of October 9th, pouring through the community with little warning. Water reached the rooflines of single-story homes. Residents who couldn't reach higher ground climbed into the branches of mango trees, clinging there for hours as debris swirled below. The barangay's small livestock population—pigs, goats, a few cattle—panicked and scattered. Many drowned. Those that survived wandered through the floodwaters, bellowing, searching for dry ground that didn't exist.
 
-In Riverside, the flooding was severe but survivable—waist-deep in most areas, sparing the homes built on the higher terraces but destroying crops and drowning backyard animals. Santa Cruz fared better, protected by its elevation and its well-maintained irrigation system that channeled some of the overflow into the fields. Kagubatan, in the foothills, escaped the flooding entirely but was cut off by road washouts for five days.
+In San Rafael, the flooding was moderate—affecting primarily the lower-lying commercial areas but limited by better construction and rapid drainage. Bagong Silang's stilt houses provided some protection, though communal wells were contaminated. Santa Cruz, in the foothills, escaped serious flooding entirely due to its elevation and served as an evacuation site, though access roads were damaged for several days.
 
 By October 12th, the waters began to recede, leaving behind a landscape transformed. Thick brown mud coated everything. Dead animals lay bloated in the streets. The smell was overwhelming—a mix of decay, sewage, and the particular mustiness of flood-soaked homes. The government declared a state of calamity. Relief goods trickled in. Residents began the exhausting work of cleaning up.
 
@@ -47,7 +47,7 @@ The Field Epidemiology Training Program team receives notification on October 29
 
 The regional epidemiologist's voice on the phone is tense: "We need help. Cases are still coming in. The community is panicking. There's talk that the water supply is contaminated—people are buying bottled water they can't afford. The mayor is pressuring us to declare the outbreak over so it doesn't affect disaster relief funding. And honestly? We're not sure what's driving this. Everyone got flooded, but Malinao got hit hardest. Is it just exposure time? Water source? Something else?"
 
-There are whispers in the community about other explanations. Some people blame the Chinese-owned mining company that operates in the mountains above Kagubatan—maybe the floodwaters carried chemicals down from the mine tailings. Others suspect the pigs. A local faith healer has been doing brisk business, suggesting the illness is spiritual punishment for the community's sins. The veterinarian who handles the dairy cooperative in Santa Cruz has been asking uncomfortable questions about animal die-offs that no one in the health sector seems interested in answering.
+There are whispers in the community about other explanations. Some people blame the Chinese-owned mining company that operates in the mountains upstream from Malinao—maybe the floodwaters carried chemicals down from the mine tailings. Others suspect the pigs. A local faith healer has been doing brisk business, suggesting the illness is spiritual punishment for the community's sins. The local veterinarian has been asking uncomfortable questions about animal die-offs that no one in the health sector seems interested in answering.
 
 The team's mission is clear: characterize the outbreak, identify risk factors, and recommend evidence-based interventions. But beneath the epidemiological puzzle lies something more human—a traumatized community struggling to recover from disaster, local politics and personalities complicating the response, and the weight of lives that hang on getting the answers right.
 
@@ -64,26 +64,26 @@ The most severely affected community, situated in the river's flood plain at a s
 
 **Attack rate: Highest.** Twenty-eight of thirty-four suspected cases reside here.
 
-### Barangay Riverside (Population: 850)
-**"The old settlement"**
+### Barangay San Rafael (Population: 2,500)
+**"The commercial center"**
 
-Built on ancient river terraces that provide modest elevation advantage. Mixed economy of rice farming and tobacco cultivation. The community has a reputation for being more prosperous and educated than Malinao—several teachers and a nurse live here. Flooding was significant but shorter in duration (24-36 hours), affecting primarily the lower-lying areas near the river. The barangay has two water sources: a protected spring that serves the upper community and a shallow well serving the lower areas. The shallow well was contaminated during the flood. Some residents participated in cleanup activities in Malinao, commuting daily to help relatives. 
+San Isidro's largest and most developed barangay, serving as a commercial and residential hub. Mixed economy of rice farming, small businesses, and pig farming. The community has better infrastructure than Malinao, including a partially functional municipal water system. Flooding was moderate (averaging 0.6m depth for 24-36 hours), affecting primarily the lower-lying commercial areas. Better construction standards and rapid drainage limited damage compared to Malinao. Several pig farms in this barangay reported sick animals post-typhoon—a critical clue for One Health investigation. Some residents participated in cleanup activities in Malinao, commuting daily to help relatives.
 
-**Attack rate: Moderate.** Four suspected cases, all from the lower section of the barangay.
+**Attack rate: Moderate.** Four suspected cases, primarily workers involved in flood cleanup.
 
-### Barangay Santa Cruz (Population: 680)
-**"The dairy village"**
+### Barangay Bagong Silang (Population: 850)
+**"The fishing community"**
 
-Home to the municipality's small dairy cooperative—thirty-two cattle distributed among a dozen families who sell fresh milk to a processor in the provincial capital. The community takes pride in its relative prosperity and organization. Well-maintained irrigation canals actually helped channel floodwaters away from homes, resulting in minimal flooding (ankle-deep at worst, for less than 12 hours). The cooperative's cattle barn, however, was flooded, and animals stood in contaminated water for nearly two days before they could be moved to higher ground. Three cows died in the week following the typhoon—attributed to stress and infection, though no veterinary investigation was conducted. The cooperative's veterinary liaison, Dr. Ernesto Villareal, has been expressing concern about the cattle deaths but has been largely ignored by health authorities focused on human cases. 
+A fishing and farming settlement along the river, characterized by traditional stilt houses that provide flood adaptation. The community has a mixed economy of fishing, rice farming, and small-scale agriculture. Flooding was moderate (0.8m depth for 24-36 hours), but the elevated stilt house construction and good natural drainage limited household damage. Most residents have experience with seasonal flooding and took preventive measures. Communal wells were contaminated but recovered quickly. Less intensive cleanup work was required compared to Malinao.
 
-**Attack rate: Low.** Two suspected cases, both dairy farmers.
+**Attack rate: Low.** Two suspected cases, both from the lower-lying areas near the riverbank.
 
-### Barangay Kagubatan (Population: 520)
-**"The upland community"**
+### Barangay Santa Cruz (Population: 4,600)
+**"The upland sanctuary"**
 
-Located in the forested foothills, this barangay escaped flooding entirely due to its elevation. Primary livelihood is upland farming (corn, vegetables) and, for some families, small-scale mining and quarrying. The community was isolated for five days when the access road washed out, but suffered no flood damage. Residents here did not participate in cleanup activities in the flooded barangays. However, Kagubatan is downstream from the Sino-Philippine Mining Corporation's gold mining operation, and some community members have long suspected the company of contaminating local water sources with mining runoff. The post-typhoon illness outbreak has reignited these suspicions, even though no cases have been identified in Kagubatan. 
+Located at higher elevation in the foothills, this is the largest and most prosperous barangay, home to government employees, teachers, and professionals. The barangay escaped serious flooding (minimal 0.1m depth for less than 12 hours) due to its elevation and served as an evacuation site during Typhoon Odette. Infrastructure includes spring-fed water systems with excellent quality (90% sanitation coverage) and well-maintained roads. Residents here did not participate in cleanup activities in the flooded barangays and had minimal exposure to contaminated floodwater. The community serves as an ideal control group for epidemiological investigation. However, Santa Cruz is located downstream from the Golden Valley Mining Corporation's copper-gold mining operation, and some community members have long suspected the company of contaminating local water sources. The post-typhoon illness outbreak has reignited these suspicions, even though no cases have been identified in Santa Cruz.
 
-**Attack rate: Zero cases.** This community will serve as a potential comparison group—but also as a source of the "mining contamination" red herring.
+**Attack rate: Zero cases.** This community serves as the primary comparison/control group—but also as a source of the "mining contamination" red herring that investigators must rule out.
 
 ---
 
@@ -93,11 +93,11 @@ Located in the forested foothills, this barangay escaped flooding entirely due t
 |------|-----|-------|
 | Oct 8-10 | — | Typhoon Odette stalls over Cagayan Valley; catastrophic flooding |
 | Oct 9 | — | Cagayan River overflows; Malinao submerged; livestock die-off begins |
-| Oct 10 | — | Peak flooding in Malinao and Riverside; residents trapped on rooftops |
+| Oct 10 | — | Peak flooding in Malinao; residents trapped on rooftops; San Rafael and Bagong Silang also affected |
 | Oct 11 | — | Floodwaters begin receding; state of calamity declared |
 | Oct 12-15 | — | Community cleanup begins; residents wade through contaminated water and mud |
-| Oct 15 | — | First relief goods arrive; roads to Kagubatan remain impassable |
-| Oct 17 | — | Road to Kagubatan reopens; full municipal access restored |
+| Oct 15 | — | First relief goods arrive; some road damage to Santa Cruz remains |
+| Oct 17 | — | Roads fully restored; full municipal access to all barangays |
 | Oct 19 | — | First case: Renato Bautista (Malinao) admitted with fever, myalgia, headache |
 | Oct 20-22 | — | Six additional patients admitted; suspected dengue/viral fever |
 | Oct 23 | — | Seventeen patients admitted; pattern of adult male farmers noted |
@@ -179,9 +179,9 @@ The person responsible for coordinating the municipality's disaster response. En
 
 **Relationship:** Environmental data source.
 
-#### 11. Mr. Chen Wei, 36 — Community Relations Officer, Sino-Philippine Mining Corp.
+#### 11. Mr. Chen Wei, 36 — Site Manager, Golden Valley Mining Corporation
 
-The public face of the mining company that operates in the mountains above Kagubatan. Mr. Chen has been fielding angry accusations from community members blaming mine runoff for the illness outbreak. He insists the mine's operations meet all environmental standards and has water quality test results to prove it. Defensive and corporate in demeanor, but not dishonest—the mine genuinely appears to be unrelated to the outbreak. His presence in the narrative serves as a red herring and a lesson about following evidence rather than assumptions. 
+The site manager of the mining company that operates in the mountains upstream from Malinao (4.7 km from the barangay). Mr. Chen has been fielding angry accusations from community members blaming mine runoff for the illness outbreak. He insists the mine's operations meet all environmental standards and has water quality test results to prove it. Defensive and corporate in demeanor, but not dishonest—the mine genuinely appears to be unrelated to the outbreak. His presence in the narrative serves as a red herring and a lesson about following evidence rather than assumptions. 
 
 **Relationship:** Red herring, environmental data.
 
@@ -199,7 +199,7 @@ The regional epidemiologist who requested FETP assistance and will serve as the 
 
 #### 1. The Mining Contamination Theory
 
-Several community members, particularly from Kagubatan, are convinced that the Sino-Philippine Mining Corporation's gold mining operation contaminated the floodwaters with heavy metals or chemicals. This theory is emotionally compelling—the community has long distrusted the foreign-owned mine—and seems to fit the post-flood timing. However, investigation will reveal: no cases have occurred in Kagubatan (closest to the mine); water quality tests show no elevated heavy metals in flooded areas; and the clinical presentation is inconsistent with heavy metal poisoning. The team must respectfully investigate and rule out this theory while maintaining community trust.
+Several community members are convinced that the Golden Valley Mining Corporation's copper-gold mining operation contaminated the floodwaters with heavy metals or chemicals. This theory is emotionally compelling—the community has long distrusted the foreign-owned mine—and seems to fit the post-flood timing. However, investigation will reveal: no cases have occurred in Santa Cruz (the upland barangay closest to the mine); water quality tests show no elevated heavy metals in flooded areas; and the clinical presentation is inconsistent with heavy metal poisoning. The team must respectfully investigate and rule out this theory while maintaining community trust.
 
 #### 2. The Contaminated Water Supply
 
@@ -213,7 +213,7 @@ The initial cases were treated as dengue fever, which is endemic to the region. 
 
 #### 1. The Hidden Livestock Deaths (Unlocked Through Veterinary Investigation)
 
-When the team engages Dr. Villareal and applies a One Health approach, they discover an unreported die-off of livestock across Malinao and parts of Riverside—not just the cattle in Santa Cruz. Farmers didn't report sick and dying pigs because they feared they would be forced to cull their remaining animals without compensation. Dr. Villareal has collected tissue samples from some of these animals and stored them in his clinic freezer. Laboratory testing of these samples will reveal Leptospira infection in the animal population, confirming a classic One Health outbreak pattern. This discovery dramatically strengthens the investigation's conclusions and intervention recommendations.
+When the team engages Dr. Villareal and applies a One Health approach, they discover an unreported die-off of livestock across Malinao and parts of San Rafael—particularly pigs showing clinical signs of leptospirosis. Farmers didn't report sick and dying pigs because they feared they would be forced to cull their remaining animals without compensation. Dr. Villareal has collected tissue samples from some of these animals and stored them in his clinic freezer. Laboratory testing of these samples will reveal Leptospira infection in the animal population, confirming a classic One Health outbreak pattern. This discovery dramatically strengthens the investigation's conclusions and intervention recommendations.
 
 #### 2. The Barefoot Cleanup Detail (Human Behavior Risk Factor)
 
