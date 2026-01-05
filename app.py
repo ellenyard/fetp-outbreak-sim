@@ -3016,80 +3016,31 @@ def day_task_list(day: int):
 # =========================
 
 def view_intro():
-    """Serious Mode: Dr. Tran phone call intro screen."""
-    st.markdown(
-        """
-        <style>
-        .phone-overlay {
-            background: linear-gradient(135deg, #1e3a5f 0%, #2c5f8d 100%);
-            padding: 3rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            text-align: center;
-            margin: 2rem auto;
-            max-width: 600px;
-        }
-        .phone-title {
-            font-size: 2.5rem;
-            color: white;
-            margin-bottom: 1rem;
-        }
-        .phone-subtitle {
-            font-size: 1.2rem;
-            color: #a8c5e4;
-            margin-bottom: 2rem;
-        }
-        .phone-message {
-            background: rgba(255,255,255,0.1);
-            border-left: 4px solid #ff6b6b;
-            padding: 1.5rem;
-            margin: 2rem 0;
-            border-radius: 8px;
-            color: white;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            text-align: left;
-        }
-        .metrics-box {
-            background: rgba(255,107,107,0.2);
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            text-align: center;
-        }
-        .metric-item {
-            color: #ffeb3b;
-            font-weight: bold;
-            font-size: 1.3rem;
-            margin: 0.5rem 0;
-        }
-        </style>
+    """Phone call intro screen with scenario-specific content."""
+    # Load scenario-specific alert content
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    alert_content = load_scenario_content(scenario_id, "alert")
 
-        <div class="phone-overlay">
-            <div class="phone-title">📞 Incoming Call</div>
-            <div class="phone-subtitle">Dr. Tran - District Hospital</div>
+    # Extract doctor name from alert content for subtitle
+    doctor_name = "District Hospital"
+    for line in alert_content.split('\n'):
+        if line.startswith('**From:**'):
+            # Extract just the doctor name part (before comma if present)
+            from_text = line.replace('**From:**', '').strip()
+            doctor_name = from_text.split(',')[0] if ',' in from_text else from_text
+            break
 
-            <div class="phone-message">
-                <strong>Dr. Tran:</strong> "This is Dr. Tran at Sidero District Hospital.
-                We have a critical situation here. We've admitted <strong>2 severe pediatric cases</strong>
-                with acute encephalitis syndrome. Both children are experiencing seizures and altered consciousness.
-                <br><br>
-                And I'm sorry to report... we've had <strong>1 death</strong> already.
-                <br><br>
-                I need an FETP officer here <strong>immediately</strong> to investigate.
-                This could be the start of something much bigger."
-            </div>
+    # Display phone call header
+    st.markdown("# 📞 Incoming Call")
+    st.markdown(f"### {doctor_name}")
+    st.markdown("---")
 
-            <div class="metrics-box">
-                <p class="metric-item">🏥 2 Severe Cases</p>
-                <p class="metric-item">💀 1 Death</p>
-                <p class="metric-item">📅 Day 1</p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Display scenario-specific alert content
+    st.markdown(alert_content)
 
+    st.markdown("---")
+
+    # Accept assignment button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("✅ Accept Assignment", type="primary", use_container_width=True):
