@@ -1329,9 +1329,15 @@ def apply_case_definition(individuals_df: pd.DataFrame, case_criteria: dict) -> 
     if not case_criteria:
         case_criteria = {"clinical_AES": True}
     
-    # Default: use symptomatic_AES as proxy for clinical AES criteria
+    scenario_type = case_criteria.get("scenario_type")
+    symptomatic_column = "symptomatic_lepto" if scenario_type == "lepto" else "symptomatic_AES"
+
+    # Default: use symptomatic column as proxy for clinical AES criteria
     if case_criteria.get("clinical_AES", False):
-        df = df[df["symptomatic_AES"] == True]
+        if symptomatic_column in df.columns:
+            df = df[df[symptomatic_column] == True]
+        else:
+            df = df[df["symptomatic_AES"] == True]
     
     # Additional filters can be added based on case_criteria
     if "village_ids" in case_criteria and case_criteria["village_ids"]:
@@ -2201,9 +2207,20 @@ def generate_study_dataset(individuals_df, households_df, decisions, random_seed
     # Ensure reported_to_hospital is available for clinic-control logic
     individuals_df = ensure_reported_to_hospital(individuals_df, random_seed=random_seed)
 
-    # Determine case pool based on case definition (currently clinical_AES proxy)
+    # Determine case pool based on case definition (scenario-aware)
     case_criteria = decisions.get("case_definition", {"clinical_AES": True})
+    scenario_type = decisions.get("scenario_type")
+    if scenario_type:
+        case_criteria = dict(case_criteria)
+        case_criteria["scenario_type"] = scenario_type
     cases_pool = apply_case_definition(individuals_df, case_criteria)
+
+    symptomatic_column = "symptomatic_AES"
+    if scenario_type == "lepto":
+        symptomatic_column = "symptomatic_lepto"
+    elif scenario_type is None:
+        if "symptomatic_lepto" in individuals_df.columns and individuals_df["symptomatic_lepto"].any():
+            symptomatic_column = "symptomatic_lepto"
 
     study_design = decisions.get("study_design", {"type": "case_control"})
     design_type = study_design.get("type", "case_control")
@@ -2313,7 +2330,7 @@ def generate_study_dataset(individuals_df, households_df, decisions, random_seed
             (individuals_df["age"] <= 15) &
             (individuals_df["village_id"].isin(["V1", "V2"]))
         ].copy()
-        cohort["case_status"] = cohort["symptomatic_AES"].astype(int)
+        cohort["case_status"] = cohort[symptomatic_column].astype(int)
         cohort["sample_role"] = "cohort_member"
         cohort["sampling_source"] = "village_cohort"
         study_df = cohort
@@ -2322,7 +2339,7 @@ def generate_study_dataset(individuals_df, households_df, decisions, random_seed
     else:
         sample_size = int(decisions.get("sample_size", {}).get("total", 100))
         study_df = individuals_df.sample(n=min(sample_size, len(individuals_df)), random_state=random_seed).copy()
-        study_df["case_status"] = study_df["symptomatic_AES"].astype(int)
+        study_df["case_status"] = study_df[symptomatic_column].astype(int)
         study_df["sample_role"] = "sample"
         study_df["sampling_source"] = "simple_random"
         sampling_report.update({"sample_n": int(len(study_df))})
