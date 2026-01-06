@@ -198,11 +198,28 @@ def load_truth_data(data_dir: str = "scenarios/aes_sidero_valley"):
     # Load JSON file with error handling
     try:
         with open(data_path / "npc_truth.json") as f:
-            truth['npc_truth'] = json.load(f)
+            npc_truth = json.load(f)
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to parse JSON file 'npc_truth.json': {str(e)}") from e
     except Exception as e:
         raise RuntimeError(f"Unexpected error loading JSON file 'npc_truth.json': {str(e)}") from e
+
+    if isinstance(npc_truth, list):
+        npc_map = {}
+        for entry in npc_truth:
+            if not isinstance(entry, dict):
+                raise ValueError("NPC truth entries must be objects when provided as a list.")
+            npc_id = entry.get("npc_id")
+            if not npc_id:
+                raise ValueError("NPC truth entries must include an 'npc_id' when provided as a list.")
+            if npc_id in npc_map:
+                raise ValueError(f"Duplicate npc_id '{npc_id}' in NPC truth list.")
+            entry_copy = dict(entry)
+            entry_copy.pop("npc_id", None)
+            npc_map[npc_id] = entry_copy
+        npc_truth = npc_map
+
+    truth['npc_truth'] = npc_truth
 
     return truth
 
