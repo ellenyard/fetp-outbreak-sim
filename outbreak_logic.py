@@ -792,6 +792,92 @@ def check_case_definition(criteria, patient=None):
     }
 
 
+def _weighted_choice(options: List[str], weights: List[float]) -> str:
+    """Helper to select a single item from options using weights."""
+    return np.random.choice(options, p=weights)
+
+
+def _lepto_flood_depth_category(flood_depth_m: float) -> str:
+    if flood_depth_m >= 1.5:
+        return _weighted_choice(["deep", "moderate"], [0.7, 0.3])
+    if flood_depth_m >= 0.8:
+        return _weighted_choice(["moderate", "shallow"], [0.6, 0.4])
+    if flood_depth_m >= 0.3:
+        return _weighted_choice(["shallow", "minimal"], [0.7, 0.3])
+    return _weighted_choice(["minimal", "shallow"], [0.8, 0.2])
+
+
+def _lepto_cleanup_participation(cleanup_intensity: float) -> str:
+    if isinstance(cleanup_intensity, str):
+        intensity_map = {
+            "very_high": 0.85,
+            "high": 0.75,
+            "medium": 0.6,
+            "low": 0.35,
+            "minimal": 0.15,
+        }
+        cleanup_intensity = intensity_map.get(cleanup_intensity.lower(), 0.5)
+    if cleanup_intensity >= 0.75:
+        return _weighted_choice(["heavy", "moderate", "light", "none"], [0.5, 0.3, 0.15, 0.05])
+    if cleanup_intensity >= 0.45:
+        return _weighted_choice(["heavy", "moderate", "light", "none"], [0.3, 0.4, 0.2, 0.1])
+    return _weighted_choice(["moderate", "light", "none"], [0.3, 0.5, 0.2])
+
+
+def _lepto_sanitation_type(coverage: float) -> str:
+    if coverage >= 0.8:
+        return _weighted_choice(["flush_toilet", "pit_latrine", "none"], [0.7, 0.25, 0.05])
+    if coverage >= 0.6:
+        return _weighted_choice(["flush_toilet", "pit_latrine", "none"], [0.5, 0.35, 0.15])
+    return _weighted_choice(["flush_toilet", "pit_latrine", "none"], [0.3, 0.45, 0.25])
+
+
+def _lepto_water_source(quality: str) -> str:
+    quality = str(quality).lower()
+    if quality == "good":
+        return _weighted_choice(["municipal", "spring", "well"], [0.6, 0.25, 0.15])
+    if quality == "fair":
+        return _weighted_choice(["well", "municipal", "irrigation_canal"], [0.45, 0.25, 0.3])
+    return _weighted_choice(["river", "irrigation_canal", "well"], [0.5, 0.35, 0.15])
+
+
+def _lepto_rat_sightings(rat_population: str) -> str:
+    rat_population = str(rat_population).lower()
+    if rat_population in {"very_high", "high"}:
+        return _weighted_choice(["very_many", "many", "some", "few"], [0.45, 0.3, 0.2, 0.05])
+    if rat_population == "medium":
+        return _weighted_choice(["many", "some", "few", "rare"], [0.3, 0.35, 0.25, 0.1])
+    return _weighted_choice(["some", "few", "rare", "none"], [0.3, 0.35, 0.25, 0.1])
+
+
+def _lepto_distance_to_river(flood_risk: str) -> float:
+    flood_risk = str(flood_risk).lower()
+    if flood_risk in {"very_high", "high"}:
+        return float(np.random.uniform(10, 200))
+    if flood_risk == "medium":
+        return float(np.random.uniform(80, 400))
+    return float(np.random.uniform(250, 800))
+
+
+def _lepto_household_size() -> int:
+    return int(_weighted_choice([3, 4, 5, 6, 7], [0.15, 0.25, 0.25, 0.2, 0.15]))
+
+
+def _lepto_occupation(age: int) -> str:
+    if age < 6:
+        return "child"
+    if age < 18:
+        return "student"
+    return _weighted_choice(
+        ["farmer", "construction", "day_laborer", "vendor", "fisher", "teacher", "healthcare", "other"],
+        [0.35, 0.15, 0.15, 0.1, 0.1, 0.05, 0.04, 0.06],
+    )
+
+
+def _initialize_row(columns: List[str]) -> Dict[str, Any]:
+    return {column: None for column in columns}
+
+
 def generate_full_population(villages_df, households_seed, individuals_seed, random_seed=42, scenario_type="je"):
     """
     Generate a complete population from seed data + generation rules.
@@ -820,15 +906,6 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
     all_households = [households_seed.copy()]
     all_individuals = [individuals_seed.copy()]
     
-    # Generation parameters
-    village_params = {
-        'V1': {'pig_lambda': 3, 'net_rate': 0.30, 'rice_dist': (20, 150), 'proportion': 0.40},
-        'V2': {'pig_lambda': 1, 'net_rate': 0.50, 'rice_dist': (80, 200), 'proportion': 0.40},
-        'V3': {'pig_lambda': 0.2, 'net_rate': 0.70, 'rice_dist': (200, 500), 'proportion': 0.20}
-    }
-    
-    target_households = 350
-
     # Track existing IDs and find max household/person numbers to avoid collisions
     existing_hh_ids = set(households_seed['hh_id'].tolist())
     max_hh_num = max([int(hh_id[2:]) for hh_id in existing_hh_ids]) if existing_hh_ids else 0
@@ -837,36 +914,44 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
     existing_person_ids = set(individuals_seed['person_id'].tolist())
     max_person_num = max([int(pid[1:]) for pid in existing_person_ids]) if existing_person_ids else 0
     person_counter = max(max_person_num + 1, 3000)  # Start at 3000 minimum for generated IDs
-    
-    # Generate additional households
-    for village_id, params in village_params.items():
-        n_hh = int(target_households * params['proportion'])
-        village_row = villages_df[villages_df['village_id'] == village_id].iloc[0]
-        
-        for _ in range(n_hh):
-            # Generate unique household ID (skip if already exists)
-            hh_id = f'HH{hh_counter:03d}'
-            while hh_id in existing_hh_ids:
-                hh_counter += 1
-                hh_id = f'HH{hh_counter:03d}'
-            hh_counter += 1
-            existing_hh_ids.add(hh_id)
-            
-            # Pig ownership (Poisson)
-            pigs = min(np.random.poisson(params['pig_lambda']), 12)
-            pig_dist = np.random.uniform(5, 50) if pigs > 0 else None
-            
-            # Mosquito nets
-            nets = np.random.random() < params['net_rate']
-            
-            # Rice field distance
-            rice_dist = np.random.uniform(*params['rice_dist'])
-            
-            # Children
-            n_children = min(np.random.poisson(1.8), 5)
+    if scenario_type == "je":
+        # Generation parameters
+        village_params = {
+            'V1': {'pig_lambda': 3, 'net_rate': 0.30, 'rice_dist': (20, 150), 'proportion': 0.40},
+            'V2': {'pig_lambda': 1, 'net_rate': 0.50, 'rice_dist': (80, 200), 'proportion': 0.40},
+            'V3': {'pig_lambda': 0.2, 'net_rate': 0.70, 'rice_dist': (200, 500), 'proportion': 0.20}
+        }
 
-            # Scenario-specific vaccination attributes
-            if scenario_type == "je":
+        target_households = 350
+
+        # Generate additional households
+        for village_id, params in village_params.items():
+            n_hh = int(target_households * params['proportion'])
+            village_row = villages_df[villages_df['village_id'] == village_id].iloc[0]
+
+            for _ in range(n_hh):
+                # Generate unique household ID (skip if already exists)
+                hh_id = f'HH{hh_counter:03d}'
+                while hh_id in existing_hh_ids:
+                    hh_counter += 1
+                    hh_id = f'HH{hh_counter:03d}'
+                hh_counter += 1
+                existing_hh_ids.add(hh_id)
+
+                # Pig ownership (Poisson)
+                pigs = min(np.random.poisson(params['pig_lambda']), 12)
+                pig_dist = np.random.uniform(5, 50) if pigs > 0 else None
+
+                # Mosquito nets
+                nets = np.random.random() < params['net_rate']
+
+                # Rice field distance
+                rice_dist = np.random.uniform(*params['rice_dist'])
+
+                # Children
+                n_children = min(np.random.poisson(1.8), 5)
+
+                # Scenario-specific vaccination attributes
                 # JE vaccination coverage
                 vacc_coverage = village_row.get('JE_vacc_coverage', 0.0)
                 vacc_probs = [
@@ -876,89 +961,176 @@ def generate_full_population(villages_df, households_seed, individuals_seed, ran
                     vacc_coverage * 0.25   # high
                 ]
                 child_vacc = np.random.choice(['none', 'low', 'medium', 'high'], p=vacc_probs)
-            else:
-                # Lepto or other scenarios: no vaccination data
-                vacc_coverage = 0.0
-                child_vacc = 'none'
-            
-            all_households.append(pd.DataFrame([{
-                'hh_id': hh_id,
-                'village_id': village_id,
-                'pigs_owned': pigs,
-                'pig_pen_distance_m': pig_dist,
-                'uses_mosquito_nets': nets,
-                'rice_field_distance_m': rice_dist,
-                'children_under_15': n_children,
-                'JE_vaccination_children': child_vacc
-            }]))
-            
-            # Generate household members
-            n_adults = np.random.choice([1, 2, 3], p=[0.2, 0.6, 0.2])
 
-            for i in range(n_adults):
-                age = np.random.randint(18, 65)
-                sex = 'M' if i == 0 and np.random.random() < 0.6 else np.random.choice(['M', 'F'])
-                occupation = np.random.choice(
-                    ['farmer', 'trader', 'teacher', 'healthcare', 'other'],
-                    p=[0.50, 0.20, 0.10, 0.05, 0.15]
-                )
-                vaccinated = np.random.random() < (vacc_coverage * 0.5)
-                evening_outdoor = np.random.random() < (0.8 if occupation == 'farmer' else 0.4)
-
-                all_individuals.append(pd.DataFrame([{
-                    'person_id': f'P{person_counter:04d}',
+                all_households.append(pd.DataFrame([{
                     'hh_id': hh_id,
                     'village_id': village_id,
-                    'age': age,
-                    'sex': sex,
-                    'occupation': occupation,
-                    'JE_vaccinated': vaccinated,
-                    'evening_outdoor_exposure': evening_outdoor,
-                    'true_je_infection': False,
-                    'symptomatic_AES': False,
-                    'severe_neuro': False,
-                    'onset_date': None,
-                    'outcome': None,
-                    'has_sequelae': False,
-                    'name_hint': None
+                    'pigs_owned': pigs,
+                    'pig_pen_distance_m': pig_dist,
+                    'uses_mosquito_nets': nets,
+                    'rice_field_distance_m': rice_dist,
+                    'children_under_15': n_children,
+                    'JE_vaccination_children': child_vacc
                 }]))
-                person_counter += 1
-            
-            # Generate children
-            for i in range(n_children):
-                age = np.random.randint(1, 15)
-                sex = np.random.choice(['M', 'F'])
-                occupation = 'child' if age < 6 else 'student'
 
-                if child_vacc == 'high':
-                    vaccinated = np.random.random() < 0.85
-                elif child_vacc == 'medium':
-                    vaccinated = np.random.random() < 0.50
-                elif child_vacc == 'low':
-                    vaccinated = np.random.random() < 0.20
-                else:
-                    vaccinated = False
+                # Generate household members
+                n_adults = np.random.choice([1, 2, 3], p=[0.2, 0.6, 0.2])
 
-                evening_outdoor = np.random.random() < 0.7
+                for i in range(n_adults):
+                    age = np.random.randint(18, 65)
+                    sex = 'M' if i == 0 and np.random.random() < 0.6 else np.random.choice(['M', 'F'])
+                    occupation = np.random.choice(
+                        ['farmer', 'trader', 'teacher', 'healthcare', 'other'],
+                        p=[0.50, 0.20, 0.10, 0.05, 0.15]
+                    )
+                    vaccinated = np.random.random() < (vacc_coverage * 0.5)
+                    evening_outdoor = np.random.random() < (0.8 if occupation == 'farmer' else 0.4)
 
-                all_individuals.append(pd.DataFrame([{
-                    'person_id': f'P{person_counter:04d}',
-                    'hh_id': hh_id,
-                    'village_id': village_id,
-                    'age': age,
-                    'sex': sex,
-                    'occupation': occupation,
-                    'JE_vaccinated': vaccinated,
-                    'evening_outdoor_exposure': evening_outdoor,
-                    'true_je_infection': False,
-                    'symptomatic_AES': False,
-                    'severe_neuro': False,
-                    'onset_date': None,
-                    'outcome': None,
-                    'has_sequelae': False,
-                    'name_hint': None
-                }]))
-                person_counter += 1
+                    all_individuals.append(pd.DataFrame([{
+                        'person_id': f'P{person_counter:04d}',
+                        'hh_id': hh_id,
+                        'village_id': village_id,
+                        'age': age,
+                        'sex': sex,
+                        'occupation': occupation,
+                        'JE_vaccinated': vaccinated,
+                        'evening_outdoor_exposure': evening_outdoor,
+                        'true_je_infection': False,
+                        'symptomatic_AES': False,
+                        'severe_neuro': False,
+                        'onset_date': None,
+                        'outcome': None,
+                        'has_sequelae': False,
+                        'name_hint': None
+                    }]))
+                    person_counter += 1
+
+                # Generate children
+                for i in range(n_children):
+                    age = np.random.randint(1, 15)
+                    sex = np.random.choice(['M', 'F'])
+                    occupation = 'child' if age < 6 else 'student'
+
+                    if child_vacc == 'high':
+                        vaccinated = np.random.random() < 0.85
+                    elif child_vacc == 'medium':
+                        vaccinated = np.random.random() < 0.50
+                    elif child_vacc == 'low':
+                        vaccinated = np.random.random() < 0.20
+                    else:
+                        vaccinated = False
+
+                    evening_outdoor = np.random.random() < 0.7
+
+                    all_individuals.append(pd.DataFrame([{
+                        'person_id': f'P{person_counter:04d}',
+                        'hh_id': hh_id,
+                        'village_id': village_id,
+                        'age': age,
+                        'sex': sex,
+                        'occupation': occupation,
+                        'JE_vaccinated': vaccinated,
+                        'evening_outdoor_exposure': evening_outdoor,
+                        'true_je_infection': False,
+                        'symptomatic_AES': False,
+                        'severe_neuro': False,
+                        'onset_date': None,
+                        'outcome': None,
+                        'has_sequelae': False,
+                        'name_hint': None
+                    }]))
+                    person_counter += 1
+    else:
+        household_columns = list(households_seed.columns)
+        individual_columns = list(individuals_seed.columns)
+        village_targets = villages_df.set_index("village_id")["households"].to_dict()
+        for village_id, target in village_targets.items():
+            village_row = villages_df[villages_df["village_id"] == village_id].iloc[0]
+            existing_count = households_seed[households_seed["village_id"] == village_id].shape[0]
+            n_hh = max(0, int(target) - existing_count)
+
+            for _ in range(n_hh):
+                hh_id = f'HH{hh_counter:03d}'
+                while hh_id in existing_hh_ids:
+                    hh_counter += 1
+                    hh_id = f'HH{hh_counter:03d}'
+                hh_counter += 1
+                existing_hh_ids.add(hh_id)
+
+                household_size = _lepto_household_size()
+                sanitation_type = _lepto_sanitation_type(village_row.get("sanitation_coverage", 0.6))
+                water_source = _lepto_water_source(village_row.get("water_source_quality", "fair"))
+                cleanup_participation = _lepto_cleanup_participation(village_row.get("cleanup_intensity", 0.5))
+                flood_depth_category = _lepto_flood_depth_category(village_row.get("flood_depth_m", 0.3))
+                rat_sightings = _lepto_rat_sightings(village_row.get("rat_population", "medium"))
+                distance_to_river_m = _lepto_distance_to_river(village_row.get("flood_risk", "medium"))
+                pig_ownership = int(min(np.random.poisson(1.1), 8))
+                chicken_ownership = int(min(np.random.poisson(3.0), 12))
+
+                household_row = _initialize_row(household_columns)
+                household_row.update({
+                    "hh_id": hh_id,
+                    "village_id": village_id,
+                    "household_size": household_size,
+                    "sanitation_type": sanitation_type,
+                    "water_source": water_source,
+                    "flood_depth_category": flood_depth_category,
+                    "cleanup_participation": cleanup_participation,
+                    "rat_sightings_post_flood": rat_sightings,
+                    "distance_to_river_m": distance_to_river_m,
+                    "pig_ownership": pig_ownership,
+                    "chicken_ownership": chicken_ownership,
+                })
+                all_households.append(pd.DataFrame([household_row]))
+
+                for _ in range(household_size):
+                    age = int(np.random.choice(
+                        [np.random.randint(1, 15), np.random.randint(15, 61), np.random.randint(61, 85)],
+                        p=[0.25, 0.6, 0.15],
+                    ))
+                    sex = np.random.choice(["M", "F"])
+                    occupation = _lepto_occupation(age)
+                    cleanup_prob = {
+                        "heavy": 0.7,
+                        "moderate": 0.5,
+                        "light": 0.3,
+                        "none": 0.05,
+                    }.get(cleanup_participation, 0.2)
+                    exposure_cleanup = np.random.random() < cleanup_prob if age >= 12 else np.random.random() < 0.1
+                    barefoot_prob = 0.6 if cleanup_participation in {"heavy", "moderate"} else 0.3
+                    exposure_barefoot = exposure_cleanup and (np.random.random() < barefoot_prob)
+                    exposure_wounds = exposure_barefoot and (np.random.random() < 0.45)
+                    animal_contact = (pig_ownership + chicken_ownership) > 0 and (np.random.random() < 0.45)
+                    rat_contact = np.random.random() < (0.55 if rat_sightings in {"very_many", "many"} else 0.25)
+
+                    individual_row = _initialize_row(individual_columns)
+                    individual_row.update({
+                        "person_id": f'P{person_counter:04d}',
+                        "hh_id": hh_id,
+                        "village_id": village_id,
+                        "age": age,
+                        "sex": sex,
+                        "occupation": occupation,
+                        "symptoms_fever": False,
+                        "symptoms_headache": False,
+                        "symptoms_myalgia": False,
+                        "symptoms_conjunctival_suffusion": False,
+                        "symptoms_jaundice": False,
+                        "symptoms_renal_failure": False,
+                        "outcome": None,
+                        "days_to_hospital": None,
+                        "exposure_cleanup_work": exposure_cleanup,
+                        "exposure_barefoot_water": exposure_barefoot,
+                        "exposure_skin_wounds": exposure_wounds,
+                        "exposure_animal_contact": animal_contact,
+                        "exposure_rat_contact": rat_contact,
+                        "reported_to_hospital": False,
+                        "name_hint": None,
+                        "clinical_severity": None,
+                        "onset_date": None,
+                    })
+                    all_individuals.append(pd.DataFrame([individual_row]))
+                    person_counter += 1
     
     households_df = pd.concat(all_households, ignore_index=True)
     individuals_df = pd.concat(all_individuals, ignore_index=True)
