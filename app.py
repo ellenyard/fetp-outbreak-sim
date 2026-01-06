@@ -700,11 +700,11 @@ AES_LOCATIONS = {
 }
 
 LEPTO_LOCATIONS = {
-    # === BARANGAY MALINAO ===
-    "malinao_barangay_hall": {
-        "name": "Barangay Malinao Hall",
-        "area": "Barangay Malinao",
-        "description": "The barangay hall for Malinao. Community leaders meet here to discuss recent cases and flooding in nearby rice fields.",
+    # === WARD NORTHBEND ===
+    "malinao_ward_hall": {
+        "name": "Ward Northbend Hall",
+        "area": "Ward Northbend",
+        "description": "The ward hall for Northbend. Community leaders meet here to discuss recent cases and flooding in nearby rice fields.",
         "image_path": "assets/Nalu/nalu_01_village_scene.png",
         "image_thumb": "assets/Nalu/nalu_01_village_scene.png",
         "icon": "🏘️",
@@ -712,11 +712,11 @@ LEPTO_LOCATIONS = {
         "available_actions": [],
         "travel_time": 0.5,
     },
-    # === BARANGAY SAN RAFAEL ===
-    "san_rafael_barangay_hall": {
-        "name": "San Rafael Barangay Hall",
-        "area": "San Rafael",
-        "description": "The barangay hall where local leaders share updates on recent illnesses and sanitation concerns.",
+    # === WARD EAST TERRACE ===
+    "san_rafael_ward_hall": {
+        "name": "East Terrace Ward Hall",
+        "area": "East Terrace",
+        "description": "The ward hall where local leaders share updates on recent illnesses and sanitation concerns.",
         "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "icon": "🏘️",
@@ -724,11 +724,11 @@ LEPTO_LOCATIONS = {
         "available_actions": [],
         "travel_time": 0.5,
     },
-    # === BARANGAY BAGONG SILANG ===
-    "bagong_silang_barangay_hall": {
-        "name": "Bagong Silang Barangay Hall",
-        "area": "Bagong Silang",
-        "description": "A busy barangay hall where residents report illness clusters after heavy rains.",
+    # === WARD SOUTHSHORE ===
+    "bagong_silang_ward_hall": {
+        "name": "Southshore Ward Hall",
+        "area": "Southshore",
+        "description": "A busy ward hall where residents report illness clusters after heavy rains.",
         "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "icon": "🏘️",
@@ -736,11 +736,11 @@ LEPTO_LOCATIONS = {
         "available_actions": [],
         "travel_time": 0.5,
     },
-    # === BARANGAY SANTA CRUZ ===
-    "santa_cruz_barangay_hall": {
-        "name": "Santa Cruz Barangay Hall",
-        "area": "Santa Cruz",
-        "description": "A modest barangay office near low-lying farms where floodwaters tend to linger.",
+    # === WARD HIGHRIDGE ===
+    "santa_cruz_ward_hall": {
+        "name": "Highridge Ward Hall",
+        "area": "Highridge",
+        "description": "A modest ward office near low-lying farms where floodwaters tend to linger.",
         "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
         "icon": "🏘️",
@@ -764,7 +764,7 @@ LEPTO_LOCATIONS = {
     "rhu_office": {
         "name": "Rural Health Unit (RHU) Office",
         "area": "RHU",
-        "description": "The RHU office coordinating barangay surveillance and case reporting.",
+        "description": "The RHU office coordinating ward surveillance and case reporting.",
         "image_path": "assets/Hospital/hospital_admin.png",
         "image_thumb": "assets/Hospital/hospital_admin.png",
         "icon": "🏥",
@@ -812,10 +812,10 @@ AES_AREA_LOCATIONS = {
 
 # Map areas to their sub-locations (Leptospirosis scenario)
 LEPTO_AREA_LOCATIONS = {
-    "Barangay Malinao": ["malinao_barangay_hall"],
-    "San Rafael": ["san_rafael_barangay_hall"],
-    "Bagong Silang": ["bagong_silang_barangay_hall"],
-    "Santa Cruz": ["santa_cruz_barangay_hall"],
+    "Ward Northbend": ["malinao_ward_hall"],
+    "East Terrace": ["san_rafael_ward_hall"],
+    "Southshore": ["bagong_silang_ward_hall"],
+    "Highridge": ["santa_cruz_ward_hall"],
     "District Hospital": ["lepto_district_hospital"],
     "RHU": ["rhu_office"],
     "DRRM Office": ["drrm_office"],
@@ -825,7 +825,7 @@ LEPTO_AREA_LOCATIONS = {
 # Scenario-specific initial NPCs (unlocked at start)
 SCENARIO_INITIAL_NPCS = {
     "aes_sidero_valley": ["dr_chen", "nurse_joy", "mama_kofi", "foreman_rex", "teacher_grace"],
-    "lepto_maharlika": ["dr_reyes", "nurse_maricel", "kapitana_gloria", "dr_mendoza"],
+    "lepto_rivergate": ["dr_reyes", "nurse_maricel", "kapitana_gloria", "dr_mendoza"],
 }
 
 # Area metadata for visual rendering (hero images, descriptions)
@@ -874,24 +874,24 @@ AES_AREA_METADATA = {
 
 # Area metadata for Leptospirosis scenario
 LEPTO_AREA_METADATA = {
-    "Barangay Malinao": {
+    "Ward Northbend": {
         "image_exterior": "assets/Nalu/nalu_01_village_scene.png",
         "description": "Flood-prone farming community reporting fevers and muscle pain after heavy rains.",
         "icon": "🏘️",
     },
-    "San Rafael": {
+    "East Terrace": {
         "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
-        "description": "A riverside barangay with recent standing water and livestock exposure.",
+        "description": "A riverside ward with recent standing water and livestock exposure.",
         "icon": "🏘️",
     },
-    "Bagong Silang": {
+    "Southshore": {
         "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
-        "description": "Low-lying barangay where residents report flooding in rice fields and drainage canals.",
+        "description": "Low-lying ward where residents report flooding in rice fields and drainage canals.",
         "icon": "🏘️",
     },
-    "Santa Cruz": {
+    "Highridge": {
         "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
-        "description": "Barangay near the irrigation system with stagnant water and rodent activity.",
+        "description": "Ward near the irrigation system with stagnant water and rodent activity.",
         "icon": "🏘️",
     },
     "District Hospital": {
@@ -901,7 +901,7 @@ LEPTO_AREA_METADATA = {
     },
     "RHU": {
         "image_exterior": "assets/Hospital/hospital_admin.png",
-        "description": "Rural Health Unit coordinating barangay surveillance and reporting.",
+        "description": "Rural Health Unit coordinating ward surveillance and reporting.",
         "icon": "🏥",
     },
     "DRRM Office": {
@@ -940,12 +940,12 @@ AES_NPC_LOCATIONS = {
 LEPTO_NPC_LOCATIONS = {
     "dr_reyes": "lepto_district_hospital",
     "nurse_maricel": "lepto_district_hospital",
-    "kapitana_gloria": "malinao_barangay_hall",
+    "kapitana_gloria": "malinao_ward_hall",
     "dr_mendoza": "rhu_office",
     "dr_villareal": "rhu_office",
-    "mang_tonyo": "malinao_barangay_hall",
-    "luz_fernandez": "malinao_barangay_hall",
-    "pastor_elijah": "san_rafael_barangay_hall",
+    "mang_tonyo": "malinao_ward_hall",
+    "luz_fernandez": "malinao_ward_hall",
+    "pastor_elijah": "san_rafael_ward_hall",
     "mayor_villanueva": "drrm_office",
     "engr_ramon": "drrm_office",
     "mr_chen_wei": "lepto_mining_area",
@@ -959,28 +959,28 @@ def get_current_scenario_id() -> str:
 
 def get_locations(scenario_id: str | None = None) -> dict:
     scenario_id = scenario_id or get_current_scenario_id()
-    if scenario_id == "lepto_maharlika":
+    if scenario_id == "lepto_rivergate":
         return LEPTO_LOCATIONS
     return AES_LOCATIONS
 
 
 def get_area_locations(scenario_id: str | None = None) -> dict:
     scenario_id = scenario_id or get_current_scenario_id()
-    if scenario_id == "lepto_maharlika":
+    if scenario_id == "lepto_rivergate":
         return LEPTO_AREA_LOCATIONS
     return AES_AREA_LOCATIONS
 
 
 def get_area_metadata(scenario_id: str | None = None) -> dict:
     scenario_id = scenario_id or get_current_scenario_id()
-    if scenario_id == "lepto_maharlika":
+    if scenario_id == "lepto_rivergate":
         return LEPTO_AREA_METADATA
     return AES_AREA_METADATA
 
 
 def get_npc_locations(scenario_id: str | None = None) -> dict:
     scenario_id = scenario_id or get_current_scenario_id()
-    if scenario_id == "lepto_maharlika":
+    if scenario_id == "lepto_rivergate":
         return LEPTO_NPC_LOCATIONS
     return AES_NPC_LOCATIONS
 
@@ -1121,7 +1121,7 @@ def load_scenario_content(scenario_id: str, content_type: str) -> str:
     """Load scenario-specific content file.
 
     Args:
-        scenario_id: Scenario identifier (e.g., 'aes_sidero_valley', 'lepto_maharlika')
+        scenario_id: Scenario identifier (e.g., 'aes_sidero_valley', 'lepto_rivergate')
         content_type: Type of content file to load (e.g., 'alert', 'day1_briefing')
 
     Returns:
@@ -2966,7 +2966,7 @@ def make_village_map(truth: dict) -> go.Figure:
         fig.update_layout(
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
-            title="Schematic Map of Maharlika Flooding & Cleanup Exposure",
+            title="Schematic Map of Rivergate Flooding & Cleanup Exposure",
             legend_title_text="Flood risk (color) & Cleanup intensity (symbol)",
             height=300,
             margin=dict(l=10, r=10, t=40, b=10),
@@ -4019,7 +4019,7 @@ def view_medical_records():
             with st.expander("Case 1: Flood Cleanup Worker (Index Case)", expanded=True):
                 st.markdown("**ID:** HOSP-L1")
                 st.markdown("**Age/Sex:** 42 years / Male")
-                st.markdown("**Village:** Malinao")
+                st.markdown("**Village:** Northbend")
                 st.markdown("**Clinical Presentation:**")
                 st.markdown("- Fever: Yes (39.4°C)")
                 st.markdown("- Calf myalgia: Yes (severe)")
@@ -4047,7 +4047,7 @@ def view_medical_records():
                 st.markdown("**ID:** HOSP-L4")
                 st.markdown("**Name:** Luz F.")
                 st.markdown("**Age/Sex:** 38 years / Female")
-                st.markdown("**Village:** Malinao")
+                st.markdown("**Village:** Northbend")
                 st.markdown("**Clinical Presentation:**")
                 st.markdown("- Fever: Yes (40.0°C)")
                 st.markdown("- Calf myalgia: Yes")
@@ -4158,7 +4158,7 @@ def view_clinic_register_scan():
     st.markdown("---")
 
     if scenario_type == "lepto":
-        st.markdown("### Raw Logbook from Malinao Rural Health Unit")
+        st.markdown("### Raw Logbook from Northbend Rural Health Unit")
     else:
         st.markdown("### Raw Logbook from Nalu Health Center")
     if scenario_type == "lepto":
@@ -7851,7 +7851,7 @@ def main():
 
         scenario_options = [
             ("aes_sidero_valley", "🦟 Japanese Encephalitis - Sidero Valley"),
-            ("lepto_maharlika", "🌊 Leptospirosis - San Isidro, Maharlika")
+            ("lepto_rivergate", "🌊 Leptospirosis - Rivergate District, Aruvia")
         ]
 
         # Find current selection index

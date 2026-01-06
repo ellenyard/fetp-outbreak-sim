@@ -10,7 +10,7 @@ This module contains the core logic for:
 
 Supported scenarios:
 - JE (Japanese Encephalitis) - AES in Sidero Valley
-- Lepto (Leptospirosis) - Post-flood outbreak in San Isidro, Maharlika
+- Lepto (Leptospirosis) - Post-flood outbreak in Rivergate, Aruvia
 
 Separating logic from UI enables:
 - Easier testing

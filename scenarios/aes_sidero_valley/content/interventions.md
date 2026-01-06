@@ -134,5 +134,5 @@
 
 - **Outbreak Control Committee:** Daily coordination meetings
 - **Sectors involved:** Health, Agriculture, Environment, Education, Communications
-- **Community:** Village leaders, barangay councils, parent groups
+- **Community:** Village leaders, ward councils, parent groups
 - **External:** WHO, CDC, partner organizations as needed

@@ -199,7 +199,7 @@
   - Environment: Rodent control, environmental cleanup
   - Labor: Worker safety, occupational health
   - Communications: Public messaging
-- **Community:** Barangay leaders, cleanup supervisors, community organizations
+- **Community:** Ward leaders, cleanup supervisors, community organizations
 - **External:** WHO, PAHO, IFRC, partner NGOs
 
 ## Special Considerations for Post-Disaster Context

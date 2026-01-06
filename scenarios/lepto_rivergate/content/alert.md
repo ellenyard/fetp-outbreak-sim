@@ -1,6 +1,6 @@
 # Day 0: Initial Alert
 
-**From:** Dr. Annalisa Reyes, San Isidro District Hospital
+**From:** Dr. Annalisa Reyes, Rivergate District Hospital
 **Date:** October 24, 2024
 **Time:** 09:15
 
@@ -17,4 +17,4 @@ I need help here. This is beyond what we can handle."
 **Key Metrics:**
 - 🏥 34 Confirmed/Suspected Cases
 - ☠️ 3 Deaths
-- 📅 October 8-24, 2024 (Post-Typhoon Odette)
+- 📅 October 8-24, 2024 (Post-Typhoon Halcyon)

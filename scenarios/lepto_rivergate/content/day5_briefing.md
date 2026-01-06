@@ -20,7 +20,7 @@
 
 **Executive Summary:**
 - Outbreak description (what, when, where, who)
-- Disaster context (Typhoon Odette impact)
+- Disaster context (Typhoon Halcyon impact)
 - Key findings and risk factors
 - Intervention impact
 - Recommendations
