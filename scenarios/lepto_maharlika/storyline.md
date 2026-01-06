@@ -25,25 +25,25 @@ Barangay Malinao bore the worst of it. The river jumped its banks on the morning
 
 In San Rafael, the flooding was moderate—affecting primarily the lower-lying commercial areas but limited by better construction and rapid drainage. Bagong Silang's stilt houses provided some protection, though communal wells were contaminated. Santa Cruz, in the foothills, escaped serious flooding entirely due to its elevation and served as an evacuation site, though access roads were damaged for several days.
 
-By October 12th, the waters began to recede, leaving behind a landscape transformed. Thick brown mud coated everything. Dead animals lay bloated in the streets. The smell was overwhelming—a mix of decay, sewage, and the particular mustiness of flood-soaked homes. The government declared a state of calamity. Relief goods trickled in. Residents began the exhausting work of cleaning up.
+By October 10th, the waters began to recede, leaving behind a landscape transformed. Thick brown mud coated everything. Dead animals lay bloated in the streets. The smell was overwhelming—a mix of decay, sewage, and the particular mustiness of flood-soaked homes. The government declared a state of calamity. Relief goods trickled in. Residents began the exhausting work of cleaning up, wading through standing water that lingered in low-lying areas until October 12th.
 
 And then people started getting sick.
 
 ### The Emergence
 
-The first patient arrived at San Isidro District Hospital on October 19th—nine days after the flooding peaked. Renato Bautista, 42, a rice farmer from Malinao, came in with fever, severe headache, and muscle pain so intense he couldn't straighten his legs. Dr. Annalisa Reyes, the hospital's lone internist, initially suspected dengue, which had been circulating at low levels before the typhoon. She started supportive care and ordered the standard tests.
+The first patient arrived at San Isidro District Hospital on October 16th—six days after the flooding peaked. Renato Bautista, 42, a rice farmer from Malinao, came in with fever, severe headache, and muscle pain so intense he couldn't straighten his legs. Dr. Annalisa Reyes, the hospital's lone internist, initially suspected dengue, which had been circulating at low levels before the typhoon. She started supportive care and ordered the standard tests.
 
 Three more patients arrived the next day, all from Malinao, all with similar symptoms. Then two more. By October 23rd, seventeen patients had been admitted with acute febrile illness, and Renato Bautista had developed jaundice and was struggling to breathe.
 
-Dr. Reyes noticed the pattern first: almost all the patients were adult men, most were farmers or laborers, and all had been involved in flood cleanup activities. She raised the possibility of leptospirosis at the morning staff meeting on October 24th—she had seen a handful of cases earlier in her career, during a smaller flood five years ago. But the rural health unit physician, Dr. Carlos Mendoza, was skeptical. "We've never had a leptospirosis outbreak here," he said. "It's probably just viral fever. Everyone's immune systems are compromised from the stress."
+Dr. Reyes noticed the pattern first: almost all the patients were adult men, most were farmers or laborers, and all had been involved in flood cleanup activities. She raised the possibility of leptospirosis at the morning staff meeting on October 16th—she had seen a handful of cases earlier in her career, during a smaller flood five years ago. But the rural health unit physician, Dr. Carlos Mendoza, was skeptical. "We've never had a leptospirosis outbreak here," he said. "It's probably just viral fever. Everyone's immune systems are compromised from the stress."
 
 Meanwhile, the cases kept coming. And on October 26th, Renato Bautista—the first patient, the rice farmer with the kind smile and the worried wife who hadn't left his bedside—died of respiratory failure complicated by kidney failure. He left behind three children, the youngest just eight years old.
 
-His death catalyzed action. The provincial health office requested assistance from the Department of Health regional epidemiology team. Blood samples, finally collected on October 25th after delays in obtaining test kits, were sent to the national reference laboratory in Manila. The preliminary results came back on October 28th: three of seven samples positive for Leptospira IgM antibodies.
+As cases mounted, the provincial health office requested assistance from the Department of Health regional epidemiology team. Blood samples, collected on October 16th after a frantic scramble for test kits, were sent to the regional laboratory in Tuguegarao. The preliminary results came back on October 18th: three of seven samples positive for Leptospira IgM antibodies.
 
 ### The Call
 
-The Field Epidemiology Training Program team receives notification on October 29th, 2024. Nineteen days have passed since the typhoon made landfall. Thirty-four suspected cases have been identified across San Isidro municipality—twenty-eight of them from Barangay Malinao alone. Three patients have died. At least a dozen more are seriously ill with jaundice and kidney involvement.
+The Field Epidemiology Training Program team receives notification on October 29th, 2024. Twenty-one days have passed since the typhoon made landfall. Thirty-four suspected cases have been identified across San Isidro municipality—twenty-eight of them from Barangay Malinao alone. Three patients have died. At least a dozen more are seriously ill with jaundice and kidney involvement.
 
 The regional epidemiologist's voice on the phone is tense: "We need help. Cases are still coming in. The community is panicking. There's talk that the water supply is contaminated—people are buying bottled water they can't afford. The mayor is pressuring us to declare the outbreak over so it doesn't affect disaster relief funding. And honestly? We're not sure what's driving this. Everyone got flooded, but Malinao got hit hardest. Is it just exposure time? Water source? Something else?"
 
@@ -94,18 +94,18 @@ Located at higher elevation in the foothills, this is the largest and most prosp
 | Oct 8-10 | — | Typhoon Odette stalls over Cagayan Valley; catastrophic flooding |
 | Oct 9 | — | Cagayan River overflows; Malinao submerged; livestock die-off begins |
 | Oct 10 | — | Peak flooding in Malinao; residents trapped on rooftops; San Rafael and Bagong Silang also affected |
-| Oct 11 | — | Floodwaters begin receding; state of calamity declared |
-| Oct 12-15 | — | Community cleanup begins; residents wade through contaminated water and mud |
-| Oct 15 | — | First relief goods arrive; some road damage to Santa Cruz remains |
-| Oct 17 | — | Roads fully restored; full municipal access to all barangays |
-| Oct 19 | — | First case: Renato Bautista (Malinao) admitted with fever, myalgia, headache |
-| Oct 20-22 | — | Six additional patients admitted; suspected dengue/viral fever |
+| Oct 10 | — | Floodwaters begin receding; state of calamity declared |
+| Oct 10-12 | — | Community cleanup begins; residents wade through contaminated water and mud |
+| Oct 12 | — | First relief goods arrive; some road damage to Santa Cruz remains |
+| Oct 13 | — | Roads partially restored; municipal access limited in low-lying areas |
+| Oct 16 | — | First case: Renato Bautista (Malinao) admitted with fever, myalgia, headache |
+| Oct 16-18 | — | Blood samples collected from seven patients for testing |
+| Oct 18 | — | Lab results: 3/7 samples positive for Leptospira IgM; DOH notified |
+| Oct 19-22 | — | Additional patients admitted; suspected dengue/viral fever still noted |
 | Oct 23 | — | Seventeen patients admitted; pattern of adult male farmers noted |
-| Oct 24 | — | Dr. Reyes raises leptospirosis hypothesis; RHU physician skeptical |
-| Oct 25 | — | Blood samples collected from seven patients for testing |
+| Oct 24 | — | Dr. Reyes reiterates leptospirosis hypothesis; RHU physician still cautious |
 | Oct 26 | — | First death: Renato Bautista dies of respiratory/renal failure |
 | Oct 27 | — | Second death: 38-year-old laborer from Malinao |
-| Oct 28 | — | Lab results: 3/7 samples positive for Leptospira IgM; DOH notified |
 | Oct 29 | — | Provincial health office requests FETP assistance; Third death confirmed |
 | Oct 30 | **Day 1** | **FETP team arrives in San Isidro; 34 suspected cases, 3 deaths** |
 
