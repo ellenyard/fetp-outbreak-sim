@@ -1629,10 +1629,11 @@ def check_npc_unlock_triggers(user_input: str) -> str:
             st.session_state.questions_asked_about.add("animals")
             if "dr_villareal" not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append("dr_villareal")
-            notification = (
-                "🔓 **New Contact Unlocked:** Dr. Ernesto Villareal (Private Veterinarian) - "
-                "Your question about animal deaths opened a One Health perspective!"
-            )
+            if not notification:
+                notification = (
+                    "🔓 **New Contact Unlocked:** Dr. Ernesto Villareal (Private Veterinarian) - "
+                    "Your question about animal deaths opened a One Health perspective!"
+                )
 
         faith_triggers = [
             "faith healer",
@@ -1647,20 +1648,22 @@ def check_npc_unlock_triggers(user_input: str) -> str:
             st.session_state.questions_asked_about.add("faith_healing")
             if "pastor_elijah" not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append("pastor_elijah")
-            notification = (
-                "🔓 **New Contact Unlocked:** Pastor Elijah Gonzales (Faith Healer) - "
-                "Your question about prayer and healing revealed another care pathway."
-            )
+            if not notification:
+                notification = (
+                    "🔓 **New Contact Unlocked:** Pastor Elijah Gonzales (Faith Healer) - "
+                    "Your question about prayer and healing revealed another care pathway."
+                )
 
         flood_triggers = ["flood map", "flood maps", "flood mapping", "flood depth", "inundation"]
         if any(trigger in text for trigger in flood_triggers):
             st.session_state.questions_asked_about.add("flood_mapping")
             if "engr_ramon" not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append("engr_ramon")
-            notification = (
-                "🔓 **New Contact Unlocked:** Engr. Ramon Santos (DRRM Officer) - "
-                "Your question about flood maps opened DRRM records."
-            )
+            if not notification:
+                notification = (
+                    "🔓 **New Contact Unlocked:** Engr. Ramon Santos (DRRM Officer) - "
+                    "Your question about flood maps opened DRRM records."
+                )
 
         mining_triggers = [
             "mining contamination",
@@ -1674,10 +1677,11 @@ def check_npc_unlock_triggers(user_input: str) -> str:
             st.session_state.questions_asked_about.add("mining")
             if "mr_chen_wei" not in st.session_state.npcs_unlocked:
                 st.session_state.npcs_unlocked.append("mr_chen_wei")
-            notification = (
-                "🔓 **New Contact Unlocked:** Mr. Chen Wei (Mining Site Manager) - "
-                "Your question about mining contamination revealed compliance records."
-            )
+            if not notification:
+                notification = (
+                    "🔓 **New Contact Unlocked:** Mr. Chen Wei (Mining Site Manager) - "
+                    "Your question about mining contamination revealed compliance records."
+                )
 
         return notification
     
