@@ -1291,7 +1291,10 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
               f"You know of high mosquito breeding around these sites: {sites}."
         )
 
-    if data_access == "drrm_flood_mapping":
+    if data_access in {
+        "drrm_flood_mapping",
+        "drrm_flood_mapping_and_damage_assessments",
+    }:
         if scenario_type != "lepto":
             return epi_context
         hh = households.merge(villages, on="village_id", how="left")

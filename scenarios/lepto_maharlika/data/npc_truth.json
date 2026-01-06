@@ -513,7 +513,7 @@
       "Provincial epidemiologist's assessment"
     ],
     "unlocks": "spatial_epidemiology_data_and_disaster_response_records",
-    "data_access": "drrm_flood_mapping"
+    "data_access": "drrm_flood_mapping_and_damage_assessments"
   },
   {
     "npc_id": "mr_chen_wei",
