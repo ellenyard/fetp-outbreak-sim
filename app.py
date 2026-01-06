@@ -1734,6 +1734,24 @@ INFORMATION RULES:
 # CLINIC RECORDS FOR CASE FINDING
 # =========================
 
+def load_scenario_json(filename: str):
+    """Load scenario-specific JSON data when available."""
+    scenario_id = st.session_state.get("current_scenario")
+    scenario_type = st.session_state.get("current_scenario_type")
+    if not scenario_id:
+        return None
+
+    if scenario_type == "lepto":
+        base_dir = Path("scenarios") / scenario_id / "data"
+    else:
+        base_dir = Path("scenarios") / scenario_id
+
+    path = base_dir / filename
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return None
+
+
 def generate_clinic_records(village_context="nalu"):
     """
     Generate messy, handwritten-style clinic records.
@@ -1745,6 +1763,12 @@ def generate_clinic_records(village_context="nalu"):
                         "kabwe" (mild fevers, cuts, 1-2 transferred AES),
                         "tamu" (coughs, snakebites, Panya traveler case)
     """
+    scenario_type = st.session_state.get("current_scenario_type")
+    if scenario_type == "lepto":
+        scenario_records = load_scenario_json("clinic_records.json")
+        if scenario_records:
+            return scenario_records
+
     import random
     random.seed(42)
     
@@ -2417,6 +2441,12 @@ def generate_hospital_records():
     These contain more clinical detail than clinic records - typical for a
     district hospital in a developing country.
     """
+    scenario_type = st.session_state.get("current_scenario_type")
+    if scenario_type == "lepto":
+        scenario_records = load_scenario_json("hospital_records.json")
+        if scenario_records:
+            return scenario_records
+
     records = {
         "case_1": {
             "patient_id": "DH-2025-0847",
@@ -3627,11 +3657,17 @@ def view_case_finding():
     
     with tab2:
         st.subheader("District Hospital - Detailed Medical Records")
-        
-        st.markdown("""
-        The District Hospital has provided detailed medical records for 2 of the admitted AES cases.
-        These records contain more clinical information that may help characterize the outbreak.
-        """)
+        scenario_type = st.session_state.get("current_scenario_type", "je")
+        if scenario_type == "lepto":
+            st.markdown("""
+            The District Hospital has provided detailed medical records for 2 of the admitted leptospirosis cases.
+            These records contain more clinical information that may help characterize the outbreak.
+            """)
+        else:
+            st.markdown("""
+            The District Hospital has provided detailed medical records for 2 of the admitted AES cases.
+            These records contain more clinical information that may help characterize the outbreak.
+            """)
         
         hospital_records = generate_hospital_records()
         
@@ -3650,6 +3686,7 @@ def view_medical_records():
 
     st.title("Medical Records")
     st.caption("Day 1: Review initial cases and build your field log structure")
+    scenario_type = st.session_state.get("current_scenario_type", "je")
 
     # Back button
     if st.button("Return to Map", key="return_from_medical_records"):
@@ -3665,31 +3702,60 @@ def view_medical_records():
     col1, col2 = st.columns(2)
 
     with col1:
-        with st.expander("Case 1: Index Case (First Reported)", expanded=True):
-            st.markdown("**ID:** HOSP-01")
-            st.markdown("**Age/Sex:** 6 years / Male")
-            st.markdown("**Village:** Nalu")
-            st.markdown("**Clinical Presentation:**")
-            st.markdown("- Fever: Yes (39.5°C)")
-            st.markdown("- Seizures: Yes (multiple episodes)")
-            st.markdown("- Altered consciousness: Yes")
-            st.markdown("- Vomiting: Yes")
-            st.markdown("- Rash: No")
-            st.markdown("**Status:** Hospitalized")
+        if scenario_type == "lepto":
+            with st.expander("Case 1: Flood Cleanup Worker (Index Case)", expanded=True):
+                st.markdown("**ID:** HOSP-L1")
+                st.markdown("**Age/Sex:** 42 years / Male")
+                st.markdown("**Village:** Malinao")
+                st.markdown("**Clinical Presentation:**")
+                st.markdown("- Fever: Yes (39.4°C)")
+                st.markdown("- Calf myalgia: Yes (severe)")
+                st.markdown("- Conjunctival suffusion: Yes")
+                st.markdown("- Jaundice: Mild")
+                st.markdown("- Acute kidney injury: Creatinine 3.9 mg/dL")
+                st.markdown("- Flood cleanup history: 3 days, barefoot, open cuts")
+                st.markdown("**Status:** Hospitalized")
+        else:
+            with st.expander("Case 1: Index Case (First Reported)", expanded=True):
+                st.markdown("**ID:** HOSP-01")
+                st.markdown("**Age/Sex:** 6 years / Male")
+                st.markdown("**Village:** Nalu")
+                st.markdown("**Clinical Presentation:**")
+                st.markdown("- Fever: Yes (39.5°C)")
+                st.markdown("- Seizures: Yes (multiple episodes)")
+                st.markdown("- Altered consciousness: Yes")
+                st.markdown("- Vomiting: Yes")
+                st.markdown("- Rash: No")
+                st.markdown("**Status:** Hospitalized")
 
     with col2:
-        with st.expander("Case 2: Panya (Deceased)", expanded=True):
-            st.markdown("**ID:** HOSP-04")
-            st.markdown("**Name:** Panya")
-            st.markdown("**Age/Sex:** 7 years / Female")
-            st.markdown("**Village:** Tamu")
-            st.markdown("**Clinical Presentation:**")
-            st.markdown("- Fever: Yes (40.1°C)")
-            st.markdown("- Seizures: Yes (severe)")
-            st.markdown("- Altered consciousness: Yes (coma)")
-            st.markdown("- Vomiting: Yes")
-            st.markdown("- Rash: No")
-            st.markdown("**Status:** Deceased")
+        if scenario_type == "lepto":
+            with st.expander("Case 2: ICU Admission (Severe Leptospirosis)", expanded=True):
+                st.markdown("**ID:** HOSP-L4")
+                st.markdown("**Name:** Luz F.")
+                st.markdown("**Age/Sex:** 38 years / Female")
+                st.markdown("**Village:** Malinao")
+                st.markdown("**Clinical Presentation:**")
+                st.markdown("- Fever: Yes (40.0°C)")
+                st.markdown("- Calf myalgia: Yes")
+                st.markdown("- Conjunctival suffusion: Yes")
+                st.markdown("- Jaundice: Marked")
+                st.markdown("- Acute kidney injury: Oliguria, creatinine 4.6 mg/dL")
+                st.markdown("- Flood cleanup history: 2 days, wading in floodwater")
+                st.markdown("**Status:** ICU (dialysis arranged)")
+        else:
+            with st.expander("Case 2: Panya (Deceased)", expanded=True):
+                st.markdown("**ID:** HOSP-04")
+                st.markdown("**Name:** Panya")
+                st.markdown("**Age/Sex:** 7 years / Female")
+                st.markdown("**Village:** Tamu")
+                st.markdown("**Clinical Presentation:**")
+                st.markdown("- Fever: Yes (40.1°C)")
+                st.markdown("- Seizures: Yes (severe)")
+                st.markdown("- Altered consciousness: Yes (coma)")
+                st.markdown("- Vomiting: Yes")
+                st.markdown("- Rash: No")
+                st.markdown("**Status:** Deceased")
 
     st.markdown("---")
 
@@ -3697,18 +3763,31 @@ def view_medical_records():
     st.markdown("### Step 2: Build Line List Variables")
     st.caption("Select which columns you want to include in your field investigation log.")
 
-    # Available options - including traps
-    all_options = [
-        "Age",
-        "Sex",
-        "Village",
-        "Fever",
-        "Seizure",
-        "Rash",
-        "Vomiting",
-        "Pig Contact",  # Trap!
-        "Rice Field",   # Trap!
-    ]
+    if scenario_type == "lepto":
+        all_options = [
+            "Age",
+            "Sex",
+            "Village",
+            "Fever",
+            "Calf myalgia",
+            "Conjunctival suffusion",
+            "Jaundice",
+            "Acute kidney injury",
+            "Onset date",
+        ]
+    else:
+        # Available options - including traps
+        all_options = [
+            "Age",
+            "Sex",
+            "Village",
+            "Fever",
+            "Seizure",
+            "Rash",
+            "Vomiting",
+            "Pig Contact",  # Trap!
+            "Rice Field",   # Trap!
+        ]
 
     selected_cols = st.multiselect(
         "Select columns for your field log:",
@@ -3717,15 +3796,16 @@ def view_medical_records():
         key="line_list_cols_select"
     )
 
-    # Check for traps
-    traps = []
-    if "Pig Contact" in selected_cols:
-        traps.append("Pig Contact")
-    if "Rice Field" in selected_cols:
-        traps.append("Rice Field")
+    if scenario_type != "lepto":
+        # Check for traps
+        traps = []
+        if "Pig Contact" in selected_cols:
+            traps.append("Pig Contact")
+        if "Rice Field" in selected_cols:
+            traps.append("Rice Field")
 
-    if traps:
-        st.warning(f"⚠️ **Medical records do not typically contain exposure information like {', '.join(traps)}. Consider sticking to clinical signs and demographic information that would be documented in hospital records.**")
+        if traps:
+            st.warning(f"⚠️ **Medical records do not typically contain exposure information like {', '.join(traps)}. Consider sticking to clinical signs and demographic information that would be documented in hospital records.**")
 
     if st.button("Save Line List Structure", type="primary"):
         st.session_state.line_list_cols = selected_cols
@@ -3750,6 +3830,7 @@ def view_clinic_register_scan():
 
     st.title("Clinic Register Scan")
     st.caption("Day 1: Review the clinic logbook and identify potential cases")
+    scenario_type = st.session_state.get("current_scenario_type", "je")
 
     # Back button
     col1, col2 = st.columns([1, 5])
@@ -3760,8 +3841,14 @@ def view_clinic_register_scan():
 
     st.markdown("---")
 
-    st.markdown("### Raw Logbook from Nalu Health Center")
-    st.caption("Review these handwritten records and check any that you suspect might be AES cases.")
+    if scenario_type == "lepto":
+        st.markdown("### Raw Logbook from Malinao Rural Health Unit")
+    else:
+        st.markdown("### Raw Logbook from Nalu Health Center")
+    if scenario_type == "lepto":
+        st.caption("Review these handwritten records and check any that you suspect might be leptospirosis cases.")
+    else:
+        st.caption("Review these handwritten records and check any that you suspect might be AES cases.")
 
     # Generate clinic records if not already done
     if 'clinic_records' not in st.session_state:
