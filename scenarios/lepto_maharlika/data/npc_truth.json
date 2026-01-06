@@ -1,6 +1,5 @@
-[
-  {
-    "npc_id": "dr_reyes",
+{
+  "dr_reyes": {
     "name": "Dr. Annalisa Reyes",
     "role": "Internist, San Isidro District Hospital",
     "location": "District Hospital, Internal Medicine Ward",
@@ -52,8 +51,7 @@
     "unlocks": "hospital_patient_records",
     "data_access": "hospital_cases"
   },
-  {
-    "npc_id": "dr_villareal",
+  "dr_villareal": {
     "name": "Dr. Ernesto Villareal",
     "role": "Private Veterinarian, Villareal Animal Clinic",
     "location": "Small veterinary clinic on main road between Malinao and Poblacion",
@@ -102,8 +100,7 @@
     "unlocks": "veterinary_surveillance_data",
     "data_access": "vet_surveillance"
   },
-  {
-    "npc_id": "kapitana_gloria",
+  "kapitana_gloria": {
     "name": "Kapitana Gloria Ramos",
     "role": "Barangay Captain (community leader), Barangay Malinao",
     "location": "Barangay Hall, Malinao (small concrete building, storm-damaged roof being repaired)",
@@ -157,8 +154,7 @@
     "unlocks": "community_access_and_barangay_records",
     "data_access": null
   },
-  {
-    "npc_id": "dr_mendoza",
+  "dr_mendoza": {
     "name": "Dr. Carlos Mendoza",
     "role": "Rural Health Unit (RHU) Physician, San Isidro",
     "location": "San Isidro Rural Health Unit office (cluttered desk, outdated filing system)",
@@ -208,8 +204,7 @@
     "unlocks": "rhu_patient_registries",
     "data_access": "rhu_records"
   },
-  {
-    "npc_id": "nurse_maricel",
+  "nurse_maricel": {
     "name": "Nurse Maricel Santos",
     "role": "Emergency Room Head Nurse, San Isidro District Hospital",
     "location": "Hospital ER nursing station",
@@ -259,8 +254,7 @@
     "unlocks": "detailed_patient_exposure_matrix",
     "data_access": "patient_exposure_histories"
   },
-  {
-    "npc_id": "mang_tonyo",
+  "mang_tonyo": {
     "name": "Mang Tonyo Bautista",
     "role": "Subsistence farmer, father of deceased victim Renato Bautista",
     "location": "Small bamboo and concrete house in Sitio Riverside, Barangay Malinao (flood damage visible)",
@@ -313,8 +307,7 @@
     "unlocks": "patient_perspective_and_local_ecological_observations",
     "data_access": null
   },
-  {
-    "npc_id": "luz_fernandez",
+  "luz_fernandez": {
     "name": "Luz Fernandez",
     "role": "Recovering leptospirosis patient, community organizer",
     "location": "Her home in Barangay Malinao (recovering, but able to give interview)",
@@ -361,8 +354,7 @@
     "unlocks": "patient_advocate_and_community_educator_access",
     "data_access": "patient_perspective"
   },
-  {
-    "npc_id": "pastor_elijah",
+  "pastor_elijah": {
     "name": "Pastor Elijah Gonzales",
     "role": "Faith Healer and Minister, Bethel Healing Ministry",
     "location": "Small chapel behind his residence, Barangay Malinao (near basketball court)",
@@ -414,8 +406,7 @@
     "unlocks": "cultural_broker_and_community_trust_access",
     "data_access": null
   },
-  {
-    "npc_id": "mayor_villanueva",
+  "mayor_villanueva": {
     "name": "Mayor Roberto Villanueva",
     "role": "Municipal Mayor, San Isidro",
     "location": "Mayor's office, Municipal Hall",
@@ -466,8 +457,7 @@
     "unlocks": "municipal_government_records_and_political_context",
     "data_access": "municipal_disaster_response_records"
   },
-  {
-    "npc_id": "engr_ramon",
+  "engr_ramon": {
     "name": "Engr. Ramon Santos",
     "role": "Municipal Disaster Risk Reduction and Management (DRRM) Officer",
     "location": "DRRM Office, Municipal Hall",
@@ -515,8 +505,7 @@
     "unlocks": "spatial_epidemiology_data_and_disaster_response_records",
     "data_access": "drrm_flood_mapping_and_damage_assessments"
   },
-  {
-    "npc_id": "mr_chen_wei",
+  "mr_chen_wei": {
     "name": "Mr. Chen Wei",
     "role": "Site Manager, Golden Valley Mining Corporation",
     "location": "Mining company field office (4.7 km upstream from Malinao)",
@@ -565,8 +554,7 @@
     "unlocks": "environmental_monitoring_data_that_rules_out_mining",
     "data_access": "mining_environmental_compliance_records"
   },
-  {
-    "npc_id": "dr_lacson",
+  "dr_lacson": {
     "name": "Dr. Gemma Lacson",
     "role": "Provincial Epidemiologist, Cagayan Provincial Health Office",
     "location": "Provincial Health Office, Tuguegarao City (arrived San Isidro October 28)",
@@ -612,4 +600,4 @@
     "unlocks": "provincial_laboratory_capacity_and_expert_validation",
     "data_access": "provincial_surveillance_and_laboratory_resources"
   }
-]
+}
