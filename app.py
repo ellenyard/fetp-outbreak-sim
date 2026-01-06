@@ -2642,42 +2642,98 @@ def render_clinic_record(record: dict, show_checkbox: bool = True) -> bool:
 # =========================
 
 def make_village_map(truth: dict) -> go.Figure:
-    """Simple schematic map of villages with pig density and rice paddies."""
+    """Simple schematic map of villages with exposure indicators."""
     villages = truth["villages"].copy()
+    scenario_type = truth.get("scenario_type", "je")
     # Assign simple coordinates for display
     villages = villages.reset_index(drop=True)
     villages["x"] = np.arange(len(villages))
     villages["y"] = 0
 
-    # Marker size from population, color from pig_density
+    # Marker size from population
     size = 20 + 5 * (villages["population_size"] / villages["population_size"].max())
-    color_map = {"high": "red", "medium": "orange", "low": "yellow", "none": "green"}
-    colors = [color_map.get(str(d).lower(), "gray") for d in villages["pig_density"]]
 
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=villages["x"],
-            y=villages["y"],
-            mode="markers+text",
-            text=villages["village_name"],
-            textposition="top center",
-            marker=dict(size=size, color=colors, line=dict(color="black", width=1)),
-            hovertext=[
-                f"{row['village_name']}<br>Pigs: {row['pig_density']}<br>Rice paddies: {row['has_rice_paddies']}"
-                for _, row in villages.iterrows()
-            ],
-            hoverinfo="text",
+
+    if scenario_type == "lepto":
+        color_map = {"very_high": "#d73027", "high": "#fc8d59", "medium": "#fee08b", "low": "#91bfdb"}
+        symbol_map = {"very_high": "diamond", "high": "square", "medium": "circle", "low": "triangle-up", "minimal": "x"}
+        for risk_level, group in villages.groupby("flood_risk"):
+            fig.add_trace(
+                go.Scatter(
+                    x=group["x"],
+                    y=group["y"],
+                    mode="markers+text",
+                    text=group["village_name"],
+                    textposition="top center",
+                    marker=dict(
+                        size=size.loc[group.index],
+                        color=color_map.get(str(risk_level).lower(), "gray"),
+                        symbol=[symbol_map.get(str(val).lower(), "circle") for val in group["cleanup_intensity"]],
+                        line=dict(color="black", width=1),
+                    ),
+                    name=f"Flood risk: {risk_level}",
+                    hovertext=[
+                        (
+                            f"{row['village_name']}"
+                            f"<br>Flood risk: {row['flood_risk']}"
+                            f"<br>Flood depth (m): {row['flood_depth_m']}"
+                            f"<br>Cleanup intensity: {row['cleanup_intensity']}"
+                            f"<br>Rat population: {row['rat_population']}"
+                        )
+                        for _, row in group.iterrows()
+                    ],
+                    hoverinfo="text",
+                )
+            )
+        for cleanup_level, symbol in symbol_map.items():
+            if cleanup_level in villages["cleanup_intensity"].astype(str).str.lower().unique():
+                fig.add_trace(
+                    go.Scatter(
+                        x=[None],
+                        y=[None],
+                        mode="markers",
+                        marker=dict(size=12, symbol=symbol, color="#8c8c8c", line=dict(color="black", width=1)),
+                        name=f"Cleanup: {cleanup_level}",
+                        legendgroup="cleanup",
+                        showlegend=True,
+                    )
+                )
+        fig.update_layout(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            title="Schematic Map of Maharlika Flooding & Cleanup Exposure",
+            legend_title_text="Flood risk (color) & Cleanup intensity (symbol)",
+            height=300,
+            margin=dict(l=10, r=10, t=40, b=10),
         )
-    )
-    fig.update_layout(
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        title="Schematic Map of Sidero Valley",
-        showlegend=False,
-        height=300,
-        margin=dict(l=10, r=10, t=40, b=10),
-    )
+    else:
+        # Marker size from population, color from pig_density
+        color_map = {"high": "red", "medium": "orange", "low": "yellow", "none": "green"}
+        colors = [color_map.get(str(d).lower(), "gray") for d in villages["pig_density"]]
+        fig.add_trace(
+            go.Scatter(
+                x=villages["x"],
+                y=villages["y"],
+                mode="markers+text",
+                text=villages["village_name"],
+                textposition="top center",
+                marker=dict(size=size, color=colors, line=dict(color="black", width=1)),
+                hovertext=[
+                    f"{row['village_name']}<br>Pigs: {row['pig_density']}<br>Rice paddies: {row['has_rice_paddies']}"
+                    for _, row in villages.iterrows()
+                ],
+                hoverinfo="text",
+            )
+        )
+        fig.update_layout(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            title="Schematic Map of Sidero Valley",
+            showlegend=False,
+            height=300,
+            margin=dict(l=10, r=10, t=40, b=10),
+        )
     return fig
 
 
