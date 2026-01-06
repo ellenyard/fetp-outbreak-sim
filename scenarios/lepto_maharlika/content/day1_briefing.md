@@ -10,13 +10,13 @@ The Provincial Health Office has deployed you to investigate a cluster of severe
 
 ## BACKGROUND
 
-On October 8-10, Typhoon Odette brought torrential rains and severe flooding to San Isidro District. Barangay Malinao, located in a low-lying river valley, experienced catastrophic flooding with water depths reaching 1.2-2.3 meters in the worst-affected areas (Sitio Riverside). Floodwaters began receding October 10, but standing water remained in some areas until October 12-13.
+On October 8-10, Typhoon Odette brought torrential rains and severe flooding to San Isidro District. Barangay Malinao, located in a low-lying river valley, experienced catastrophic flooding with water depths reaching 1.2-2.3 meters in the worst-affected areas (Sitio Riverside). Floodwaters began receding October 10, but standing water remained in some areas until October 12.
 
 Immediately following the flood recession (October 10-12), community members began intensive cleanup efforts—clearing debris from homes and roads, salvaging rice from flooded paddies, and removing mud and dead animals from drainage canals. Most cleanup workers were male farmers and laborers working barefoot or with damaged footwear due to poverty and equipment loss during the flood.
 
 ## TEMPORAL PATTERN
 
-The first recognized case was Renato Bautista, a 42-year-old farmer from Sitio Riverside, Barangay Malinao, who developed symptoms on October 12 (approximately 2 days after cleanup began). He was hospitalized October 19 and died October 26 from pulmonary hemorrhage and acute kidney injury.
+The first recognized case was Renato Bautista, a 42-year-old farmer from Sitio Riverside, Barangay Malinao, who developed symptoms on October 13 (approximately 3 days after cleanup began). He was hospitalized October 16 and died October 26 from pulmonary hemorrhage and acute kidney injury.
 
 By October 19, Dr. Annalisa Reyes at the District Hospital had identified a clear pattern: nearly identical clinical presentations among adult males from flooded barangays, all of whom had participated in post-typhoon cleanup activities.
 
@@ -47,8 +47,8 @@ Clear dose-response relationship: greater flood depth and duration → higher ca
 ## LABORATORY FINDINGS
 
 - Multiple patients tested positive for Leptospira IgM ELISA (sent to Tuguegarao)
-- Dr. Annalisa Reyes suspected leptospirosis from clinical presentation as early as October 11
-- Laboratory confirmation received October 13
+- Dr. Annalisa Reyes suspected leptospirosis from clinical presentation as early as October 16
+- Laboratory confirmation received October 18
 - Veterinary investigation by Dr. Villareal identified 4 of 6 pigs tested positive for Leptospira antibodies (serovars Pomona and Icterohaemorrhagiae)
 
 ## CURRENT SITUATION
