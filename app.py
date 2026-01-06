@@ -125,6 +125,9 @@ _FALLBACK_UI = {
         "outcome": "Interventions & Outcome",
         "villages": "Village Profiles",
         "notebook": "Investigation Notebook",
+        "map": "Map",
+        "medical_records": "Medical Records",
+        "clinic_register": "Clinic Register Scan",
         "advance_day": "Advance to Day",
         "cannot_advance": "Cannot advance yet. See missing tasks on Overview.",
         "missing_tasks_title": "Missing tasks before you can advance:",
@@ -193,6 +196,9 @@ _FALLBACK_UI = {
         "outcome": "Intervenciones",
         "villages": "Perfiles de aldeas",
         "notebook": "Cuaderno",
+        "map": "Mapa",
+        "medical_records": "Registros médicos",
+        "clinic_register": "Registro de clínica",
         "advance_day": "Avanzar al día",
         "cannot_advance": "Aún no puede avanzar. Consulte las tareas pendientes en Resumen.",
         "missing_tasks_title": "Tareas pendientes antes de avanzar:",
@@ -231,6 +237,9 @@ _FALLBACK_UI = {
         "outcome": "Interventions",
         "villages": "Profils des villages",
         "notebook": "Carnet",
+        "map": "Carte",
+        "medical_records": "Dossiers médicaux",
+        "clinic_register": "Registre de la clinique",
         "advance_day": "Passer au jour",
         "cannot_advance": "Impossible d'avancer. Voir les tâches manquantes dans Aperçu.",
         "missing_tasks_title": "Tâches manquantes avant d'avancer :",
@@ -269,6 +278,9 @@ _FALLBACK_UI = {
         "outcome": "Intervenções",
         "villages": "Perfis das aldeias",
         "notebook": "Caderno",
+        "map": "Mapa",
+        "medical_records": "Registros médicos",
+        "clinic_register": "Registro da clínica",
         "advance_day": "Avançar para o dia",
         "cannot_advance": "Ainda não é possível avançar. Veja as tarefas pendentes em Visão geral.",
         "missing_tasks_title": "Tarefas pendentes antes de avançar:",
@@ -3201,8 +3213,12 @@ def sidebar_navigation():
     st.sidebar.markdown("---")
 
     # Navigation - day-appropriate options
-    labels = [t("overview"), t("casefinding"), t("descriptive"), t("villages"), t("interviews"), t("spotmap"), t("study"), t("lab"), t("outcome")]
-    internal = ["overview", "casefinding", "descriptive", "villages", "interviews", "spotmap", "study", "lab", "outcome"]
+    labels = [t("map"), t("overview"), t("casefinding"), t("descriptive"), t("villages"), t("interviews"), t("spotmap"), t("study"), t("lab"), t("outcome")]
+    internal = ["map", "overview", "casefinding", "descriptive", "villages", "interviews", "spotmap", "study", "lab", "outcome"]
+
+    if st.session_state.current_day == 1:
+        labels.append(t("medical_records"))
+        internal.append("medical_records")
     
     if st.session_state.current_view in internal:
         current_idx = internal.index(st.session_state.current_view)
@@ -3494,14 +3510,26 @@ def view_overview():
                 time_period = st.text_input("**Time:** When?")
 
                 if st.form_submit_button("Save Case Definition"):
-                    full_def = f"Clinical: {clinical}\nPerson: {person}\nPlace: {place}\nTime: {time_period}"
-                    st.session_state.decisions["case_definition_text"] = full_def
-                    st.session_state.decisions["case_definition"] = {"clinical_AES": True}
-                    st.session_state.case_definition_written = True
-                    st.success("✅ Case definition saved!")
+                    if not any([clinical.strip(), person.strip(), place.strip(), time_period.strip()]):
+                        st.error("Please enter at least one case definition element before saving.")
+                    else:
+                        full_def = f"Clinical: {clinical}\nPerson: {person}\nPlace: {place}\nTime: {time_period}"
+                        st.session_state.decisions["case_definition_text"] = full_def
+                        st.session_state.decisions["case_definition"] = {"clinical_AES": True}
+                        st.session_state.case_definition_written = True
+                        st.success("✅ Case definition saved!")
 
             if st.session_state.case_definition_written:
                 st.info("✓ Case definition recorded")
+                st.markdown("**Saved case definition:**")
+                st.text_area(
+                    "Case definition (saved)",
+                    value=st.session_state.decisions.get("case_definition_text", ""),
+                    height=140,
+                    key="case_definition_saved_display",
+                    disabled=True,
+                    label_visibility="collapsed",
+                )
 
         with col2:
             st.markdown("### Initial Hypotheses")
@@ -3529,6 +3557,9 @@ def view_overview():
 
             if st.session_state.hypotheses_documented:
                 st.info(f"✓ {len(st.session_state.initial_hypotheses)} hypothesis(es) recorded")
+                st.markdown("**Saved hypotheses:**")
+                for hypothesis in st.session_state.initial_hypotheses:
+                    st.markdown(f"- {hypothesis}")
 
 
 def view_hospital_triage():
@@ -4090,9 +4121,12 @@ def view_medical_records():
             st.warning(f"⚠️ **Medical records do not typically contain exposure information like {', '.join(traps)}. Consider sticking to clinical signs and demographic information that would be documented in hospital records.**")
 
     if st.button("Save Line List Structure", type="primary"):
-        st.session_state.line_list_cols = selected_cols
-        st.success(f"✅ Line list structure saved with {len(selected_cols)} columns!")
-        st.rerun()
+        if not selected_cols:
+            st.error("Select at least one column before saving your line list structure.")
+        else:
+            st.session_state.line_list_cols = selected_cols
+            st.success(f"✅ Line list structure saved with {len(selected_cols)} columns!")
+            st.rerun()
 
     if st.session_state.line_list_cols:
         st.info(f"Current line list columns: {', '.join(st.session_state.line_list_cols)}")
@@ -4101,9 +4135,9 @@ def view_medical_records():
 
     # Navigation hint
     st.markdown("### Next Steps")
-    st.caption("Once you've defined your line list structure, proceed to the Clinic Register Scan to review additional cases.")
-    if st.button("Go to Clinic Register Scan"):
-        st.session_state.current_view = "clinic_register"
+    st.caption("Once you've defined your line list structure, proceed to Case Finding to review additional cases.")
+    if st.button("Go to Case Finding"):
+        st.session_state.current_view = "casefinding"
         st.rerun()
 
 
@@ -4149,6 +4183,14 @@ def view_clinic_register_scan():
         st.session_state.manual_cases = []
 
     # Display records with checkboxes
+    header_cols = st.columns([1, 2, 1, 1, 5])
+    header_cols[0].markdown("**Suspect?**")
+    header_cols[1].markdown("**Record ID**")
+    header_cols[2].markdown("**Date**")
+    header_cols[3].markdown("**Age**")
+    header_cols[4].markdown("**Patient / Village**")
+
+    selected_records = []
     for i, record in enumerate(records):
         with st.container():
             col1, col2, col3, col4, col5 = st.columns([1, 2, 1, 1, 5])
@@ -4162,12 +4204,8 @@ def view_clinic_register_scan():
                 label_visibility="collapsed"
             )
 
-            if check and not is_checked:
-                st.session_state.manual_cases.append(record['record_id'])
-                st.rerun()
-            elif not check and is_checked:
-                st.session_state.manual_cases.remove(record['record_id'])
-                st.rerun()
+            if check:
+                selected_records.append(record['record_id'])
 
             # Record details
             col2.write(f"**{record['record_id']}**")
@@ -4179,6 +4217,8 @@ def view_clinic_register_scan():
             st.caption(f"**Complaint:** {record['complaint']}")
             st.caption(f"**Notes:** {record['notes']}")
             st.divider()
+
+    st.session_state.manual_cases = selected_records
 
     st.markdown("---")
 
@@ -7844,8 +7884,8 @@ def main():
         data_dir = f"scenarios/{scenario_id}/data"
     else:
         scenario_type = "je"
-        # JE scenario has files directly in scenario folder (no /data subdirectory)
-        data_dir = f"scenarios/{scenario_id}"
+        scenario_root = Path(f"scenarios/{scenario_id}")
+        data_dir = str(scenario_root / "data") if (scenario_root / "data").exists() else str(scenario_root)
 
     # Check if we need to load or reload data
     need_reload = (
@@ -7860,10 +7900,17 @@ def main():
             st.session_state.current_scenario_type = scenario_type
 
             # Load truth data for selected scenario
-            st.session_state.truth = load_truth_and_population(
-                data_dir=data_dir,
-                scenario_type=scenario_type
-            )
+            try:
+                st.session_state.truth = load_truth_and_population(
+                    data_dir=data_dir,
+                    scenario_type=scenario_type
+                )
+            except FileNotFoundError as exc:
+                st.error(str(exc))
+                st.stop()
+            except Exception as exc:
+                st.error(f"Failed to load scenario data: {exc}")
+                st.stop()
 
             # Reset investigation progress when switching scenarios
             st.session_state.current_day = 1
