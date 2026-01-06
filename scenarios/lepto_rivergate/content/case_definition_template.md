@@ -61,4 +61,4 @@ In post-flood/typhoon settings, maintain high index of suspicion for leptospiros
 - Cases presenting 3-30 days after flooding
 
 ## Adapted Case Definition for This Outbreak
-*You may adapt this definition based on post-Typhoon Odette context, local epidemiology, clinical patterns, and laboratory capacity*
+*You may adapt this definition based on post-Typhoon Halcyon context, local epidemiology, clinical patterns, and laboratory capacity*

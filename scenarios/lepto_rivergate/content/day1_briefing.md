@@ -1,26 +1,26 @@
 # Day 1: Initial Investigation
 
 **OUTBREAK NOTIFICATION - DAY 1**
-San Isidro District Health Office
-Cagayan Province, Philippines
+Rivergate District Health Office
+Kantara Province, Aruvia
 
 ## SITUATION SUMMARY
 
-The Provincial Health Office has deployed you to investigate a cluster of severe febrile illness in San Isidro District following Typhoon Odette. Between October 19-30, San Isidro District Hospital and the Rural Health Unit have documented 28-34 cases of acute febrile illness with features including high fever, severe muscle pain, conjunctival suffusion (red eyes), and in some cases, jaundice and kidney failure. Three deaths have been reported.
+The Provincial Health Office has deployed you to investigate a cluster of severe febrile illness in Rivergate District following Typhoon Halcyon. Between October 19-30, Rivergate District Hospital and the Rural Health Unit have documented 28-34 cases of acute febrile illness with features including high fever, severe muscle pain, conjunctival suffusion (red eyes), and in some cases, jaundice and kidney failure. Three deaths have been reported.
 
 ## BACKGROUND
 
-On October 8-10, Typhoon Odette brought torrential rains and severe flooding to San Isidro District. Barangay Malinao, located in a low-lying river valley, experienced catastrophic flooding with water depths reaching 1.2-2.3 meters in the worst-affected areas (Sitio Riverside). Floodwaters began receding October 10, but standing water remained in some areas until October 12.
+On October 8-10, Typhoon Halcyon brought torrential rains and severe flooding to Rivergate District. Ward Northbend, located in a low-lying river valley, experienced catastrophic flooding with water depths reaching 1.2-2.3 meters in the worst-affected areas (Riverside Hamlet). Floodwaters began receding October 10, but standing water remained in some areas until October 12.
 
 Immediately following the flood recession (October 10-12), community members began intensive cleanup efforts—clearing debris from homes and roads, salvaging rice from flooded paddies, and removing mud and dead animals from drainage canals. Most cleanup workers were male farmers and laborers working barefoot or with damaged footwear due to poverty and equipment loss during the flood.
 
 ## TEMPORAL PATTERN
 
-The first recognized case was Renato Bautista, a 42-year-old farmer from Sitio Riverside, Barangay Malinao, who developed symptoms on October 13 (approximately 3 days after cleanup began). He was hospitalized October 16 and died October 26 from pulmonary hemorrhage and acute kidney injury.
+The first recognized case was Adrian Vale, a 42-year-old farmer from Riverside Hamlet, Ward Northbend, who developed symptoms on October 13 (approximately 3 days after cleanup began). He was hospitalized October 16 and died October 26 from pulmonary hemorrhage and acute kidney injury.
 
-By October 19, Dr. Annalisa Reyes at the District Hospital had identified a clear pattern: nearly identical clinical presentations among adult males from flooded barangays, all of whom had participated in post-typhoon cleanup activities.
+By October 19, Dr. Annalisa Reyes at the District Hospital had identified a clear pattern: nearly identical clinical presentations among adult males from flooded wards, all of whom had participated in post-typhoon cleanup activities.
 
-Case numbers increased steadily through late October. Two additional deaths occurred: Pedro Magat (October 28) and Ernesto Cruz (October 29).
+Case numbers increased steadily through late October. Two additional deaths occurred: Lucas Orr (October 28) and Neil Carver (October 29).
 
 ## CLINICAL PRESENTATION
 
@@ -37,16 +37,16 @@ Average time from symptom onset to hospital admission: 4-6 days (delayed present
 
 ## GEOGRAPHIC DISTRIBUTION
 
-- **Barangay Malinao**: 28 of 34 cases (82%), particularly Sitio Riverside area
-- **Barangay San Rafael**: 4 cases (moderate flooding)
-- **Barangay Bagong Silang**: 2 cases (minimal flooding)
-- **Barangay Santa Cruz**: 0 cases (higher elevation, served as evacuation site)
+- **Ward Northbend**: 28 of 34 cases (82%), particularly Riverside Hamlet area
+- **Ward East Terrace**: 4 cases (moderate flooding)
+- **Ward Southshore**: 2 cases (minimal flooding)
+- **Ward Highridge**: 0 cases (higher elevation, served as evacuation site)
 
 Clear dose-response relationship: greater flood depth and duration → higher case incidence
 
 ## LABORATORY FINDINGS
 
-- Multiple patients tested positive for Leptospira IgM ELISA (sent to Tuguegarao)
+- Multiple patients tested positive for Leptospira IgM ELISA (sent to Lunara)
 - Dr. Annalisa Reyes suspected leptospirosis from clinical presentation as early as October 16
 - Laboratory confirmation received October 18
 - Veterinary investigation by Dr. Villareal identified 4 of 6 pigs tested positive for Leptospira antibodies (serovars Pomona and Icterohaemorrhagiae)
@@ -71,15 +71,15 @@ As FETP residents, you must:
 You have 5 days and limited resources. Today (Day 1), you should focus on:
 - Establishing rapport with key stakeholders
 - Reviewing existing medical and surveillance data
-- Conducting initial field assessment in Barangay Malinao
+- Conducting initial field assessment in Ward Northbend
 - Beginning to formulate hypotheses about transmission dynamics
 
 ## YOUR TASKS TODAY
 
 - **Visit the District Health Office** to meet Dr. Carlos Mendoza (RHU Physician) and review initial case reports and patient registries
 - **Visit the District Hospital** to meet Dr. Annalisa Reyes (Internist) and review hospitalized cases, including the three fatalities
-- **Travel to Barangay Malinao** to meet Kapitana Gloria Ramos, assess the outbreak setting, and understand community perspectives
-- **Interview key informants** such as Nurse Maricel Santos (who has detailed exposure histories) and affected community members
+- **Travel to Ward Northbend** to meet Captain Gloria Ramos, assess the outbreak setting, and understand community perspectives
+- **Interview key informants** such as Nurse Maricel Holt (who has detailed exposure histories) and affected community members
 - **Begin developing your case definition** and line listing based on available data
 - **Document initial hypotheses** about outbreak source, transmission routes, and risk factors
 

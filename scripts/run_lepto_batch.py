@@ -97,7 +97,7 @@ def summarize_cases(individuals_df):
 
 def main():
     parser = argparse.ArgumentParser(description="Batch run the Leptospirosis scenario.")
-    parser.add_argument("--data-dir", default="scenarios/lepto_maharlika/data", help="Scenario data directory.")
+    parser.add_argument("--data-dir", default="scenarios/lepto_rivergate/data", help="Scenario data directory.")
     parser.add_argument("--runs", type=int, default=100, help="Number of simulation runs.")
     parser.add_argument("--seed", type=int, default=42, help="Seed offset for reproducibility.")
     parser.add_argument("--output", type=Path, default=None, help="Optional JSON output path.")

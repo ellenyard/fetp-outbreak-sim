@@ -31,7 +31,7 @@ fetp-outbreak-sim/
     │       ├── case_definition_template.md
     │       ├── hypothesis_examples.md
     │       └── interventions.md
-    └── lepto_maharlika/ (Lepto scenario)
+    └── lepto_rivergate/ (Lepto scenario)
         ├── data/
         │   ├── villages.csv
         │   ├── households_seed.csv
@@ -134,7 +134,7 @@ In `app.py`, locate the scenario selector (around line 7368) and add:
 ```python
 scenario_options = [
     ("aes_sidero_valley", "🦟 Japanese Encephalitis - Sidero Valley"),
-    ("lepto_maharlika", "🌊 Leptospirosis - San Isidro, Maharlika"),
+    ("lepto_rivergate", "🌊 Leptospirosis - Rivergate District, Aruvia"),
     ("new_scenario_id", "🔬 New Scenario Name - Location"),
 ]
 ```
@@ -190,7 +190,7 @@ st.markdown(briefing)
 - Outdoor activities during dusk/dawn
 - JE vaccination status
 
-### Leptospirosis (lepto_maharlika)
+### Leptospirosis (lepto_rivergate)
 **Village-level risk factors:**
 - `flood_severity` - Post-typhoon flooding (0-1)
 - `cleanup_workers` - Number of flood cleanup workers

@@ -66,7 +66,7 @@ Use the epidemiologic triad to structure your thinking:
 
 4. **Protective Factor Hypothesis:** Use of boots and gloves during flood water contact reduces risk of leptospirosis
 
-5. **Geographic Hypothesis:** Persons from Barangay Malinao (most flooded area) have higher risk than those from less-flooded barangays
+5. **Geographic Hypothesis:** Persons from Ward Northbend (most flooded area) have higher risk than those from less-flooded wards
 
 6. **Water Source Hypothesis:** Use of contaminated well water for drinking/washing increases risk compared to use of bottled/boiled water
 
@@ -89,7 +89,7 @@ Use the epidemiologic triad to structure your thinking:
 ### Potential Confounders:
 - Age (continuous or categorical)
 - Sex
-- Barangay of residence
+- Ward of residence
 - Socioeconomic status
 - Pre-existing health conditions
 - Chemoprophylaxis use
@@ -98,7 +98,7 @@ Use the epidemiologic triad to structure your thinking:
 
 **Case-Control Study:**
 - Cases: Persons meeting leptospirosis case definition
-- Controls: Healthy persons from same barangays, matched by age and sex
+- Controls: Healthy persons from same wards, matched by age and sex
 - Exposure assessment: Interview about flood exposure, cleanup work, water contact, protective behaviors
 
 **Cohort Study (if feasible):**
@@ -116,7 +116,7 @@ Investigate across human-animal-environment interface:
 
 ## Post-Disaster Context
 
-Special considerations for Typhoon Odette outbreak:
+Special considerations for Typhoon Halcyon outbreak:
 - **Timing:** Incubation period 2-30 days (most 7-14 days) after exposure
 - **Exposure intensity:** Catastrophic flooding creates massive exposure
 - **Vulnerable populations:** Cleanup workers, displaced persons

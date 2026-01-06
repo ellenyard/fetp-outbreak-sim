@@ -1,10 +1,10 @@
 # Leptospirosis Scenario Assets
 
 Place scenario-specific assets here:
-- Village/barangay photos (Malinao, etc.)
+- Village/ward photos (Northbend, etc.)
 - Post-typhoon damage photos
 - Flood water images
-- Maps of San Isidro municipality
+- Maps of Rivergate municipality
 - Infographics about leptospirosis
 - Protective equipment diagrams
 

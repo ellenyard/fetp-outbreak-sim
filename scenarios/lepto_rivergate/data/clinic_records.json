@@ -4,7 +4,7 @@
     "date": "10-Oct",
     "patient": "Alvin P.",
     "age": "19",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "sprained ankle, swelling",
     "notes": "injured during debris clearing. given pain meds",
     "is_aes": false
@@ -14,7 +14,7 @@
     "date": "10-Oct",
     "patient": "Marites L.",
     "age": "33",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "fever, headache, body aches",
     "notes": "dengue RDT pending; no red eyes",
     "is_aes": false
@@ -22,9 +22,9 @@
   {
     "record_id": "MHC-0111",
     "date": "11-Oct",
-    "patient": "Renato B.",
+    "patient": "Adrian B.",
     "age": "42",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "high fever, severe calf pain, headache",
     "notes": "cleaned flood debris barefoot; eyes very red. sent to hospital",
     "is_aes": true
@@ -34,7 +34,7 @@
     "date": "11-Oct",
     "patient": "Luz F.",
     "age": "38",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, myalgia, red eyes",
     "notes": "reported dark urine and nausea; flood cleanup 2 days",
     "is_aes": true
@@ -44,7 +44,7 @@
     "date": "11-Oct",
     "patient": "Baby J.",
     "age": "9 months",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "diarrhea, poor feeding",
     "notes": "ORS given, advised mother to return if worse",
     "is_aes": false
@@ -54,7 +54,7 @@
     "date": "12-Oct",
     "patient": "Harold S.",
     "age": "51",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "fever, chills, muscle pain",
     "notes": "worked in flooded rice field; conjunctival suffusion noted",
     "is_aes": true
@@ -64,7 +64,7 @@
     "date": "12-Oct",
     "patient": "Mary Joy C.",
     "age": "27",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "cough, sore throat",
     "notes": "viral URI, advised rest and fluids",
     "is_aes": false
@@ -74,7 +74,7 @@
     "date": "12-Oct",
     "patient": "Pedro V.",
     "age": "44",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever 3 days, calf pain, headache",
     "notes": "waded in floodwater w/ foot cuts; jaundice starting",
     "is_aes": true
@@ -84,7 +84,7 @@
     "date": "13-Oct",
     "patient": "Nida C.",
     "age": "36",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "dysuria, lower abdominal pain",
     "notes": "UTI suspected; antibiotics given",
     "is_aes": false
@@ -94,7 +94,7 @@
     "date": "13-Oct",
     "patient": "Ernesto D.",
     "age": "48",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "high fever, severe myalgia, red eyes",
     "notes": "reports flood cleanup and wounds; referred to hospital",
     "is_aes": true
@@ -104,7 +104,7 @@
     "date": "13-Oct",
     "patient": "Ethel M.",
     "age": "29",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "abdominal pain, vomiting",
     "notes": "suspected gastroenteritis",
     "is_aes": false
@@ -114,7 +114,7 @@
     "date": "14-Oct",
     "patient": "Rogelio T.",
     "age": "58",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, jaundice, decreased urine",
     "notes": "eyes yellow, calf tenderness; flood cleanup last week",
     "is_aes": true
@@ -124,7 +124,7 @@
     "date": "14-Oct",
     "patient": "Angelica N.",
     "age": "22",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "rash with fever",
     "notes": "possible dengue; no conjunctival suffusion",
     "is_aes": false
@@ -134,7 +134,7 @@
     "date": "14-Oct",
     "patient": "Fermin G.",
     "age": "39",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, myalgia, red eyes",
     "notes": "cleaned flooded pig pens; reports calf pain",
     "is_aes": true
@@ -144,7 +144,7 @@
     "date": "15-Oct",
     "patient": "Rosalinda P.",
     "age": "31",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "headache, photophobia",
     "notes": "migraine history; given analgesics",
     "is_aes": false
@@ -154,7 +154,7 @@
     "date": "15-Oct",
     "patient": "Manuel A.",
     "age": "46",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, calf pain, nausea",
     "notes": "worked in flood cleanup; conjunctival suffusion",
     "is_aes": true
@@ -164,7 +164,7 @@
     "date": "16-Oct",
     "patient": "Selena D.",
     "age": "40",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "fever, cough",
     "notes": "treated as bronchitis",
     "is_aes": false
@@ -174,7 +174,7 @@
     "date": "16-Oct",
     "patient": "Isabel B.",
     "age": "24",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, myalgia",
     "notes": "helped clean flooded school; mild conjunctival suffusion",
     "is_aes": true
@@ -184,7 +184,7 @@
     "date": "16-Oct",
     "patient": "Joel R.",
     "age": "34",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "skin laceration",
     "notes": "cleaned and bandaged; tetanus shot",
     "is_aes": false
@@ -194,7 +194,7 @@
     "date": "17-Oct",
     "patient": "Mila S.",
     "age": "55",
-    "village": "San Rafael",
+    "village": "East Terrace",
     "complaint": "fever, calf pain",
     "notes": "recent flood cleanup, mild jaundice; referred",
     "is_aes": true
@@ -204,7 +204,7 @@
     "date": "17-Oct",
     "patient": "Rhea V.",
     "age": "20",
-    "village": "Poblacion",
+    "village": "Central Ward",
     "complaint": "UTI symptoms",
     "notes": "given antibiotics",
     "is_aes": false
@@ -214,7 +214,7 @@
     "date": "18-Oct",
     "patient": "Nestor C.",
     "age": "47",
-    "village": "Malinao",
+    "village": "Northbend",
     "complaint": "fever, muscle pain, jaundice",
     "notes": "dark urine, conjunctival suffusion; flood cleanup 4 days",
     "is_aes": true

@@ -1,20 +1,20 @@
 {
   "case_1": {
     "patient_id": "SIH-2024-1021",
-    "name": "Renato Bautista",
+    "name": "Adrian Vale",
     "age": "42 years",
     "sex": "Male",
-    "village": "Barangay Malinao",
+    "village": "Ward Northbend",
     "admission_date": "19-Oct-2024",
     "admission_time": "08:40",
-    "brought_by": "Wife (Marissa Bautista)",
+    "brought_by": "Wife (Elena Vale)",
     "chief_complaint": "High fever, severe calf pain, red eyes",
     "history_present_illness": """
 Patient was well until 4 days ago when he developed sudden high fever and chills. 
 Reports severe myalgia, especially calves and lower back, making it difficult to walk. 
 Eyes noted to be markedly red with tearing. Nausea and dark urine began yesterday. 
 
-History of flood cleanup work after Typhoon Odette (Oct 10-12). Patient worked barefoot in 
+History of flood cleanup work after Typhoon Halcyon (Oct 10-12). Patient worked barefoot in 
 contaminated floodwater with multiple foot cuts from debris. No mosquito nets or PPE used.
 """,
     "past_medical_history": "No known chronic illnesses. No diabetes or hypertension. No known drug allergies.",
@@ -51,7 +51,7 @@ Day 6: Fever improving, urine output better. Planned to continue antibiotics 7 d
     "name": "Luz Fernandez",
     "age": "38 years",
     "sex": "Female",
-    "village": "Barangay Malinao",
+    "village": "Ward Northbend",
     "admission_date": "17-Oct-2024",
     "admission_time": "21:05",
     "brought_by": "Husband (Mario Fernandez)",

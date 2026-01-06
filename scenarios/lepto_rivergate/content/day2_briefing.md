@@ -5,7 +5,7 @@
 ## Situation Update
 - Active case search identifying additional suspected cases
 - Clear temporal relationship with post-typhoon flooding
-- Geographic concentration in Malinao barangay confirmed
+- Geographic concentration in Northbend ward confirmed
 - Community members continue cleanup activities despite risks
 
 ## Your Tasks Today
@@ -14,7 +14,7 @@
 3. **Interview cases and families** - Gather detailed exposure histories
 4. **Collect environmental samples** - Water, soil, rodent specimens
 5. **Assess sanitation conditions** - Evaluate post-typhoon water and sanitation status
-6. **Expand active case finding** - Search neighboring barangays
+6. **Expand active case finding** - Search neighboring wards
 
 ## Investigation Priorities
 - **Water contact exposure:** Flood cleanup work, wading through flood water

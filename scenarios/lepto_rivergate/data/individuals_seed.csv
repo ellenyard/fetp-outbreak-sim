@@ -1,13 +1,13 @@
 person_id,hh_id,village_id,age,sex,occupation,onset_date,symptoms_fever,symptoms_headache,symptoms_myalgia,symptoms_conjunctival_suffusion,symptoms_jaundice,symptoms_renal_failure,outcome,days_to_hospital,exposure_cleanup_work,exposure_barefoot_water,exposure_skin_wounds,exposure_animal_contact,exposure_rat_contact,reported_to_hospital,name_hint,clinical_severity
-P0001,HH001,V1,42,M,farmer,2024-10-13,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,died,3,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Renato Bautista,critical
+P0001,HH001,V1,42,M,farmer,2024-10-13,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,died,3,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Adrian Vale,critical
 P0002,HH001,V1,34,F,vendor,2024-10-14,TRUE,TRUE,TRUE,,,FALSE,recovered,2,TRUE,TRUE,FALSE,,TRUE,TRUE,Luz Fernandez,moderate
 P0003,HH001,V1,38,M,farmer,2024-10-14,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,hospitalized,4,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Tomas Fernandez,severe
-P0004,HH002,V1,29,M,construction,2024-10-13,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,recovering,7,TRUE,TRUE,TRUE,FALSE,TRUE,TRUE,Mario Cruz,moderate
-P0005,HH002,V1,33,M,day_laborer,2024-10-15,TRUE,TRUE,TRUE,TRUE,FALSE,FALSE,recovered,2,TRUE,TRUE,FALSE,TRUE,TRUE,TRUE,Luis Cruz,moderate
-P0006,HH007,V1,51,M,farmer,2024-10-12,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,recovering,1,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Tatay Aquino,severe
-P0007,HH012,V1,45,M,day_laborer,2024-10-15,TRUE,TRUE,TRUE,TRUE,FALSE,FALSE,hospitalized,,TRUE,,TRUE,FALSE,TRUE,TRUE,Ramon Magat,moderate
-P0008,HH018,V1,28,M,construction,2024-10-16,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,recovered,1,TRUE,TRUE,FALSE,FALSE,FALSE,TRUE,Joel Soriano,mild
-P0009,HH024,V1,37,M,farmer,2024-10-15,TRUE,TRUE,,,FALSE,FALSE,recovering,3,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Pedro Santos,moderate
+P0004,HH002,V1,29,M,construction,2024-10-13,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,recovering,7,TRUE,TRUE,TRUE,FALSE,TRUE,TRUE,Derek Carver,moderate
+P0005,HH002,V1,33,M,day_laborer,2024-10-15,TRUE,TRUE,TRUE,TRUE,FALSE,FALSE,recovered,2,TRUE,TRUE,FALSE,TRUE,TRUE,TRUE,Nolan Carver,moderate
+P0006,HH007,V1,51,M,farmer,2024-10-12,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,recovering,1,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Elder Merrin,severe
+P0007,HH012,V1,45,M,day_laborer,2024-10-15,TRUE,TRUE,TRUE,TRUE,FALSE,FALSE,hospitalized,,TRUE,,TRUE,FALSE,TRUE,TRUE,Grant Orr,moderate
+P0008,HH018,V1,28,M,construction,2024-10-16,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,recovered,1,TRUE,TRUE,FALSE,FALSE,FALSE,TRUE,Joel Halden,mild
+P0009,HH024,V1,37,M,farmer,2024-10-15,TRUE,TRUE,,,FALSE,FALSE,recovering,3,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,Pedro Holt,moderate
 P0010,HH031,V1,43,M,fisher,2024-10-17,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,hospitalized,2,FALSE,TRUE,TRUE,FALSE,FALSE,TRUE,Carlos Valdez,mild
 P0011,HH045,V1,52,F,vendor,2024-10-19,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,recovering,5,FALSE,TRUE,FALSE,,,TRUE,Maria Reyes,severe
 P0012,HH003,V2,31,M,construction,2024-10-16,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,recovered,3,TRUE,TRUE,TRUE,FALSE,TRUE,TRUE,Roberto Tan,moderate
