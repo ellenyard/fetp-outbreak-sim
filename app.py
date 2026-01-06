@@ -8,6 +8,7 @@ import plotly.express as px
 import io
 import re
 import time
+import base64
 from pathlib import Path
 from PIL import Image
 
@@ -6127,14 +6128,16 @@ def render_interactive_map():
     Clicking a location updates st.session_state.current_area and reruns.
     """
     # Load the background map image
-    map_image_path = Path("assets/map_background.png")
+    map_image_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
 
     if not map_image_path.exists():
-        st.error("Map background image not found at assets/map_background.png")
+        st.error(f"Map background image not found at {map_image_path}")
         return
 
     img = Image.open(map_image_path)
-    img_width, img_height = img.size
+    with map_image_path.open("rb") as map_file:
+        map_image_base64 = base64.b64encode(map_file.read()).decode("utf-8")
+    map_image_uri = f"data:image/png;base64,{map_image_base64}"
 
     # Create figure with the background image
     fig = go.Figure()
@@ -6142,7 +6145,7 @@ def render_interactive_map():
     # Add the background image
     fig.add_layout_image(
         dict(
-            source=img,
+            source=map_image_uri,
             xref="x",
             yref="y",
             x=0,
