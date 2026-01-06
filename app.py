@@ -428,7 +428,7 @@ def format_resource_cost(time_cost: float = 0, budget_cost: float = 0) -> str:
 # LOCATIONS CONFIG (Adventure-Style Navigation)
 # =========================
 
-LOCATIONS = {
+AES_LOCATIONS = {
     # === NALU VILLAGE ===
     "nalu_village_center": {
         "name": "Nalu Village Center",
@@ -687,8 +687,107 @@ LOCATIONS = {
     },
 }
 
+LEPTO_LOCATIONS = {
+    # === BARANGAY MALINAO ===
+    "malinao_barangay_hall": {
+        "name": "Barangay Malinao Hall",
+        "area": "Barangay Malinao",
+        "description": "The barangay hall for Malinao. Community leaders meet here to discuss recent cases and flooding in nearby rice fields.",
+        "image_path": "assets/Nalu/nalu_01_village_scene.png",
+        "image_thumb": "assets/Nalu/nalu_01_village_scene.png",
+        "icon": "🏘️",
+        "npcs": ["kapitana_gloria", "mang_tonyo", "luz_fernandez"],
+        "available_actions": [],
+        "travel_time": 0.5,
+    },
+    # === BARANGAY SAN RAFAEL ===
+    "san_rafael_barangay_hall": {
+        "name": "San Rafael Barangay Hall",
+        "area": "San Rafael",
+        "description": "The barangay hall where local leaders share updates on recent illnesses and sanitation concerns.",
+        "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "icon": "🏘️",
+        "npcs": ["pastor_elijah"],
+        "available_actions": [],
+        "travel_time": 0.5,
+    },
+    # === BARANGAY BAGONG SILANG ===
+    "bagong_silang_barangay_hall": {
+        "name": "Bagong Silang Barangay Hall",
+        "area": "Bagong Silang",
+        "description": "A busy barangay hall where residents report illness clusters after heavy rains.",
+        "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "icon": "🏘️",
+        "npcs": [],
+        "available_actions": [],
+        "travel_time": 0.5,
+    },
+    # === BARANGAY SANTA CRUZ ===
+    "santa_cruz_barangay_hall": {
+        "name": "Santa Cruz Barangay Hall",
+        "area": "Santa Cruz",
+        "description": "A modest barangay office near low-lying farms where floodwaters tend to linger.",
+        "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "icon": "🏘️",
+        "npcs": [],
+        "available_actions": [],
+        "travel_time": 0.5,
+    },
+    # === DISTRICT HOSPITAL ===
+    "lepto_district_hospital": {
+        "name": "District Hospital Ward",
+        "area": "District Hospital",
+        "description": "The district hospital ward where severe leptospirosis cases are being managed.",
+        "image_path": "assets/Hospital/hospital_ward.png",
+        "image_thumb": "assets/Hospital/hospital_ward.png",
+        "icon": "🏥",
+        "npcs": ["dr_reyes", "nurse_maricel"],
+        "available_actions": ["review_hospital_records"],
+        "travel_time": 0.5,
+    },
+    # === RHU ===
+    "rhu_office": {
+        "name": "Rural Health Unit (RHU) Office",
+        "area": "RHU",
+        "description": "The RHU office coordinating barangay surveillance and case reporting.",
+        "image_path": "assets/Hospital/hospital_admin.png",
+        "image_thumb": "assets/Hospital/hospital_admin.png",
+        "icon": "🏥",
+        "npcs": ["dr_mendoza", "dr_villareal", "dr_lacson"],
+        "available_actions": ["request_data"],
+        "travel_time": 0.5,
+    },
+    # === DRRM OFFICE ===
+    "drrm_office": {
+        "name": "DRRM Office",
+        "area": "DRRM Office",
+        "description": "Disaster Risk Reduction and Management office coordinating flood response and environmental cleanup.",
+        "image_path": "assets/Hospital/hospital_admin.png",
+        "image_thumb": "assets/Hospital/hospital_admin.png",
+        "icon": "🏛️",
+        "npcs": ["engr_ramon", "mayor_villanueva"],
+        "available_actions": ["plan_interventions"],
+        "travel_time": 0.5,
+    },
+    # === MINING AREA ===
+    "lepto_mining_area": {
+        "name": "Mining Area",
+        "area": "Mining Area",
+        "description": "Mining runoff and standing water are potential exposure sites for leptospirosis.",
+        "image_path": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "image_thumb": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "icon": "⛏️",
+        "npcs": ["mr_chen_wei"],
+        "available_actions": ["collect_water_sample"],
+        "travel_time": 1.0,
+    },
+}
+
 # Map areas to their sub-locations
-AREA_LOCATIONS = {
+AES_AREA_LOCATIONS = {
     "Nalu Village": ["nalu_village_center", "nalu_health_center", "nalu_pig_coop", "nalu_rice_paddies", "nalu_school", "nalu_canal", "central_market", "healer_clinic"],
     "Kabwe Village": ["kabwe_village_center", "kabwe_school_path", "kabwe_school", "kabwe_health_center", "kabwe_paddies"],
     "Tamu Village": ["tamu_remote_upland", "tamu_forest_edge", "tamu_forest", "tamu_health_center"],
@@ -699,6 +798,18 @@ AREA_LOCATIONS = {
     "Mining Area": ["mining_area"],
 }
 
+# Map areas to their sub-locations (Leptospirosis scenario)
+LEPTO_AREA_LOCATIONS = {
+    "Barangay Malinao": ["malinao_barangay_hall"],
+    "San Rafael": ["san_rafael_barangay_hall"],
+    "Bagong Silang": ["bagong_silang_barangay_hall"],
+    "Santa Cruz": ["santa_cruz_barangay_hall"],
+    "District Hospital": ["lepto_district_hospital"],
+    "RHU": ["rhu_office"],
+    "DRRM Office": ["drrm_office"],
+    "Mining Area": ["lepto_mining_area"],
+}
+
 # Scenario-specific initial NPCs (unlocked at start)
 SCENARIO_INITIAL_NPCS = {
     "aes_sidero_valley": ["dr_chen", "nurse_joy", "mama_kofi", "foreman_rex", "teacher_grace"],
@@ -706,7 +817,7 @@ SCENARIO_INITIAL_NPCS = {
 }
 
 # Area metadata for visual rendering (hero images, descriptions)
-AREA_METADATA = {
+AES_AREA_METADATA = {
     "Admin Office": {
         "image_exterior": "assets/Hospital/hospital_exterior.png",
         "description": "The hospital ward and administrative office where AES patients are treated. Dr. Tran oversees triage and patient charts. Deep-dive clinical data is available here.",
@@ -749,8 +860,52 @@ AREA_METADATA = {
     },
 }
 
+# Area metadata for Leptospirosis scenario
+LEPTO_AREA_METADATA = {
+    "Barangay Malinao": {
+        "image_exterior": "assets/Nalu/nalu_01_village_scene.png",
+        "description": "Flood-prone farming community reporting fevers and muscle pain after heavy rains.",
+        "icon": "🏘️",
+    },
+    "San Rafael": {
+        "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "description": "A riverside barangay with recent standing water and livestock exposure.",
+        "icon": "🏘️",
+    },
+    "Bagong Silang": {
+        "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "description": "Low-lying barangay where residents report flooding in rice fields and drainage canals.",
+        "icon": "🏘️",
+    },
+    "Santa Cruz": {
+        "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "description": "Barangay near the irrigation system with stagnant water and rodent activity.",
+        "icon": "🏘️",
+    },
+    "District Hospital": {
+        "image_exterior": "assets/Hospital/hospital_exterior.png",
+        "description": "Referral hospital managing severe leptospirosis cases.",
+        "icon": "🏥",
+    },
+    "RHU": {
+        "image_exterior": "assets/Hospital/hospital_admin.png",
+        "description": "Rural Health Unit coordinating barangay surveillance and reporting.",
+        "icon": "🏥",
+    },
+    "DRRM Office": {
+        "image_exterior": "assets/Hospital/hospital_admin.png",
+        "description": "Disaster response office coordinating flood mitigation and cleanup.",
+        "icon": "🏛️",
+    },
+    "Mining Area": {
+        "image_exterior": "assets/Kabwe/kabwe_01_mixed_farming.png",
+        "description": "Mining area with runoff and pooled water that may amplify leptospira exposure.",
+        "icon": "⛏️",
+    },
+}
+
 # Map NPC keys to their primary location
-NPC_LOCATIONS = {
+AES_NPC_LOCATIONS = {
     # JE scenario NPCs
     "dr_chen": "hospital_ward",
     "dr_reyes": "hospital_ward",  # Leptospirosis scenario
@@ -768,20 +923,54 @@ NPC_LOCATIONS = {
     "mayor_simon": "district_office",
     "nurse_kabwe": "kabwe_health_center",
     "chv_tamu": "tamu_health_center",
-    # Lepto scenario NPCs
-    "dr_reyes": "hospital_ward",
-    "nurse_maricel": "hospital_ward",
-    "kapitana_gloria": "nalu_village_center",
-    "dr_mendoza": "district_office",
-    "dr_villareal": "district_office",
-    "mang_tonyo": "nalu_village_center",
-    "luz_fernandez": "nalu_village_center",
-    "pastor_elijah": "healer_clinic",
-    "mayor_villanueva": "district_office",
-    "engr_ramon": "district_office",
-    "mr_chen_wei": "mining_area",
-    "dr_lacson": "district_office",
 }
+
+LEPTO_NPC_LOCATIONS = {
+    "dr_reyes": "lepto_district_hospital",
+    "nurse_maricel": "lepto_district_hospital",
+    "kapitana_gloria": "malinao_barangay_hall",
+    "dr_mendoza": "rhu_office",
+    "dr_villareal": "rhu_office",
+    "mang_tonyo": "malinao_barangay_hall",
+    "luz_fernandez": "malinao_barangay_hall",
+    "pastor_elijah": "san_rafael_barangay_hall",
+    "mayor_villanueva": "drrm_office",
+    "engr_ramon": "drrm_office",
+    "mr_chen_wei": "lepto_mining_area",
+    "dr_lacson": "rhu_office",
+}
+
+
+def get_current_scenario_id() -> str:
+    return st.session_state.get("current_scenario", "aes_sidero_valley")
+
+
+def get_locations(scenario_id: str | None = None) -> dict:
+    scenario_id = scenario_id or get_current_scenario_id()
+    if scenario_id == "lepto_maharlika":
+        return LEPTO_LOCATIONS
+    return AES_LOCATIONS
+
+
+def get_area_locations(scenario_id: str | None = None) -> dict:
+    scenario_id = scenario_id or get_current_scenario_id()
+    if scenario_id == "lepto_maharlika":
+        return LEPTO_AREA_LOCATIONS
+    return AES_AREA_LOCATIONS
+
+
+def get_area_metadata(scenario_id: str | None = None) -> dict:
+    scenario_id = scenario_id or get_current_scenario_id()
+    if scenario_id == "lepto_maharlika":
+        return LEPTO_AREA_METADATA
+    return AES_AREA_METADATA
+
+
+def get_npc_locations(scenario_id: str | None = None) -> dict:
+    scenario_id = scenario_id or get_current_scenario_id()
+    if scenario_id == "lepto_maharlika":
+        return LEPTO_NPC_LOCATIONS
+    return AES_NPC_LOCATIONS
 
 
 # =========================
@@ -3335,7 +3524,7 @@ def view_interviews():
         # If coming from a location, show "Return to Location" button
         current_loc = st.session_state.get("current_location")
         if current_loc:
-            loc_data = LOCATIONS.get(current_loc, {})
+            loc_data = get_locations().get(current_loc, {})
             loc_name = loc_data.get("name", "Location")
             if st.button(f"🔙 Return to {loc_name}", key="return_to_loc_from_interviews"):
                 st.session_state.current_view = "location"
@@ -3351,7 +3540,7 @@ def view_interviews():
     context_loc = st.session_state.get("interview_context_location")
     context_npcs = []
     if context_loc:
-        loc_data = LOCATIONS.get(context_loc, {})
+        loc_data = get_locations().get(context_loc, {})
         for npc_key in loc_data.get("npcs", []):
             if npc_key in st.session_state.npcs_unlocked and npc_key in npc_truth:
                 context_npcs.append((npc_key, npc_truth[npc_key]))
@@ -6052,7 +6241,7 @@ def get_location_status(loc_key: str) -> dict:
             break
 
     # Check NPCs interviewed at this location
-    loc = LOCATIONS.get(loc_key, {})
+    loc = get_locations().get(loc_key, {})
     for npc_key in loc.get("npcs", []):
         if npc_key in st.session_state.get("interview_history", {}):
             status["npcs_interviewed"].append(npc_key)
@@ -6062,10 +6251,10 @@ def get_location_status(loc_key: str) -> dict:
 
 def render_breadcrumb(area: str = None, location: str = None):
     """Render a breadcrumb navigation bar."""
-    area_meta = AREA_METADATA.get(area, {}) if area else {}
+    area_meta = get_area_metadata().get(area, {}) if area else {}
     area_icon = area_meta.get("icon", "📍")
 
-    loc_data = LOCATIONS.get(location, {}) if location else {}
+    loc_data = get_locations().get(location, {}) if location else {}
     loc_icon = loc_data.get("icon", "📍")
     loc_name = loc_data.get("name", location) if location else None
 
@@ -6234,7 +6423,7 @@ def render_location_card(loc_key: str, loc: dict, npcs_here: list, npc_truth: di
 
 def render_area_hero_image(area: str) -> bool:
     """Render the hero/exterior image for an area if available."""
-    area_meta = AREA_METADATA.get(area, {})
+    area_meta = get_area_metadata().get(area, {})
     image_path = area_meta.get("image_exterior")
 
     if not image_path:
@@ -6259,7 +6448,7 @@ def render_area_hero_image(area: str) -> bool:
 
 def render_location_thumbnail(loc_key: str, width: int = 200) -> bool:
     """Render a thumbnail image for a sub-location if available."""
-    loc = LOCATIONS.get(loc_key, {})
+    loc = get_locations().get(loc_key, {})
 
     # Try thumbnail first, then fall back to main image
     image_path = loc.get("image_thumb") or loc.get("image_path")
@@ -6295,7 +6484,7 @@ def view_area_visual(area: str):
     """
     from pathlib import Path
 
-    area_meta = AREA_METADATA.get(area, {})
+    area_meta = get_area_metadata().get(area, {})
     area_icon = area_meta.get("icon", "📍")
 
     # === BREADCRUMB NAVIGATION ===
@@ -6326,7 +6515,7 @@ def view_area_visual(area: str):
     st.markdown("### 🚪 Locations to Explore")
 
     # Get locations in this area
-    location_keys = AREA_LOCATIONS.get(area, [])
+    location_keys = get_area_locations().get(area, [])
 
     if not location_keys:
         st.warning("No locations available in this area.")
@@ -6340,7 +6529,7 @@ def view_area_visual(area: str):
     cols = st.columns(num_cols)
 
     for i, loc_key in enumerate(location_keys):
-        loc = LOCATIONS.get(loc_key, {})
+        loc = get_locations().get(loc_key, {})
 
         # Find NPCs at this location
         npcs_here = []
@@ -6371,7 +6560,7 @@ def view_area_map(area: str):
     st.markdown("---")
 
     # Get locations in this area
-    location_keys = AREA_LOCATIONS.get(area, [])
+    location_keys = get_area_locations().get(area, [])
 
     if not location_keys:
         st.warning("No locations available in this area.")
@@ -6410,7 +6599,7 @@ def view_area_map(area: str):
     cols = st.columns(2)
 
     for i, loc_key in enumerate(location_keys):
-        loc = LOCATIONS.get(loc_key, {})
+        loc = get_locations().get(loc_key, {})
 
         # Check if location has unlocked NPCs
         npcs_here = []
@@ -6456,7 +6645,7 @@ def view_area_map(area: str):
 
 def render_location_image(loc_key: str):
     """Render the image for a location if available."""
-    loc = LOCATIONS.get(loc_key, {})
+    loc = get_locations().get(loc_key, {})
     image_path = loc.get("image_path")
 
     if not image_path:
@@ -6484,7 +6673,7 @@ def render_location_image(loc_key: str):
 
 def view_location(loc_key: str):
     """Render a specific location with NPCs and actions."""
-    loc = LOCATIONS.get(loc_key, {})
+    loc = get_locations().get(loc_key, {})
 
     if not loc:
         st.error("Location not found!")
