@@ -1295,6 +1295,14 @@ def init_session_state():
 # UTILITY FUNCTIONS
 # =========================
 
+def get_symptomatic_column(truth: dict) -> str:
+    """Return the symptomatic column based on the scenario."""
+    scenario_type = truth.get("scenario_type")
+    if scenario_type == "lepto":
+        return "symptomatic_lepto"
+    return "symptomatic_AES"
+
+
 def build_epidemiologic_context(truth: dict) -> str:
     """Short summary of the outbreak from truth tables."""
     individuals = truth["individuals"]
@@ -1306,11 +1314,33 @@ def build_epidemiologic_context(truth: dict) -> str:
         hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
     )
 
-    cases = merged[merged["symptomatic_AES"] == True]
+    scenario_type = truth.get("scenario_type")
+    symptomatic_column = get_symptomatic_column(truth)
+    cases = merged[merged[symptomatic_column] == True]
     total_cases = len(cases)
 
     if total_cases == 0:
+        if scenario_type == "lepto":
+            return "No symptomatic leptospirosis cases have been assigned in the truth model."
         return "No symptomatic AES cases have been assigned in the truth model."
+
+    if scenario_type == "lepto":
+        adult_male_cases = cases[
+            (cases["sex"] == "M") & (cases["age"] >= 18) & (cases["age"] <= 60)
+        ]
+        cleanup_cases = cases[
+            cases["cleanup_participation"].isin(["heavy", "moderate", "light"])
+        ]
+        flood_exposed_cases = cases[
+            cases["flood_depth_category"].isin(["deep", "moderate"])
+        ]
+        context = (
+            f"There are currently about {total_cases} symptomatic leptospirosis cases in the district. "
+            f"Adult men account for {len(adult_male_cases)} cases. "
+            f"{len(cleanup_cases)} cases report flood cleanup work, and {len(flood_exposed_cases)} "
+            "come from households with moderate or deep flooding exposure."
+        )
+        return context
 
     village_counts = cases["village_name"].value_counts().to_dict()
 
@@ -1332,6 +1362,9 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     """NPC-specific data context based on their data_access scope."""
     npc = truth["npc_truth"][npc_key]
     data_access = npc.get("data_access")
+    scenario_type = truth.get("scenario_type")
+    symptomatic_column = get_symptomatic_column(truth)
+    case_label = "leptospirosis" if scenario_type == "lepto" else "AES"
 
     individuals = truth["individuals"]
     households = truth["households"]
@@ -1355,45 +1388,45 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "hospital_cases":
-        cases = merged[merged["symptomatic_AES"] == True]
+        cases = merged[merged[symptomatic_column] == True]
         summary = cases.groupby("village_name").size().to_dict()
         return (
             epi_context
-            + " As hospital director, you mainly see hospitalized AES cases. "
+            + f" As hospital director, you mainly see hospitalized {case_label} cases. "
               f"You know current hospitalized cases come from these villages: {summary}."
         )
 
     if data_access == "triage_logs":
-        cases = merged[merged["symptomatic_AES"] == True]
+        cases = merged[merged[symptomatic_column] == True]
         earliest = cases["onset_date"].min()
         latest = cases["onset_date"].max()
         return (
             epi_context
             + " As triage nurse, you mostly notice who walks in first. "
-              f"You saw the first AES cases between {earliest} and {latest}."
+              f"You saw the first {case_label} cases between {earliest} and {latest}."
         )
 
     if data_access == "private_clinic":
         cases = merged[
-            (merged["symptomatic_AES"] == True)
+            (merged[symptomatic_column] == True)
             & (merged["village_name"] == "Nalu Village")
         ]
         n = len(cases)
         return (
             epi_context
-            + f" As a private healer, you have personally seen around {n} early AES-like illnesses "
-              "from households near pig farms and rice paddies in Nalu."
+            + f" As a private healer, you have personally seen around {n} early "
+              f"{case_label}-like illnesses from households near pig farms and rice paddies in Nalu."
         )
 
     if data_access == "school_attendance":
         school_age = merged[(merged["age"] >= 5) & (merged["age"] <= 18)]
-        cases = school_age[school_age["symptomatic_AES"] == True]
+        cases = school_age[school_age[symptomatic_column] == True]
         n = len(cases)
         by_village = cases["village_name"].value_counts().to_dict()
         return (
             epi_context
             + f" As school principal, you mostly know about school-age children. "
-              f"You know of AES cases among your students: {n} total, by village: {by_village}."
+              f"You know of {case_label} cases among your students: {n} total, by village: {by_village}."
         )
 
     if data_access == "vet_surveillance":
@@ -2871,17 +2904,18 @@ def make_village_map(truth: dict) -> go.Figure:
 
 
 def get_initial_cases(truth: dict, n: int = 12) -> pd.DataFrame:
-    """Return a small line list of earliest AES cases."""
+    """Return a small line list of earliest symptomatic cases."""
     individuals = truth["individuals"]
     households = truth["households"]
     villages = truth["villages"][["village_id", "village_name"]]
+    symptomatic_column = get_symptomatic_column(truth)
 
     hh_vil = households.merge(villages, on="village_id", how="left")
     merged = individuals.merge(
         hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
     )
 
-    cases = merged[merged["symptomatic_AES"] == True].copy()
+    cases = merged[merged[symptomatic_column] == True].copy()
     if "onset_date" in cases.columns:
         cases = cases.sort_values("onset_date")
 
@@ -2900,9 +2934,12 @@ def get_initial_cases(truth: dict, n: int = 12) -> pd.DataFrame:
 
 
 def make_epi_curve(truth: dict) -> go.Figure:
-    """Epi curve of AES cases by onset date."""
+    """Epi curve of cases by onset date."""
     individuals = truth["individuals"]
-    cases = individuals[individuals["symptomatic_AES"] == True].copy()
+    symptomatic_column = get_symptomatic_column(truth)
+    scenario_type = truth.get("scenario_type")
+    case_label = "leptospirosis" if scenario_type == "lepto" else "AES"
+    cases = individuals[individuals[symptomatic_column] == True].copy()
     if "onset_date" not in cases.columns:
         fig = go.Figure()
         fig.update_layout(title="Epi curve not available")
@@ -2921,7 +2958,7 @@ def make_epi_curve(truth: dict) -> go.Figure:
         )
     )
     fig.update_layout(
-        title="AES cases by onset date",
+        title=f"{case_label.title()} cases by onset date",
         xaxis_title="Onset date",
         yaxis_title="Number of cases",
         height=300,
@@ -4149,9 +4186,10 @@ def view_descriptive_epi():
     individuals = truth["individuals"]
     households = truth["households"]
     villages = truth["villages"]
+    symptomatic_column = get_symptomatic_column(truth)
     
     # Get all symptomatic cases
-    cases = individuals[individuals["symptomatic_AES"] == True].copy()
+    cases = individuals[individuals[symptomatic_column] == True].copy()
     
     # Merge with location info
     hh_vil = households.merge(villages[["village_id", "village_name"]], on="village_id", how="left")
@@ -4644,6 +4682,10 @@ def view_study_design():
             st.session_state.truth["individuals"] = individuals
 
         case_criteria = st.session_state.decisions.get("case_definition", {"clinical_AES": True})
+        scenario_type = st.session_state.truth.get("scenario_type")
+        if scenario_type:
+            case_criteria = dict(case_criteria)
+            case_criteria["scenario_type"] = scenario_type
         cases_pool = apply_case_definition(individuals, case_criteria).copy()
         cases_pool = cases_pool.sort_values(["village_id", "onset_date"], na_position="last")
 
@@ -4904,6 +4946,7 @@ def view_study_design():
             try:
                 decisions = dict(st.session_state.decisions)
                 decisions["return_sampling_report"] = True
+                decisions["scenario_type"] = st.session_state.truth.get("scenario_type")
                 df, report = generate_study_dataset(individuals, households, decisions)
 
                 st.session_state.generated_dataset = df
