@@ -1111,11 +1111,30 @@ def build_epidemiologic_context(truth: dict) -> str:
     individuals = truth["individuals"]
     households = truth["households"]
     villages = truth["villages"][["village_id", "village_name"]]
+    scenario_type = truth.get("scenario_type")
 
     hh_vil = households.merge(villages, on="village_id", how="left")
     merged = individuals.merge(
         hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
     )
+
+    if scenario_type == "lepto" or "symptomatic_lepto" in merged.columns:
+        cases = merged[merged["symptomatic_lepto"] == True]
+        total_cases = len(cases)
+
+        if total_cases == 0:
+            return "No symptomatic leptospirosis cases have been assigned in the truth model."
+
+        village_counts = cases["village_name"].value_counts().to_dict()
+        sex_counts = cases["sex"].value_counts().to_dict() if "sex" in cases.columns else {}
+
+        context = (
+            f"There are currently about {total_cases} symptomatic leptospirosis cases in the municipality. "
+            f"Cases by barangay: {village_counts}. "
+            f"Cases by sex: {sex_counts}. "
+            "Most reported cases are adult men involved in post-flood cleanup."
+        )
+        return context
 
     cases = merged[merged["symptomatic_AES"] == True]
     total_cases = len(cases)
@@ -1143,6 +1162,7 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     """NPC-specific data context based on their data_access scope."""
     npc = truth["npc_truth"][npc_key]
     data_access = npc.get("data_access")
+    scenario_type = truth.get("scenario_type")
 
     individuals = truth["individuals"]
     households = truth["households"]
@@ -1154,6 +1174,12 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     )
 
     epi_context = build_epidemiologic_context(truth)
+    village_lookup = villages.set_index("village_id")["village_name"].to_dict()
+    community_village_lookup = {
+        "kapitana_gloria": "V1",
+        "mang_tonyo": "V1",
+        "pastor_elijah": "V1",
+    }
 
     # Override for Dr. Tran - restrict his knowledge to prevent omniscience
     if npc_key == "dr_chen":
@@ -1166,6 +1192,28 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "hospital_cases":
+        if scenario_type == "lepto" and "symptomatic_lepto" in merged.columns:
+            cases = merged[merged["symptomatic_lepto"] == True]
+            hospitalized = cases
+            if "reported_to_hospital" in cases.columns:
+                hospitalized = cases[cases["reported_to_hospital"] == True]
+            elif "outcome" in cases.columns:
+                hospitalized = cases[
+                    cases["outcome"].isin(["hospitalized", "died"])
+                ]
+            by_village = cases["village_name"].value_counts().to_dict()
+            severe_count = (
+                int(cases["severe_lepto"].sum())
+                if "severe_lepto" in cases.columns
+                else 0
+            )
+            return (
+                epi_context
+                + " As hospital director, you mainly see leptospirosis admissions. "
+                  f"Hospital records include {len(hospitalized)} hospitalized or fatal cases, "
+                  f"with symptomatic cases by barangay: {by_village}. "
+                  f"Severe presentations total about {severe_count}."
+            )
         cases = merged[merged["symptomatic_AES"] == True]
         summary = cases.groupby("village_name").size().to_dict()
         return (
@@ -1208,6 +1256,21 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "vet_surveillance":
+        if scenario_type == "lepto":
+            lab = truth["lab_samples"]
+            animals = lab[lab["sample_type"].isin(["animal_serum", "rodent_kidney"])]
+            pos = animals[animals["true_lepto_positive"] == True]
+            by_type = pos["sample_type"].value_counts().to_dict()
+            by_village = {
+                village_lookup.get(k, k): v
+                for k, v in pos["linked_village_id"].value_counts().to_dict().items()
+            }
+            return (
+                epi_context
+                + " As the district veterinary officer, you track animal and rodent testing. "
+                  f"Recent positives by sample type: {by_type}. "
+                  f"Positive detections by barangay: {by_village}."
+            )
         lab = truth["lab_samples"]
         pigs = lab[lab["sample_type"] == "pig_serum"]
         pos = pigs[pigs["true_JEV_positive"] == True]
@@ -1226,6 +1289,168 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
             epi_context
             + " As environmental health officer, you survey breeding sites. "
               f"You know of high mosquito breeding around these sites: {sites}."
+        )
+
+    if data_access == "drrm_flood_mapping":
+        if scenario_type != "lepto":
+            return epi_context
+        hh = households.merge(villages, on="village_id", how="left")
+        flood = (
+            hh.groupby(["village_name", "flood_depth_category"])
+            .size()
+            .unstack(fill_value=0)
+            .to_dict()
+        )
+        cleanup = (
+            hh.groupby(["village_name", "cleanup_participation"])
+            .size()
+            .unstack(fill_value=0)
+            .to_dict()
+        )
+        return (
+            epi_context
+            + " As DRRM officer, you maintain flood impact maps and cleanup records. "
+              f"Flood depth by barangay: {flood}. "
+              f"Cleanup participation levels by barangay: {cleanup}."
+        )
+
+    if data_access == "mining_environmental_compliance_records":
+        if scenario_type != "lepto":
+            return epi_context
+        lab = truth["lab_samples"]
+        env_samples = lab[
+            lab["sample_type"].isin(["environmental_water", "environmental_soil"])
+        ]
+        positives = env_samples[env_samples["true_lepto_positive"] == True]
+        negatives = env_samples[env_samples["true_lepto_positive"] == False]
+        positive_by_village = {
+            village_lookup.get(k, k): v
+            for k, v in positives["linked_village_id"].value_counts().to_dict().items()
+        }
+        negative_by_village = {
+            village_lookup.get(k, k): v
+            for k, v in negatives["linked_village_id"].value_counts().to_dict().items()
+        }
+        return (
+            epi_context
+            + " As mining site manager, you track environmental compliance testing. "
+              f"Environmental samples positive for Leptospira by barangay: {positive_by_village}. "
+              f"Negative samples by barangay: {negative_by_village}."
+        )
+
+    if data_access == "rhu_records":
+        if scenario_type != "lepto" or "symptomatic_lepto" not in merged.columns:
+            return epi_context
+        cases = merged[merged["symptomatic_lepto"] == True]
+        by_village = cases["village_name"].value_counts().to_dict()
+        earliest = cases["onset_date"].min() if "onset_date" in cases.columns else None
+        latest = cases["onset_date"].max() if "onset_date" in cases.columns else None
+        return (
+            epi_context
+            + " As RHU physician, you track reports from clinics and referrals. "
+              f"Reported symptomatic cases by barangay: {by_village}. "
+              f"Onset dates range from {earliest} to {latest}."
+        )
+
+    if data_access == "patient_exposure_histories":
+        if scenario_type != "lepto":
+            return epi_context
+        if "symptomatic_lepto" not in merged.columns:
+            return epi_context
+        cases = merged[merged["symptomatic_lepto"] == True]
+        if cases.empty:
+            return epi_context
+        total = len(cases)
+        exposure_fields = {
+            "cleanup_participation": "exposure_cleanup_work",
+            "barefoot_floodwater": "exposure_barefoot_water",
+            "skin_wounds": "exposure_skin_wounds",
+            "rat_contact": "exposure_rat_contact",
+            "animal_contact": "exposure_animal_contact",
+        }
+        exposure_summary = {}
+        for label, field in exposure_fields.items():
+            if field in cases.columns:
+                exposure_summary[label] = int(cases[field].sum())
+        return (
+            epi_context
+            + " As head nurse, you have detailed exposure histories. "
+              f"Among {total} symptomatic cases, exposures reported: {exposure_summary}."
+        )
+
+    if data_access == "patient_perspective":
+        if scenario_type != "lepto":
+            return epi_context
+        if "symptomatic_lepto" not in merged.columns:
+            return epi_context
+        cases = merged[merged["symptomatic_lepto"] == True]
+        if cases.empty:
+            return epi_context
+        outcome_counts = (
+            cases["outcome"].value_counts().to_dict()
+            if "outcome" in cases.columns
+            else {}
+        )
+        return (
+            epi_context
+            + " As a recovering patient, you compare notes with others. "
+              f"Known outcomes among symptomatic cases: {outcome_counts}."
+        )
+
+    if data_access == "municipal_disaster_response_records":
+        if scenario_type != "lepto":
+            return epi_context
+        hh = households.merge(villages, on="village_id", how="left")
+        cleanup = (
+            hh.groupby(["village_name", "cleanup_participation"])
+            .size()
+            .unstack(fill_value=0)
+            .to_dict()
+        )
+        env = truth["environment_sites"]
+        evac = env[env["site_type"] == "evacuation_site"]
+        evac_counts = {
+            village_lookup.get(k, k): v
+            for k, v in evac["village_id"].value_counts().to_dict().items()
+        }
+        return (
+            epi_context
+            + " As mayor, you review municipal response records. "
+              f"Cleanup participation by barangay: {cleanup}. "
+              f"Evacuation sites by barangay: {evac_counts}."
+        )
+
+    if data_access == "provincial_surveillance_and_laboratory_resources":
+        if scenario_type != "lepto":
+            return epi_context
+        lab = truth["lab_samples"]
+        total_samples = len(lab)
+        positives = lab[lab["true_lepto_positive"] == True]
+        pos_by_type = positives["sample_type"].value_counts().to_dict()
+        return (
+            epi_context
+            + " As provincial epidemiologist, you track lab confirmations. "
+              f"Total samples logged: {total_samples}. "
+              f"Positive samples by type: {pos_by_type}."
+        )
+
+    if data_access == "community_reports":
+        if scenario_type != "lepto":
+            return epi_context
+        village_id = community_village_lookup.get(npc_key)
+        if not village_id:
+            return epi_context
+        hh = households[households["village_id"] == village_id]
+        village_name = village_lookup.get(village_id, village_id)
+        flood = hh["flood_depth_category"].value_counts().to_dict()
+        rats = hh["rat_sightings_post_flood"].value_counts().to_dict()
+        cleanup = hh["cleanup_participation"].value_counts().to_dict()
+        return (
+            epi_context
+            + f" As a community leader in {village_name}, you hear household reports. "
+              f"Flood depth reports: {flood}. "
+              f"Rat sightings after the flood: {rats}. "
+              f"Cleanup participation: {cleanup}."
         )
 
     return epi_context
@@ -1384,6 +1609,74 @@ def check_npc_unlock_triggers(user_input: str) -> str:
     """
     text = user_input.lower()
     notification = ""
+    scenario_type = st.session_state.get("current_scenario_type", "je")
+
+    if scenario_type == "lepto":
+        animal_triggers = [
+            "animal death",
+            "animal deaths",
+            "pigs",
+            "pig",
+            "rats",
+            "rat",
+            "rodent",
+            "livestock",
+        ]
+        if any(trigger in text for trigger in animal_triggers):
+            st.session_state.questions_asked_about.add("animals")
+            if "dr_villareal" not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append("dr_villareal")
+            notification = (
+                "🔓 **New Contact Unlocked:** Dr. Ernesto Villareal (Private Veterinarian) - "
+                "Your question about animal deaths opened a One Health perspective!"
+            )
+
+        faith_triggers = [
+            "faith healer",
+            "prayer",
+            "pray",
+            "praying",
+            "healer",
+            "pastor",
+            "ministry",
+        ]
+        if any(trigger in text for trigger in faith_triggers):
+            st.session_state.questions_asked_about.add("faith_healing")
+            if "pastor_elijah" not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append("pastor_elijah")
+            notification = (
+                "🔓 **New Contact Unlocked:** Pastor Elijah Gonzales (Faith Healer) - "
+                "Your question about prayer and healing revealed another care pathway."
+            )
+
+        flood_triggers = ["flood map", "flood maps", "flood mapping", "flood depth", "inundation"]
+        if any(trigger in text for trigger in flood_triggers):
+            st.session_state.questions_asked_about.add("flood_mapping")
+            if "engr_ramon" not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append("engr_ramon")
+            notification = (
+                "🔓 **New Contact Unlocked:** Engr. Ramon Santos (DRRM Officer) - "
+                "Your question about flood maps opened DRRM records."
+            )
+
+        mining_triggers = [
+            "mining contamination",
+            "mine contamination",
+            "mining",
+            "tailings",
+            "heavy metals",
+            "runoff",
+        ]
+        if any(trigger in text for trigger in mining_triggers):
+            st.session_state.questions_asked_about.add("mining")
+            if "mr_chen_wei" not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append("mr_chen_wei")
+            notification = (
+                "🔓 **New Contact Unlocked:** Mr. Chen Wei (Mining Site Manager) - "
+                "Your question about mining contamination revealed compliance records."
+            )
+
+        return notification
     
     # Animal/pig triggers → unlock Vet Amina
     animal_triggers = ['animal', 'pig', 'livestock', 'pigs', 'swine', 'cattle', 'farm animal', 'piglet']

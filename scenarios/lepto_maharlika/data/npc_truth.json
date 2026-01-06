@@ -155,7 +155,7 @@
       "Mining company involvement: Heard rumors but doesn't know if it's relevant (it's not—red herring)"
     ],
     "unlocks": "community_access_and_barangay_records",
-    "data_access": null
+    "data_access": "community_reports"
   },
   {
     "npc_id": "dr_mendoza",
@@ -311,7 +311,7 @@
       "Whether his protective measures (plastic bags on feet) actually helped or if he just had less exposure/no wounds"
     ],
     "unlocks": "patient_perspective_and_local_ecological_observations",
-    "data_access": null
+    "data_access": "community_reports"
   },
   {
     "npc_id": "luz_fernandez",
@@ -412,7 +412,7 @@
       "Provincial epidemiological context"
     ],
     "unlocks": "cultural_broker_and_community_trust_access",
-    "data_access": null
+    "data_access": "community_reports"
   },
   {
     "npc_id": "mayor_villanueva",
@@ -513,7 +513,7 @@
       "Provincial epidemiologist's assessment"
     ],
     "unlocks": "spatial_epidemiology_data_and_disaster_response_records",
-    "data_access": "drrm_flood_mapping_and_damage_assessments"
+    "data_access": "drrm_flood_mapping"
   },
   {
     "npc_id": "mr_chen_wei",
