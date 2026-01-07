@@ -309,6 +309,7 @@ def get_medical_chart(patient_id):
 
     # Determine outcome
     outcome_map = {
+        'Admitted': 'Admitted',
         'Currently Admitted': 'Admitted',
         'Discharged': 'Recovered',
         'Deceased': 'Died'

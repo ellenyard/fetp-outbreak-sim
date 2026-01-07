@@ -300,13 +300,18 @@ _FALLBACK_UI = {
 @st.cache_data(show_spinner=False)
 def _load_locale_bundle(lang: str, bundle: str) -> dict:
     # Locale files live next to app.py in Streamlit Cloud
-    base = Path(__file__).resolve().parent / "locales" / lang
-    fp = base / f"{bundle}.json"
-    if fp.exists():
-        try:
-            return json.loads(fp.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
+    app_root = Path(__file__).resolve().parent
+    locale_candidates = [
+        app_root / "locales" / lang,
+        app_root / "Locales" / lang,
+    ]
+    for base in locale_candidates:
+        fp = base / f"{bundle}.json"
+        if fp.exists():
+            try:
+                return json.loads(fp.read_text(encoding="utf-8"))
+            except Exception:
+                return {}
     return {}
 
 def _get_from_dict(d: dict, key: str):
@@ -3650,10 +3655,22 @@ def view_hospital_triage():
                             st.rerun()
 
     # --- SECTION 3: THE DIALOGUE (Pop-up) ---
-    if 'current_npc' in st.session_state and st.session_state.current_npc in ['parent_tamu', 'parent_general']:
+    if 'current_npc' in st.session_state and st.session_state.current_npc in ['parent_tamu', 'parent_general', 'parent_ward']:
         npc_key = st.session_state.current_npc
         # Load the text from truth data
-        npc_data = jl.load_truth_data().get(npc_key)
+        truth = st.session_state.get("truth", {}) or {}
+        npc_data = (truth.get("npc_truth", {}) or {}).get(npc_key)
+        if npc_data is None:
+            data_dir = st.session_state.get("data_dir")
+            if data_dir:
+                npc_data = (jl.load_truth_data(data_dir=data_dir).get("npc_truth", {}) or {}).get(npc_key)
+
+        if npc_data is None:
+            st.error("Unable to load interview data for this NPC.")
+            if st.button("End Interview"):
+                del st.session_state.current_npc
+                st.rerun()
+            return
 
         st.markdown("---")
         st.warning(f"🎙️ Interviewing: {npc_data['name']}")
@@ -7901,6 +7918,7 @@ def main():
             st.session_state.current_scenario = scenario_id
             st.session_state.current_scenario_name = scenario_name
             st.session_state.current_scenario_type = scenario_type
+            st.session_state.data_dir = data_dir
 
             # Load truth data for selected scenario
             try:
