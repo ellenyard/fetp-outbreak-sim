@@ -6129,13 +6129,24 @@ def view_interventions_and_outcome():
 # =========================
 
 # Location coordinates for interactive map (0-100 scale, 0,0 is bottom-left)
-MAP_LOCATIONS = {
+AES_MAP_LOCATIONS = {
     "Nalu Village": {"x": 35, "y": 45, "icon": "🌾", "desc": "Large rice-farming village. Pig cooperative nearby."},
     "Kabwe Village": {"x": 65, "y": 40, "icon": "🌿", "desc": "Medium village on higher ground. Mixed farming."},
     "Tamu Village": {"x": 15, "y": 85, "icon": "⛰️", "desc": "Remote upland community. Cassava farming."},
     "Mining Area": {"x": 20, "y": 15, "icon": "⛏️", "desc": "Recent expansion. New irrigation ponds."},
     "District Hospital": {"x": 85, "y": 80, "icon": "🏥", "desc": "AES patients admitted here. Lab available."},
     "District Office": {"x": 40, "y": 35, "icon": "🏛️", "desc": "Meet officials, veterinary and environmental officers."},
+}
+
+LEPTO_MAP_LOCATIONS = {
+    "Ward Northbend": {"x": 30, "y": 70, "icon": "🏘️", "desc": "Flood-prone ward reporting rising cases."},
+    "East Terrace": {"x": 70, "y": 45, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
+    "Southshore": {"x": 35, "y": 20, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
+    "Highridge": {"x": 15, "y": 55, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
+    "District Hospital": {"x": 80, "y": 75, "icon": "🏥", "desc": "Severe leptospirosis cases treated here."},
+    "RHU": {"x": 55, "y": 60, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
+    "DRRM Office": {"x": 55, "y": 35, "icon": "🏛️", "desc": "Disaster response coordination office."},
+    "Mining Area": {"x": 85, "y": 15, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
 }
 
 
@@ -6145,11 +6156,21 @@ def render_interactive_map():
     Clicking a location updates st.session_state.current_area and reruns.
     """
     # Load the background map image
-    map_image_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
+    scenario_id = get_current_scenario_id()
+    if scenario_id == "lepto_rivergate":
+        map_image_path = Path(__file__).resolve().parent / "scenarios" / scenario_id / "assets" / "map_background.png"
+        map_locations = LEPTO_MAP_LOCATIONS
+    else:
+        map_image_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
+        map_locations = AES_MAP_LOCATIONS
 
     if not map_image_path.exists():
-        st.error(f"Map background image not found at {map_image_path}")
-        return
+        fallback_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
+        if fallback_path.exists():
+            map_image_path = fallback_path
+        else:
+            st.error(f"Map background image not found at {map_image_path}")
+            return
 
     img = Image.open(map_image_path)
     with map_image_path.open("rb") as map_file:
@@ -6186,7 +6207,7 @@ def render_interactive_map():
     locked_names = []
     locked_descriptions = []
 
-    for loc_name, loc_data in MAP_LOCATIONS.items():
+    for loc_name, loc_data in map_locations.items():
         # Check if location is unlocked
         is_unlocked = True
         if is_location_unlocked and hasattr(st.session_state, 'game_state'):
@@ -6256,7 +6277,7 @@ def render_interactive_map():
 
     # Add text labels with shadow effect for readability
     # First add shadow/outline (slightly offset dark text)
-    for loc_name, loc_data in MAP_LOCATIONS.items():
+    for loc_name, loc_data in map_locations.items():
         # Shadow offset positions
         for dx, dy in [(1, -1), (-1, -1), (1, 1), (-1, 1)]:
             fig.add_annotation(
@@ -6270,7 +6291,7 @@ def render_interactive_map():
             )
 
     # Add the main white text labels on top
-    for loc_name, loc_data in MAP_LOCATIONS.items():
+    for loc_name, loc_data in map_locations.items():
         fig.add_annotation(
             x=loc_data["x"],
             y=loc_data["y"] + 6,
@@ -6343,7 +6364,7 @@ def render_interactive_map():
     st.markdown("---")
     st.markdown("**Locations:**")
     cols = st.columns(3)
-    for i, (loc_name, loc_data) in enumerate(MAP_LOCATIONS.items()):
+    for i, (loc_name, loc_data) in enumerate(map_locations.items()):
         with cols[i % 3]:
             # Check if location is unlocked
             is_unlocked = True
@@ -6363,7 +6384,8 @@ def render_interactive_map():
 
 def view_travel_map():
     """Main travel map showing all areas and allowing navigation."""
-    st.title("Sidero Valley - Investigation Map")
+    scenario_name = st.session_state.get("current_scenario_name", "Investigation")
+    st.title(f"{scenario_name} - Investigation Map")
 
     # Serious Mode: Show outbreak summary metrics prominently on Day 1
     if st.session_state.current_day == 1:
