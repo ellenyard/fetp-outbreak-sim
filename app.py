@@ -3771,7 +3771,7 @@ def view_interviews():
             time_cost = TIME_COSTS["interview_followup"] if interviewed else TIME_COSTS["interview_initial"]
             budget_cost = 0 if interviewed else npc.get("cost", 0)
 
-            st.markdown(f"**{npc['avatar']} {npc['name']}** {status}")
+            st.markdown(f"**{npc.get('avatar', '🧑')} {npc['name']}** {status}")
             st.caption(f"{npc['role']}")
             st.caption(f"Cost: {format_resource_cost(time_cost, budget_cost)}")
 
@@ -7011,7 +7011,7 @@ def view_location(loc_key: str):
                         if avatar_path and Path(avatar_path).exists():
                             st.image(avatar_path, width=60)
                         else:
-                            st.markdown(f"## {npc['avatar']}")
+                            st.markdown(f"## {npc.get('avatar', '🧑')}")
                     with cols[1]:
                         status = "✓ Interviewed" if interviewed else ""
                         st.markdown(f"**{npc['name']}** {status}")
@@ -7535,7 +7535,7 @@ def execute_location_action(action: str, config: dict, loc_key: str):
 
 def render_npc_chat(npc_key: str, npc: dict):
     """Render chat interface for an NPC at current location."""
-    st.markdown(f"### Talking to {npc['avatar']} {npc['name']}")
+    st.markdown(f"### Talking to {npc.get('avatar', '🧑')} {npc['name']}")
     st.caption(f"*{npc['role']}*")
 
     # End conversation button
