@@ -10,7 +10,7 @@ import re
 import time
 import base64
 from pathlib import Path
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 # Session persistence
 import persistence
@@ -6164,15 +6164,29 @@ def render_interactive_map():
         map_image_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
         map_locations = AES_MAP_LOCATIONS
 
+    fallback_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
     if not map_image_path.exists():
-        fallback_path = Path(__file__).resolve().parent / "assets" / "map_background.png"
         if fallback_path.exists():
             map_image_path = fallback_path
         else:
             st.error(f"Map background image not found at {map_image_path}")
             return
 
-    img = Image.open(map_image_path)
+    try:
+        with Image.open(map_image_path) as img:
+            img.verify()
+    except (UnidentifiedImageError, OSError):
+        if map_image_path != fallback_path and fallback_path.exists():
+            try:
+                with Image.open(fallback_path) as img:
+                    img.verify()
+                map_image_path = fallback_path
+            except (UnidentifiedImageError, OSError):
+                st.error("Map background image could not be loaded.")
+                return
+        else:
+            st.error("Map background image could not be loaded.")
+            return
     with map_image_path.open("rb") as map_file:
         map_image_base64 = base64.b64encode(map_file.read()).decode("utf-8")
     map_image_uri = f"data:image/png;base64,{map_image_base64}"
