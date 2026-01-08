@@ -1328,9 +1328,16 @@ def build_epidemiologic_context(truth: dict) -> str:
     villages = truth["villages"][["village_id", "village_name"]]
 
     hh_vil = households.merge(villages, on="village_id", how="left")
-    merged = individuals.merge(
-        hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
+    hh_columns = ["hh_id", "village_name"]
+    hh_columns.extend(
+        col
+        for col in ["cleanup_participation", "flood_depth_category"]
+        if col in hh_vil.columns
     )
+    merged = individuals.merge(hh_vil[hh_columns], on="hh_id", how="left")
+    for optional_col in ["cleanup_participation", "flood_depth_category"]:
+        if optional_col not in merged.columns:
+            merged[optional_col] = pd.NA
 
     scenario_type = truth.get("scenario_type")
     symptomatic_column = get_symptomatic_column(truth)
