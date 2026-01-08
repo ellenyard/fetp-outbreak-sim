@@ -1353,12 +1353,18 @@ def build_epidemiologic_context(truth: dict) -> str:
         adult_male_cases = cases[
             (cases["sex"] == "M") & (cases["age"] >= 18) & (cases["age"] <= 60)
         ]
-        cleanup_cases = cases[
-            cases["cleanup_participation"].isin(["heavy", "moderate", "light"])
-        ]
-        flood_exposed_cases = cases[
-            cases["flood_depth_category"].isin(["deep", "moderate"])
-        ]
+        if "cleanup_participation" in cases.columns:
+            cleanup_cases = cases[
+                cases["cleanup_participation"].isin(["heavy", "moderate", "light"])
+            ]
+        else:
+            cleanup_cases = cases.iloc[0:0]
+        if "flood_depth_category" in cases.columns:
+            flood_exposed_cases = cases[
+                cases["flood_depth_category"].isin(["deep", "moderate"])
+            ]
+        else:
+            flood_exposed_cases = cases.iloc[0:0]
         context = (
             f"There are currently about {total_cases} symptomatic leptospirosis cases in the district. "
             f"Adult men account for {len(adult_male_cases)} cases. "
