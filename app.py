@@ -1335,6 +1335,9 @@ def build_epidemiologic_context(truth: dict) -> str:
         if col in hh_vil.columns
     )
     merged = individuals.merge(hh_vil[hh_columns], on="hh_id", how="left")
+    for optional_col in ["cleanup_participation", "flood_depth_category"]:
+        if optional_col not in merged.columns:
+            merged[optional_col] = pd.NA
 
     scenario_type = truth.get("scenario_type")
     symptomatic_column = get_symptomatic_column(truth)
