@@ -1328,9 +1328,13 @@ def build_epidemiologic_context(truth: dict) -> str:
     villages = truth["villages"][["village_id", "village_name"]]
 
     hh_vil = households.merge(villages, on="village_id", how="left")
-    merged = individuals.merge(
-        hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
+    hh_columns = ["hh_id", "village_name"]
+    hh_columns.extend(
+        col
+        for col in ["cleanup_participation", "flood_depth_category"]
+        if col in hh_vil.columns
     )
+    merged = individuals.merge(hh_vil[hh_columns], on="hh_id", how="left")
 
     scenario_type = truth.get("scenario_type")
     symptomatic_column = get_symptomatic_column(truth)
@@ -1346,12 +1350,18 @@ def build_epidemiologic_context(truth: dict) -> str:
         adult_male_cases = cases[
             (cases["sex"] == "M") & (cases["age"] >= 18) & (cases["age"] <= 60)
         ]
-        cleanup_cases = cases[
-            cases["cleanup_participation"].isin(["heavy", "moderate", "light"])
-        ]
-        flood_exposed_cases = cases[
-            cases["flood_depth_category"].isin(["deep", "moderate"])
-        ]
+        if "cleanup_participation" in cases.columns:
+            cleanup_cases = cases[
+                cases["cleanup_participation"].isin(["heavy", "moderate", "light"])
+            ]
+        else:
+            cleanup_cases = cases.iloc[0:0]
+        if "flood_depth_category" in cases.columns:
+            flood_exposed_cases = cases[
+                cases["flood_depth_category"].isin(["deep", "moderate"])
+            ]
+        else:
+            flood_exposed_cases = cases.iloc[0:0]
         context = (
             f"There are currently about {total_cases} symptomatic leptospirosis cases in the district. "
             f"Adult men account for {len(adult_male_cases)} cases. "
