@@ -1708,12 +1708,6 @@ def get_hospital_records_contact_name() -> str:
     return "the hospital director"
 
 
-def format_area_description(description: str) -> str:
-    if not description:
-        return description
-    return description.replace("{contact_name}", get_hospital_records_contact_name())
-
-
 # =========================
 # ANTI-SPOILER / DISCLOSURE HELPERS
 # =========================
