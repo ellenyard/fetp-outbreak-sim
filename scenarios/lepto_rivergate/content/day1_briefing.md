@@ -1,96 +1,32 @@
-# Day 1: Initial Investigation
+# Day 1: Situation Assessment & Case Definition
 
-**OUTBREAK NOTIFICATION - DAY 1**
-Rivergate District Health Office
-Kantara Province, Aruvia
+**Focus:** Clean raw clinic data, define a working case definition, and triangulate early evidence.
 
-## SITUATION SUMMARY
+## Situation Update
+You've arrived at Rivergate District Hospital. Dr. Amina briefs you on the current situation:
+- Multiple febrile patients with myalgia and jaundice following recent flooding
+- Cases clustered around Northbend and riverside settlements
+- Several severe cases admitted to ICU
+- No definitive lab confirmation yet
 
-The Provincial Health Office has deployed you to investigate a cluster of severe febrile illness in Rivergate District following Typhoon Halcyon. Between October 19-30, Rivergate District Hospital and the Rural Health Unit have documented 28-34 cases of acute febrile illness with features including high fever, severe muscle pain, conjunctival suffusion (red eyes), and in some cases, jaundice and kidney failure. Three deaths have been reported.
+## Your Tasks Today
+1. **Abstract the clinic register** into a clean line list (structured fields).
+2. **Review case cards** to recognize clinical patterns and variability.
+3. **Build a tiered case definition** (suspected/probable/confirmed) with clinical, epi, lab, and time/place criteria.
+4. **Conduct case finding** and complete the case-finding debrief (identify false positives/negatives).
+5. **Complete the descriptive epi worksheet** (person–place–time observations and interpretations).
+6. **Review the Day 1 lab mini-brief** and note limitations.
+7. **Triangulate epi + clinical + lab evidence** and record working hypotheses for Day 2.
 
-## BACKGROUND
+## Key Questions to Answer
+- Which clinical features best distinguish leptospirosis from other post-flood illnesses?
+- Where are cases clustering geographically?
+- How does the timing relate to flood exposure?
+- What evidence supports or weakens your working hypotheses?
+- What critical data do you still need tomorrow?
 
-On October 8-10, Typhoon Halcyon brought torrential rains and severe flooding to Rivergate District. Ward Northbend, located in a low-lying river valley, experienced catastrophic flooding with water depths reaching 1.2-2.3 meters in the worst-affected areas (Riverside Hamlet). Floodwaters began receding October 10, but standing water remained in some areas until October 12.
-
-Immediately following the flood recession (October 10-12), community members began intensive cleanup efforts—clearing debris from homes and roads, salvaging rice from flooded paddies, and removing mud and dead animals from drainage canals. Most cleanup workers were male farmers and laborers working barefoot or with damaged footwear due to poverty and equipment loss during the flood.
-
-## TEMPORAL PATTERN
-
-The first recognized case was Adrian Vale, a 42-year-old farmer from Riverside Hamlet, Ward Northbend, who developed symptoms on October 13 (approximately 3 days after cleanup began). He was hospitalized October 16 and died October 26 from pulmonary hemorrhage and acute kidney injury.
-
-By October 19, Dr. Annalisa Reyes at the District Hospital had identified a clear pattern: nearly identical clinical presentations among adult males from flooded wards, all of whom had participated in post-typhoon cleanup activities.
-
-Case numbers increased steadily through late October. Two additional deaths occurred: Lucas Orr (October 28) and Neil Carver (October 29).
-
-## CLINICAL PRESENTATION
-
-Patients typically present with:
-- Sudden onset high fever (39-40°C)
-- Severe myalgia, particularly in calves and lower back
-- Headache
-- Conjunctival suffusion (red eyes without discharge)
-- Progression to jaundice in severe cases
-- Acute kidney injury (elevated creatinine, oliguria)
-- Some cases: pulmonary hemorrhage
-
-Average time from symptom onset to hospital admission: 4-6 days (delayed presentation is concerning for outcomes)
-
-## GEOGRAPHIC DISTRIBUTION
-
-- **Ward Northbend**: 28 of 34 cases (82%), particularly Riverside Hamlet area
-- **Ward East Terrace**: 4 cases (moderate flooding)
-- **Ward Southshore**: 2 cases (minimal flooding)
-- **Ward Highridge**: 0 cases (higher elevation, served as evacuation site)
-
-Clear dose-response relationship: greater flood depth and duration → higher case incidence
-
-## LABORATORY FINDINGS
-
-- Multiple patients tested positive for Leptospira IgM ELISA (sent to Lunara)
-- Dr. Annalisa Reyes suspected leptospirosis from clinical presentation as early as October 16
-- Laboratory confirmation received October 18
-- Veterinary investigation by Dr. Villareal identified 4 of 6 pigs tested positive for Leptospira antibodies (serovars Pomona and Icterohaemorrhagiae)
-
-## CURRENT SITUATION
-
-- Dr. Carlos Mendoza (RHU Physician) and Dr. Annalisa Reyes (District Hospital Internist) have been managing cases
-- Initial public health response was delayed due to need for laboratory confirmation and political concerns about "causing alarm"
-- Doxycycline stocks were depleted by October 15; emergency resupply requested
-- Dr. Gemma Lacson, Provincial Epidemiologist, arrived October 28 to provide oversight
-- Community cooperation varies; some families delayed seeking medical care due to poverty, fear, or initial consultation with Pastor Elijah Gonzales (faith healer)
-
-## YOUR MISSION
-
-As FETP residents, you must:
-1. Verify the outbreak and confirm the etiology
-2. Conduct a thorough epidemiologic investigation to identify risk factors
-3. Determine the source and mode of transmission
-4. Implement evidence-based control measures
-5. Provide recommendations to prevent future outbreaks
-
-You have 5 days and limited resources. Today (Day 1), you should focus on:
-- Establishing rapport with key stakeholders
-- Reviewing existing medical and surveillance data
-- Conducting initial field assessment in Ward Northbend
-- Beginning to formulate hypotheses about transmission dynamics
-
-## YOUR TASKS TODAY
-
-- **Visit the District Health Office** to meet Dr. Carlos Mendoza (RHU Physician) and review initial case reports and patient registries
-- **Visit the District Hospital** to meet Dr. Annalisa Reyes (Internist) and review hospitalized cases, including the three fatalities
-- **Travel to Ward Northbend** to meet Captain Gloria Ramos, assess the outbreak setting, and understand community perspectives
-- **Interview key informants** such as Nurse Maricel Holt (who has detailed exposure histories) and affected community members
-- **Begin developing your case definition** and line listing based on available data
-- **Document initial hypotheses** about outbreak source, transmission routes, and risk factors
-
-## KEY QUESTIONS TO ANSWER
-
-- What is the age, sex, and occupation distribution of cases?
-- Where are cases geographically located?
-- When did symptoms begin relative to the typhoon?
-- What are the common clinical features?
-- What post-typhoon exposures link the cases?
-- What role might animals (rats, pigs) play in transmission?
-- Are there environmental factors (flood depth, duration, contamination) driving the outbreak pattern?
-
-*Click on a location below to travel there.*
+## Epidemiological Context
+- **Setting:** Flood-affected urban and peri-urban Rivergate
+- **Population:** Cleanup workers, farmers, and riverside communities
+- **Season:** Post-typhoon (August)
+- **Previous outbreaks:** Sporadic leptospirosis after flooding events

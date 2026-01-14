@@ -1,6 +1,6 @@
-# Day 1: Initial Investigation
+# Day 1: Situation Assessment & Case Definition
 
-**Focus:** Understanding the outbreak scope and developing initial hypotheses.
+**Focus:** Clean raw clinic data, define a working case definition, and triangulate early evidence.
 
 ## Situation Update
 You've arrived at Sidero District Hospital. Dr. Tran briefs you on the current situation:
@@ -11,19 +11,20 @@ You've arrived at Sidero District Hospital. Dr. Tran briefs you on the current s
 - No obvious common exposure events identified
 
 ## Your Tasks Today
-1. **Review the initial line list** - Examine the cases reported so far
-2. **Describe the outbreak** - Analyze cases by person, place, and time
-3. **Develop a case definition** - Create criteria for identifying additional cases
-4. **Search for additional cases** - Review hospital records and community reports
-5. **Generate initial hypotheses** - What might be causing this outbreak?
-6. **Interview key informants** - Health workers, community leaders, families
+1. **Abstract the clinic register** into a clean line list (structured fields).
+2. **Review case cards** to recognize clinical patterns and variability.
+3. **Build a tiered case definition** (suspected/probable/confirmed) with clinical, epi, lab, and time/place criteria.
+4. **Conduct case finding** and complete the case-finding debrief (identify false positives/negatives).
+5. **Complete the descriptive epi worksheet** (person–place–time observations and interpretations).
+6. **Review the Day 1 lab mini-brief** and note limitations.
+7. **Triangulate epi + clinical + lab evidence** and record working hypotheses for Day 2.
 
 ## Key Questions to Answer
-- What is the age and sex distribution of cases?
-- Where are cases geographically located?
-- When did symptoms begin?
-- What are the common clinical features?
-- Are there shared exposures or risk factors?
+- Which features consistently appear in likely AES cases?
+- Where are cases clustering geographically?
+- How is the onset pattern evolving over time?
+- What evidence supports or weakens your working hypotheses?
+- What critical data do you still need tomorrow?
 
 ## Epidemiological Context
 - **Setting:** Rice-growing region in Sidero Valley

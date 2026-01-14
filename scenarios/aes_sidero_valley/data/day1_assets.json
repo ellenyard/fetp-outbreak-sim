@@ -1,0 +1,308 @@
+{
+  "clinic_log_entries": [
+    {
+      "entry_id": "CL-01",
+      "raw_text": "06/03 09:10 Nalu HC - 6y M, high fever 39C, seizures overnight, vomiting x2. Onset 6/02.",
+      "answer_key": {
+        "patient_id": "CL-01",
+        "visit_date": "2025-06-03",
+        "age": "6",
+        "sex": "M",
+        "village": "Nalu",
+        "symptom_onset_date": "2025-06-02",
+        "fever_y_n": "Yes",
+        "rash_y_n": "No",
+        "vomiting_y_n": "Yes",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Yes",
+        "notes": "Seizures overnight; vomiting twice."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-02",
+      "raw_text": "06/03 11:45 Kabwe - 4y F, fever and rash, itchy. No vomiting. Onset 6/01.",
+      "answer_key": {
+        "patient_id": "CL-02",
+        "visit_date": "2025-06-03",
+        "age": "4",
+        "sex": "F",
+        "village": "Kabwe",
+        "symptom_onset_date": "2025-06-01",
+        "fever_y_n": "Yes",
+        "rash_y_n": "Yes",
+        "vomiting_y_n": "No",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "No",
+        "notes": "Itchy rash."
+      },
+      "truth_case": false
+    },
+    {
+      "entry_id": "CL-03",
+      "raw_text": "06/04 08:20 Nalu - 8y M brought for confusion, sleepy, fever 38.8. Mother unsure onset.",
+      "answer_key": {
+        "patient_id": "CL-03",
+        "visit_date": "2025-06-04",
+        "age": "8",
+        "sex": "M",
+        "village": "Nalu",
+        "symptom_onset_date": "Unknown",
+        "fever_y_n": "Yes",
+        "rash_y_n": "Unknown",
+        "vomiting_y_n": "Unknown",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Unknown",
+        "notes": "Confusion and sleepiness noted."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-04",
+      "raw_text": "06/04 10:00 Tamu - 2y F, watery diarrhea x1 day, no fever, playful.",
+      "answer_key": {
+        "patient_id": "CL-04",
+        "visit_date": "2025-06-04",
+        "age": "2",
+        "sex": "F",
+        "village": "Tamu",
+        "symptom_onset_date": "2025-06-03",
+        "fever_y_n": "No",
+        "rash_y_n": "No",
+        "vomiting_y_n": "No",
+        "diarrhea_y_n": "Yes",
+        "seizure_y_n": "No",
+        "notes": "Watery diarrhea only."
+      },
+      "truth_case": false
+    },
+    {
+      "entry_id": "CL-05",
+      "raw_text": "06/04 13:15 Nalu - 7y F, fever, vomiting, stiff neck. No rash. Onset 6/03.",
+      "answer_key": {
+        "patient_id": "CL-05",
+        "visit_date": "2025-06-04",
+        "age": "7",
+        "sex": "F",
+        "village": "Nalu",
+        "symptom_onset_date": "2025-06-03",
+        "fever_y_n": "Yes",
+        "rash_y_n": "No",
+        "vomiting_y_n": "Yes",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Unknown",
+        "notes": "Stiff neck noted."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-06",
+      "raw_text": "06/05 09:40 Kabwe - 12y M, fainted at school, no fever, headache only.",
+      "answer_key": {
+        "patient_id": "CL-06",
+        "visit_date": "2025-06-05",
+        "age": "12",
+        "sex": "M",
+        "village": "Kabwe",
+        "symptom_onset_date": "2025-06-05",
+        "fever_y_n": "No",
+        "rash_y_n": "No",
+        "vomiting_y_n": "No",
+        "diarrhea_y_n": "No",
+        "seizure_y_n": "No",
+        "notes": "Fainted at school."
+      },
+      "truth_case": false
+    },
+    {
+      "entry_id": "CL-07",
+      "raw_text": "06/05 14:05 Nalu - 5y F, fever 39.2, seizure this morning, mother says started yesterday.",
+      "answer_key": {
+        "patient_id": "CL-07",
+        "visit_date": "2025-06-05",
+        "age": "5",
+        "sex": "F",
+        "village": "Nalu",
+        "symptom_onset_date": "2025-06-04",
+        "fever_y_n": "Yes",
+        "rash_y_n": "Unknown",
+        "vomiting_y_n": "Unknown",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Yes",
+        "notes": "Seizure this morning."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-08",
+      "raw_text": "06/05 16:20 Moba - 9y M, fever and cough, no neuro signs. onset 6/04.",
+      "answer_key": {
+        "patient_id": "CL-08",
+        "visit_date": "2025-06-05",
+        "age": "9",
+        "sex": "M",
+        "village": "Moba",
+        "symptom_onset_date": "2025-06-04",
+        "fever_y_n": "Yes",
+        "rash_y_n": "No",
+        "vomiting_y_n": "No",
+        "diarrhea_y_n": "No",
+        "seizure_y_n": "No",
+        "notes": "Fever with cough."
+      },
+      "truth_case": false
+    },
+    {
+      "entry_id": "CL-09",
+      "raw_text": "06/06 08:35 Nalu - 3y F, fever, vomiting, very sleepy, no rash.",
+      "answer_key": {
+        "patient_id": "CL-09",
+        "visit_date": "2025-06-06",
+        "age": "3",
+        "sex": "F",
+        "village": "Nalu",
+        "symptom_onset_date": "Unknown",
+        "fever_y_n": "Yes",
+        "rash_y_n": "No",
+        "vomiting_y_n": "Yes",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Unknown",
+        "notes": "Very sleepy; onset unclear."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-10",
+      "raw_text": "06/06 13:50 Tamu - 10y M, rash and sore throat, afebrile.",
+      "answer_key": {
+        "patient_id": "CL-10",
+        "visit_date": "2025-06-06",
+        "age": "10",
+        "sex": "M",
+        "village": "Tamu",
+        "symptom_onset_date": "Unknown",
+        "fever_y_n": "No",
+        "rash_y_n": "Yes",
+        "vomiting_y_n": "No",
+        "diarrhea_y_n": "No",
+        "seizure_y_n": "No",
+        "notes": "Rash with sore throat."
+      },
+      "truth_case": false
+    },
+    {
+      "entry_id": "CL-11",
+      "raw_text": "06/07 09:05 Kabwe - 6y F, fever, stiff neck, confused, mother mentions rice paddies.",
+      "answer_key": {
+        "patient_id": "CL-11",
+        "visit_date": "2025-06-07",
+        "age": "6",
+        "sex": "F",
+        "village": "Kabwe",
+        "symptom_onset_date": "Unknown",
+        "fever_y_n": "Yes",
+        "rash_y_n": "Unknown",
+        "vomiting_y_n": "Unknown",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "Unknown",
+        "notes": "Stiff neck, confusion. Exposure note in margins."
+      },
+      "truth_case": true
+    },
+    {
+      "entry_id": "CL-12",
+      "raw_text": "06/07 15:30 Nalu - 14y M, vomiting after bad food, no fever, resolved.",
+      "answer_key": {
+        "patient_id": "CL-12",
+        "visit_date": "2025-06-07",
+        "age": "14",
+        "sex": "M",
+        "village": "Nalu",
+        "symptom_onset_date": "2025-06-07",
+        "fever_y_n": "No",
+        "rash_y_n": "No",
+        "vomiting_y_n": "Yes",
+        "diarrhea_y_n": "Unknown",
+        "seizure_y_n": "No",
+        "notes": "Food-related vomiting."
+      },
+      "truth_case": false
+    }
+  ],
+  "case_cards": [
+    {
+      "case_id": "CARD-01",
+      "title": "Severe neuro case",
+      "clinical": "High fever, seizures, altered mental status, stiff neck.",
+      "exposure": "Lives near rice paddies; no net use.",
+      "lab": "CSF pleocytosis pending.",
+      "missing_data": "Exact onset date unclear.",
+      "tags": ["fever", "seizure", "neuro"]
+    },
+    {
+      "case_id": "CARD-02",
+      "title": "Atypical rash case",
+      "clinical": "Fever with rash, no neuro signs.",
+      "exposure": "School cluster reported.",
+      "lab": "No labs ordered yet.",
+      "missing_data": "No neuro exam documented.",
+      "tags": ["fever", "rash"]
+    },
+    {
+      "case_id": "CARD-03",
+      "title": "Mild neuro symptoms",
+      "clinical": "Low-grade fever, confusion, vomiting.",
+      "exposure": "Sibling with fever last week.",
+      "lab": "Pending CSF.",
+      "missing_data": "No seizure history.",
+      "tags": ["fever", "vomiting", "neuro"]
+    },
+    {
+      "case_id": "CARD-04",
+      "title": "Non-case trauma",
+      "clinical": "Headache after fall, afebrile.",
+      "exposure": "No notable exposures.",
+      "lab": "No labs.",
+      "missing_data": "Onset date uncertain.",
+      "tags": ["trauma"]
+    },
+    {
+      "case_id": "CARD-05",
+      "title": "Seizure without fever",
+      "clinical": "Single seizure, no fever reported.",
+      "exposure": "Lives in Nalu, vaccinated per mother.",
+      "lab": "No labs yet.",
+      "missing_data": "Temperature not measured.",
+      "tags": ["seizure"]
+    },
+    {
+      "case_id": "CARD-06",
+      "title": "Classic AES presentation",
+      "clinical": "Fever 40C, seizures, coma.",
+      "exposure": "Mosquito bites noted; pig pen nearby.",
+      "lab": "IgM JE pending.",
+      "missing_data": "Exposure timing uncertain.",
+      "tags": ["fever", "seizure", "neuro"]
+    }
+  ],
+  "lab_brief": {
+    "summary": "The regional lab returned preliminary IgM testing on a subset of CSF/serum samples. Results are early and limited.",
+    "results": [
+      {"sample_id": "LAB-01", "test": "JE IgM (serum)", "result": "Positive"},
+      {"sample_id": "LAB-02", "test": "JE IgM (CSF)", "result": "Pending"},
+      {"sample_id": "LAB-03", "test": "JE IgM (serum)", "result": "Negative"},
+      {"sample_id": "LAB-04", "test": "Malaria RDT", "result": "Negative"},
+      {"sample_id": "LAB-05", "test": "Bacterial culture", "result": "Pending"}
+    ],
+    "limitations": [
+      "IgM can be negative early in illness.",
+      "Cross-reactivity with other flaviviruses is possible.",
+      "Small sample size; results may not represent all cases."
+    ],
+    "next_steps": [
+      "Collect paired sera for seroconversion.",
+      "Request PCR for JE virus on available CSF.",
+      "Continue to rule out bacterial meningitis."
+    ]
+  }
+}
