@@ -838,7 +838,7 @@ SCENARIO_INITIAL_NPCS = {
 AES_AREA_METADATA = {
     "Admin Office": {
         "image_exterior": "assets/Hospital/hospital_exterior.png",
-        "description": "The hospital ward and administrative office where AES patients are treated. Dr. Tran oversees triage and patient charts. Deep-dive clinical data is available here.",
+        "description": "The hospital ward and administrative office where AES patients are treated. {contact_name} oversees triage and patient charts. Deep-dive clinical data is available here.",
         "icon": "🏥",
     },
     "Laboratory": {
@@ -848,7 +848,7 @@ AES_AREA_METADATA = {
     },
     "District Hospital": {
         "image_exterior": "assets/Hospital/hospital_exterior.png",
-        "description": "The district hospital where AES patients are being treated. Contains the administrative office, patient ward, and laboratory facilities. Dr. Tran oversees operations.",
+        "description": "The district hospital where AES patients are being treated. Contains the administrative office, patient ward, and laboratory facilities. {contact_name} oversees operations.",
         "icon": "🏥",
     },
     "Nalu Village": {
@@ -1672,6 +1672,49 @@ def check_npc_unlock_triggers(user_input: str) -> str:
 
 
 # =========================
+# RECORDS ACCESS HELPERS
+# =========================
+
+HOSPITAL_RECORDS_UNLOCK_KEYWORDS = ("hospital", "ward")
+
+
+def should_unlock_hospital_records(unlock_flag: str) -> bool:
+    if not unlock_flag:
+        return False
+    if unlock_flag in ("records_access", "tran_permission_granted"):
+        return True
+    lower_flag = unlock_flag.lower()
+    return "record" in lower_flag and any(key in lower_flag for key in HOSPITAL_RECORDS_UNLOCK_KEYWORDS)
+
+
+def has_hospital_records_access() -> bool:
+    if st.session_state.get("tran_permission", False):
+        return True
+    unlock_flags = st.session_state.get("unlock_flags", {})
+    if unlock_flags.get("records_access"):
+        return True
+    return any(
+        enabled and should_unlock_hospital_records(flag)
+        for flag, enabled in unlock_flags.items()
+    )
+
+
+def get_hospital_records_contact_name() -> str:
+    npc_truth = st.session_state.truth.get("npc_truth", {})
+    for npc in npc_truth.values():
+        unlock_flag = npc.get("unlocks")
+        if should_unlock_hospital_records(unlock_flag):
+            return npc.get("name", "the hospital director")
+    return "the hospital director"
+
+
+def format_area_description(description: str) -> str:
+    if not description:
+        return description
+    return description.replace("{contact_name}", get_hospital_records_contact_name())
+
+
+# =========================
 # ANTI-SPOILER / DISCLOSURE HELPERS
 # =========================
 
@@ -1953,16 +1996,26 @@ INFORMATION RULES:
 
     # Unlock flags (One Health unlocks)
     unlock_flag = npc_truth.get("unlocks")
-    if unlock_flag:
-        st.session_state.unlock_flags[unlock_flag] = True
+    permission_keywords = ["permission", "access", "records", "investigate", "allow"]
+    permission_requested = any(keyword in lower_q for keyword in permission_keywords)
 
-    # SPECIAL LOGIC: Dr. Chen permission granting
-    if npc_key == "dr_chen":
-        lower_q = user_input.lower()
-        # Grant permission if user asks for it
-        if any(keyword in lower_q for keyword in ["permission", "access", "records", "investigate", "allow"]):
-            st.session_state.unlock_flags['records_access'] = True
-            st.rerun()  # Force refresh to unlock the buttons immediately
+    if unlock_flag:
+        if unlock_flag == "tran_permission_granted":
+            if permission_requested:
+                st.session_state.unlock_flags[unlock_flag] = True
+        else:
+            st.session_state.unlock_flags[unlock_flag] = True
+
+        if should_unlock_hospital_records(unlock_flag) and (
+            unlock_flag != "tran_permission_granted" or permission_requested
+        ):
+            st.session_state.unlock_flags["records_access"] = True
+
+    # SPECIAL LOGIC: Permission granting for hospital records access
+    if npc_key == "dr_chen" and permission_requested:
+        st.session_state.unlock_flags["records_access"] = True
+        st.session_state.unlock_flags["tran_permission_granted"] = True
+        st.rerun()  # Force refresh to unlock the buttons immediately
 
     # SPECIAL LOGIC: Ward Parent livestock question counter
     if npc_key == "ward_parent":
@@ -3585,8 +3638,11 @@ def view_hospital_triage():
     st.markdown("## District Hospital Triage")
 
     # Intro Text
-    st.info("Dr. Tran: 'Here are the patients admitted in the last 48 hours. Please review them. "
-            "Mark the ones that fit your Case Definition to add them to your Line List.'")
+    contact_name = get_hospital_records_contact_name()
+    st.info(
+        f"{contact_name}: 'Here are the patients admitted in the last 48 hours. Please review them. "
+        "Mark the ones that fit your Case Definition to add them to your Line List.'"
+    )
 
     # Initialize State
     if 'line_list' not in st.session_state:
@@ -6457,9 +6513,10 @@ def view_travel_map():
     # Day briefing
     if st.session_state.current_day == 1:
         with st.expander("Day 1 Briefing - Situation Assessment", expanded=True):
-            st.markdown("""
+            contact_name = get_hospital_records_contact_name()
+            st.markdown(f"""
             **Your tasks today:**
-            - Visit the **District Hospital** to meet Dr. Tran and review cases
+            - Visit the **District Hospital** to meet {contact_name} and review cases
             - Travel to **Nalu Village** to interview residents and review clinic records
             - Document your initial hypotheses about the outbreak source
 
@@ -6802,7 +6859,7 @@ def view_area_visual(area: str):
         """, unsafe_allow_html=True)
 
     # Area description
-    description = area_meta.get("description", "")
+    description = format_area_description(area_meta.get("description", ""))
     if description:
         st.markdown(f"*{description}*")
 
@@ -6878,8 +6935,9 @@ def view_area_map(area: str):
         with less standing water.
         """)
     elif area == "District Hospital":
-        st.markdown("""
-        **District Hospital** is where the AES cases have been admitted. Dr. Tran oversees
+        contact_name = get_hospital_records_contact_name()
+        st.markdown(f"""
+        **District Hospital** is where the AES cases have been admitted. {contact_name} oversees
         patient care and the laboratory can process some samples.
         """)
     elif area == "District Office":
@@ -7066,9 +7124,12 @@ def render_ward_registry_modal():
     st.subheader("📋 District Hospital - Ward Registry (Last 30 Days)")
 
     # Check permission
-    if not st.session_state.get('tran_permission', False):
-        st.error("⛔ Access Denied: You need Dr. Chen's permission to access hospital records.")
-        st.info("💡 **Hint:** Talk to Dr. Chen and ask for 'permission' to access medical records and the laboratory.")
+    if not has_hospital_records_access():
+        contact_name = get_hospital_records_contact_name()
+        st.error(f"⛔ Access Denied: You need {contact_name}'s permission to access hospital records.")
+        st.info(
+            f"💡 **Hint:** Talk to {contact_name} and ask for 'permission' to access medical records and the laboratory."
+        )
         if st.button("Close", key="close_ward_registry"):
             st.session_state.action_modal = None
             st.rerun()
@@ -7137,9 +7198,12 @@ def render_hospital_charts_modal():
     st.subheader("📄 District Hospital - Medical Charts")
 
     # Check permission
-    if not st.session_state.get('tran_permission', False):
-        st.error("⛔ Access Denied: You need Dr. Chen's permission to access hospital records.")
-        st.info("💡 **Hint:** Talk to Dr. Chen and ask for 'permission' to access medical records and the laboratory.")
+    if not has_hospital_records_access():
+        contact_name = get_hospital_records_contact_name()
+        st.error(f"⛔ Access Denied: You need {contact_name}'s permission to access hospital records.")
+        st.info(
+            f"💡 **Hint:** Talk to {contact_name} and ask for 'permission' to access medical records and the laboratory."
+        )
         if st.button("Close", key="close_charts"):
             st.session_state.action_modal = None
             st.rerun()
