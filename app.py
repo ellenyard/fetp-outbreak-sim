@@ -449,6 +449,18 @@ def format_resource_cost(time_cost: float = 0, budget_cost: float = 0) -> str:
     return " | ".join(parts) if parts else "Free"
 
 
+def format_area_description(description: str) -> str:
+    """Format area description strings with dynamic fields and spoiler redaction."""
+    if not description:
+        return ""
+    contact_name = get_hospital_records_contact_name()
+    try:
+        formatted = description.format(contact_name=contact_name)
+    except (KeyError, ValueError):
+        formatted = description.replace("{contact_name}", contact_name)
+    return redact_spoilers(formatted, investigation_stage())
+
+
 # =========================
 # LOCATIONS CONFIG (Adventure-Style Navigation)
 # =========================
