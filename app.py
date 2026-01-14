@@ -7852,13 +7852,15 @@ def render_interview_modal():
 
     npc = npc_truth[npc_key]
 
-    # Modal header
-    st.markdown(f"### {npc.get('avatar', '👤')} Interview: {npc.get('name', 'Unknown')}")
-    st.caption(f"*{npc.get('role', '')}*")
+    npc_image_path = npc.get("image_path")
+    has_photo = npc_image_path and Path(npc_image_path).exists()
 
-    # Close button
-    col1, col2 = st.columns([6, 1])
-    with col2:
+    # Modal header
+    header_col, close_col = st.columns([6, 1])
+    with header_col:
+        st.markdown(f"### Interview: {npc.get('name', 'Unknown')}")
+        st.caption(f"*{npc.get('role', '')}*")
+    with close_col:
         if st.button("✖ Close", key="close_interview"):
             st.session_state.action_modal = None
             st.session_state.current_npc = None
@@ -7866,16 +7868,33 @@ def render_interview_modal():
 
     st.markdown("---")
 
+    photo_col, chat_col = st.columns([1, 2], gap="large")
+    with photo_col:
+        if has_photo:
+            st.image(npc_image_path, use_column_width=True)
+        else:
+            st.markdown(
+                f"<div style='font-size:72px; text-align:center;'>{npc.get('avatar', '👤')}</div>",
+                unsafe_allow_html=True,
+            )
+
+    with chat_col:
+        st.markdown("#### Conversation")
+        conversation_container = st.container(border=True)
+
     # Show conversation history
     history = st.session_state.interview_history.get(npc_key, [])
 
-    for msg in history:
-        if msg["role"] == "user":
-            with st.chat_message("user"):
-                st.write(msg["content"])
-        else:
-            with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-                st.write(msg["content"])
+    with conversation_container:
+        if not history:
+            st.caption("No messages yet. Start the interview below.")
+        for msg in history:
+            if msg["role"] == "user":
+                with st.chat_message("user"):
+                    st.write(msg["content"])
+            else:
+                with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
+                    st.write(msg["content"])
 
     # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
     if npc_key == "nurse_joy":
@@ -7892,52 +7911,61 @@ def render_interview_modal():
         rapport = st.session_state['nurse_rapport']
         animal_q = st.session_state.get('nurse_animal_questions', 0)
 
-        st.info(f"**Nurse Rapport:** {rapport} | **Animal Questions Asked:** {animal_q}/3")
+        with chat_col:
+            st.info(f"**Nurse Rapport:** {rapport} | **Animal Questions Asked:** {animal_q}/3")
 
         # Show initial dialogue choices if first interaction
         if not st.session_state['nurse_initial_dialogue_shown'] and len(history) == 0:
-            st.markdown("---")
-            st.markdown("**Nurse Mai looks up from her paperwork, clearly stressed and overwhelmed.**")
-            st.markdown('"Why are you here now? I have so many patients to see..."')
-            st.markdown("---")
-            st.markdown("**How do you respond?**")
+            with chat_col:
+                st.markdown("---")
+                st.markdown("**Nurse Mai looks up from her paperwork, clearly stressed and overwhelmed.**")
+                st.markdown('"Why are you here now? I have so many patients to see..."')
+                st.markdown("---")
+                st.markdown("**How do you respond?**")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🚨 'Show me the records. Now.'", key="nurse_demand", use_container_width=True):
-                    result = update_nurse_rapport('demand', st.session_state)
-                    history.append({"role": "user", "content": "'Show me the records. Now.'"})
-                    history.append({"role": "assistant", "content": result['message']})
-                    st.session_state.interview_history[npc_key] = history
-                    st.session_state['nurse_initial_dialogue_shown'] = True
-                    st.rerun()
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🚨 'Show me the records. Now.'", key="nurse_demand", use_container_width=True):
+                        result = update_nurse_rapport('demand', st.session_state)
+                        history.append({"role": "user", "content": "'Show me the records. Now.'"})
+                        history.append({"role": "assistant", "content": result['message']})
+                        st.session_state.interview_history[npc_key] = history
+                        st.session_state['nurse_initial_dialogue_shown'] = True
+                        st.rerun()
 
-            with col2:
-                if st.button("💚 'It looks busy here. Thank you for your work.'", key="nurse_empathize", use_container_width=True):
-                    result = update_nurse_rapport('empathize', st.session_state)
-                    history.append({"role": "user", "content": "'It looks busy here. Thank you for your work.'"})
-                    history.append({"role": "assistant", "content": result['message']})
-                    st.session_state.interview_history[npc_key] = history
-                    st.session_state['nurse_initial_dialogue_shown'] = True
-                    st.rerun()
+                with col2:
+                    if st.button("💚 'It looks busy here. Thank you for your work.'", key="nurse_empathize", use_container_width=True):
+                        result = update_nurse_rapport('empathize', st.session_state)
+                        history.append({"role": "user", "content": "'It looks busy here. Thank you for your work.'"})
+                        history.append({"role": "assistant", "content": result['message']})
+                        st.session_state.interview_history[npc_key] = history
+                        st.session_state['nurse_initial_dialogue_shown'] = True
+                        st.rerun()
 
-            st.markdown("---")
+                st.markdown("---")
             return  # Don't show chat input yet
 
         # Show pig clue if unlocked
         if (rapport > 20 or animal_q >= 3) and 'nurse_pig_clue_shown' not in st.session_state:
-            st.success("**🐷 Nurse Mai sighs:** 'Fine. A few pig litters had abortions recently. Young farmers are careless.'")
+            with chat_col:
+                st.success("**🐷 Nurse Mai sighs:** 'Fine. A few pig litters had abortions recently. Young farmers are careless.'")
             st.session_state['nurse_pig_clue_shown'] = True
 
         # Show records access status
         if rapport > 10:
-            st.success("✅ **Records Access Granted** - You may now review the child register.")
+            with chat_col:
+                st.success("✅ **Records Access Granted** - You may now review the child register.")
         else:
-            st.warning("🔒 **Records Access Denied** - Improve your rapport to access clinic records.")
+            with chat_col:
+                st.warning("🔒 **Records Access Denied** - Improve your rapport to access clinic records.")
 
     # Chat input
-    user_q = st.chat_input(f"Ask {npc.get('name', 'NPC')} a question...")
-    if user_q:
+    with chat_col:
+        with st.form(key=f"npc_chat_form_{npc_key}", clear_on_submit=True):
+            user_q = st.text_input(f"Ask {npc.get('name', 'NPC')} a question...")
+            submitted = st.form_submit_button("Send")
+
+    if submitted and user_q:
         # Check for NPC unlock triggers
         unlock_notification = check_npc_unlock_triggers(user_q)
 
@@ -7951,20 +7979,22 @@ def render_interview_modal():
         history.append({"role": "user", "content": user_q})
         st.session_state.interview_history[npc_key] = history
 
-        with st.chat_message("user"):
-            st.write(user_q)
+        with conversation_container:
+            with st.chat_message("user"):
+                st.write(user_q)
 
-        with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-            with st.spinner("..."):
-                reply = get_npc_response(npc_key, user_q)
-            st.write(reply)
+            with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
+                with st.spinner("..."):
+                    reply = get_npc_response(npc_key, user_q)
+                st.write(reply)
 
         history.append({"role": "assistant", "content": reply})
         st.session_state.interview_history[npc_key] = history
 
         # Show unlock notification
         if unlock_notification:
-            st.success(unlock_notification)
+            with chat_col:
+                st.success(unlock_notification)
 
         st.rerun()
 
