@@ -53,6 +53,13 @@ PERSISTENT_KEYS = {
 
     # Medical Records workflow (Day 1)
     'line_list_cols', 'my_case_def', 'manual_cases',
+
+    # Day 1 expanded workflows
+    'clinic_line_list', 'clinic_abstraction_submitted', 'clinic_abstraction_feedback',
+    'case_definition_versions', 'case_definition_builder', 'case_finding_debrief',
+    'case_cards_reviewed', 'case_card_labels', 'medical_chart_reviews',
+    'day1_worksheet', 'day1_lab_brief_viewed', 'day1_lab_brief_notes',
+    'triangulation_checkpoint', 'triangulation_completed',
 }
 
 

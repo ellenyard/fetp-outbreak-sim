@@ -9,8 +9,11 @@ import io
 import re
 import time
 import base64
+from datetime import date
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
+
+import day1_utils
 
 # Session persistence
 import persistence
@@ -129,6 +132,10 @@ _FALLBACK_UI = {
         "map": "Map",
         "medical_records": "Medical Records",
         "clinic_register": "Clinic Register Scan",
+        "clinic_log_abstraction": "Clinic Log Abstraction",
+        "case_finding_debrief": "Case-finding Debrief",
+        "day1_lab_brief": "Day 1 Lab Brief",
+        "triangulation_checkpoint": "Triangulation Checkpoint",
         "advance_day": "Advance to Day",
         "cannot_advance": "Cannot advance yet. See missing tasks on Overview.",
         "missing_tasks_title": "Missing tasks before you can advance:",
@@ -1220,6 +1227,8 @@ def init_session_state():
         st.session_state.decisions = {
             "case_definition": None,
             "case_definition_text": "",
+            "case_definition_tiers": {},
+            "case_definition_history": [],
             "study_design": None,
             "mapped_columns": [],
             "sample_size": {"cases": 15, "controls_per_case": 2},
@@ -1296,6 +1305,35 @@ def init_session_state():
     st.session_state.setdefault("line_list_cols", [])
     st.session_state.setdefault("my_case_def", {})
     st.session_state.setdefault("manual_cases", [])
+    st.session_state.setdefault("clinic_line_list", [])
+    st.session_state.setdefault("clinic_abstraction_submitted", False)
+    st.session_state.setdefault("clinic_abstraction_feedback", {})
+    st.session_state.setdefault("case_definition_versions", [])
+    st.session_state.setdefault("case_definition_builder", {})
+    st.session_state.setdefault("case_finding_debrief", {})
+    st.session_state.setdefault("case_cards_reviewed", False)
+    st.session_state.setdefault("case_card_labels", {})
+    st.session_state.setdefault("medical_chart_reviews", {})
+    st.session_state.setdefault("day1_worksheet", {})
+    st.session_state.setdefault("day1_lab_brief_viewed", False)
+    st.session_state.setdefault("day1_lab_brief_notes", "")
+    st.session_state.setdefault("triangulation_checkpoint", {})
+    st.session_state.setdefault("triangulation_completed", False)
+
+    if st.session_state.case_definition_builder and "case_def_suspected_clinical" not in st.session_state:
+        builder = st.session_state.case_definition_builder
+        st.session_state.case_def_suspected_clinical = builder.get("suspected", {}).get("clinical", "")
+        st.session_state.case_def_suspected_epi = builder.get("suspected", {}).get("epi_link", "")
+        st.session_state.case_def_suspected_lab = builder.get("suspected", {}).get("lab", "")
+        st.session_state.case_def_suspected_time_place = builder.get("suspected", {}).get("time_place", "")
+        st.session_state.case_def_probable_clinical = builder.get("probable", {}).get("clinical", "")
+        st.session_state.case_def_probable_epi = builder.get("probable", {}).get("epi_link", "")
+        st.session_state.case_def_probable_lab = builder.get("probable", {}).get("lab", "")
+        st.session_state.case_def_probable_time_place = builder.get("probable", {}).get("time_place", "")
+        st.session_state.case_def_confirmed_clinical = builder.get("confirmed", {}).get("clinical", "")
+        st.session_state.case_def_confirmed_epi = builder.get("confirmed", {}).get("epi_link", "")
+        st.session_state.case_def_confirmed_lab = builder.get("confirmed", {}).get("lab", "")
+        st.session_state.case_def_confirmed_time_place = builder.get("confirmed", {}).get("time_place", "")
 
     # Restore found cases from session persistence (if loading a saved session)
     # This is needed because truth is regenerated from CSV files, losing found cases
@@ -1319,6 +1357,87 @@ def get_symptomatic_column(truth: dict) -> str:
     if scenario_type == "lepto":
         return "symptomatic_lepto"
     return "symptomatic_AES"
+
+
+def get_day1_assets() -> dict:
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    return day1_utils.load_day1_assets(scenario_id)
+
+
+def build_case_definition_summary(case_def: dict) -> str:
+    lines = []
+    for tier in ["suspected", "probable", "confirmed"]:
+        tier_data = case_def.get(tier, {})
+        if not tier_data:
+            continue
+        lines.append(f"{tier.title()} Case:")
+        for key in ["clinical", "epi_link", "lab", "time_place"]:
+            text = tier_data.get(key, "").strip()
+            if text:
+                label = key.replace("_", " ").title()
+                lines.append(f"- {label}: {text}")
+    return "\n".join(lines)
+
+
+def record_case_definition_version(case_def: dict, rationale: str = "") -> None:
+    versions = st.session_state.get("case_definition_versions", [])
+    next_version = len(versions) + 1
+    entry = {
+        "version": f"v{next_version}",
+        "timestamp": time.strftime("%Y-%m-%d %H:%M"),
+        "case_definition": case_def,
+        "rationale": rationale,
+    }
+    versions.append(entry)
+    st.session_state.case_definition_versions = versions
+    st.session_state.decisions["case_definition_history"] = versions
+
+
+def case_definition_feedback(case_def: dict) -> str:
+    filled = 0
+    for tier_data in case_def.values():
+        if isinstance(tier_data, dict):
+            filled += sum(1 for value in tier_data.values() if str(value).strip())
+    if filled <= 3:
+        return "⚠️ The definition is broad and may capture many non-cases (specificity risk)."
+    if filled >= 10:
+        return "⚠️ The definition is very restrictive and may miss true cases (sensitivity risk)."
+    return "✅ Balance looks reasonable; monitor sensitivity/specificity as you collect more data."
+
+
+def extract_case_definition_keywords(case_def: dict) -> list[str]:
+    keywords = []
+    text = " ".join(
+        str(section)
+        for tier in case_def.values()
+        if isinstance(tier, dict)
+        for section in tier.values()
+    ).lower()
+    for key in ["fever", "seizure", "rash", "vomiting", "diarrhea", "myalgia", "jaundice", "conjunctival"]:
+        if key in text:
+            keywords.append(key)
+    return keywords
+
+
+def match_case_definition(row: dict, keywords: list[str]) -> bool:
+    mapping = {
+        "fever": "fever_y_n",
+        "seizure": "seizure_y_n",
+        "rash": "rash_y_n",
+        "vomiting": "vomiting_y_n",
+        "diarrhea": "diarrhea_y_n",
+        "myalgia": "myalgia_y_n",
+        "jaundice": "jaundice_y_n",
+        "conjunctival": "conjunctival_suffusion_y_n",
+    }
+    for key in keywords:
+        field = mapping.get(key)
+        if not field:
+            continue
+        value = str(row.get(field, "")).strip().lower()
+        if value not in {"yes", "y", "true"}:
+            return False
+    return True
 
 
 def build_epidemiologic_context(truth: dict) -> str:
@@ -3283,8 +3402,20 @@ def sidebar_navigation():
     internal = ["map", "overview", "casefinding", "descriptive", "villages", "interviews", "spotmap", "study", "lab", "outcome"]
 
     if st.session_state.current_day == 1:
-        labels.append(t("medical_records"))
-        internal.append("medical_records")
+        labels.extend([
+            t("clinic_log_abstraction"),
+            t("medical_records"),
+            t("case_finding_debrief"),
+            t("day1_lab_brief"),
+            t("triangulation_checkpoint"),
+        ])
+        internal.extend([
+            "clinic_log_abstraction",
+            "medical_records",
+            "case_finding_debrief",
+            "day1_lab_brief",
+            "triangulation_checkpoint",
+        ])
     
     if st.session_state.current_view in internal:
         current_idx = internal.index(st.session_state.current_view)
@@ -3365,10 +3496,12 @@ def day_task_list(day: int):
     with col1:
         st.markdown(f"### {t('key_tasks')}")
         if day == 1:
-            st.markdown(f"- {t('review_line_list')}")
-            st.markdown(f"- {t('review_clinic_records')}")
-            st.markdown(f"- {t('describe_cases')}")
-            st.markdown(f"- {t('conduct_interviews')}")
+            st.markdown("- Abstract clinic register into a clean line list")
+            st.markdown("- Build a tiered working case definition")
+            st.markdown("- Conduct case finding and debrief results")
+            st.markdown("- Review case cards and hospital charts")
+            st.markdown("- Complete descriptive epi worksheet")
+            st.markdown("- Review Day 1 lab brief and triangulation checkpoint")
         elif day == 2:
             st.markdown("- Choose a study design")
             st.markdown("- Develop questionnaire")
@@ -3390,14 +3523,12 @@ def day_task_list(day: int):
         st.markdown(f"### {t('key_outputs')}")
         if day == 1:
             # Checkboxes for Day 1 outputs
-            cases_found = st.session_state.clinic_records_reviewed
-            st.checkbox(t('find_additional_cases'), value=cases_found, disabled=True)
-            
-            case_def_done = st.session_state.case_definition_written
-            st.checkbox(t('develop_case_def'), value=case_def_done, disabled=True)
-            
-            hypotheses_done = st.session_state.hypotheses_documented
-            st.checkbox(t('develop_hypotheses'), value=hypotheses_done, disabled=True)
+            st.checkbox("Clinic log line list saved", value=st.session_state.clinic_abstraction_submitted, disabled=True)
+            st.checkbox("Working case definition (tiered)", value=st.session_state.case_definition_written, disabled=True)
+            st.checkbox("Case-finding debrief recorded", value=bool(st.session_state.case_finding_debrief), disabled=True)
+            st.checkbox("Case cards reviewed", value=st.session_state.case_cards_reviewed, disabled=True)
+            st.checkbox("Descriptive worksheet completed", value=bool(st.session_state.day1_worksheet), disabled=True)
+            st.checkbox("Triangulation checkpoint", value=st.session_state.triangulation_completed, disabled=True)
         elif day == 2:
             study_done = st.session_state.decisions.get("study_design") is not None
             st.checkbox("Study protocol", value=study_done, disabled=True)
@@ -3562,28 +3693,119 @@ def view_overview():
             with st.expander("📋 Case Definition Guidelines", expanded=False):
                 template_content = load_scenario_content(scenario_id, "case_definition_template")
                 st.markdown(template_content)
+            template_sections = day1_utils.parse_case_definition_template(template_content)
+            if st.button("Load WHO-style template", key="load_who_template"):
+                st.session_state.case_def_suspected_clinical = template_sections.get("suspected", "")
+                st.session_state.case_def_probable_clinical = template_sections.get("probable", "")
+                st.session_state.case_def_confirmed_clinical = template_sections.get("confirmed", "")
+                st.success("Template loaded into the builder.")
 
-            with st.form("case_definition_form"):
-                st.markdown("**Clinical criteria:**")
-                clinical = st.text_area("What symptoms/signs define a case?", height=80)
+            st.markdown("#### Suspected Case")
+            st.text_area(
+                "Clinical criteria",
+                key="case_def_suspected_clinical",
+                height=80,
+            )
+            st.text_area(
+                "Epi link / exposure criteria",
+                key="case_def_suspected_epi",
+                height=60,
+            )
+            st.text_area(
+                "Lab criteria (if any)",
+                key="case_def_suspected_lab",
+                height=60,
+            )
+            st.text_area(
+                "Time/place restrictions",
+                key="case_def_suspected_time_place",
+                height=60,
+            )
 
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    person = st.text_input("**Person:** Who? (age, characteristics)")
-                with col_b:
-                    place = st.text_input("**Place:** Where?")
+            st.markdown("#### Probable Case")
+            st.text_area(
+                "Clinical criteria",
+                key="case_def_probable_clinical",
+                height=80,
+            )
+            st.text_area(
+                "Epi link / exposure criteria",
+                key="case_def_probable_epi",
+                height=60,
+            )
+            st.text_area(
+                "Lab criteria (if any)",
+                key="case_def_probable_lab",
+                height=60,
+            )
+            st.text_area(
+                "Time/place restrictions",
+                key="case_def_probable_time_place",
+                height=60,
+            )
 
-                time_period = st.text_input("**Time:** When?")
+            st.markdown("#### Confirmed Case")
+            st.text_area(
+                "Clinical criteria",
+                key="case_def_confirmed_clinical",
+                height=80,
+            )
+            st.text_area(
+                "Epi link / exposure criteria",
+                key="case_def_confirmed_epi",
+                height=60,
+            )
+            st.text_area(
+                "Lab criteria (required)",
+                key="case_def_confirmed_lab",
+                height=60,
+            )
+            st.text_area(
+                "Time/place restrictions",
+                key="case_def_confirmed_time_place",
+                height=60,
+            )
 
-                if st.form_submit_button("Save Case Definition"):
-                    if not any([clinical.strip(), person.strip(), place.strip(), time_period.strip()]):
-                        st.error("Please enter at least one case definition element before saving.")
-                    else:
-                        full_def = f"Clinical: {clinical}\nPerson: {person}\nPlace: {place}\nTime: {time_period}"
-                        st.session_state.decisions["case_definition_text"] = full_def
-                        st.session_state.decisions["case_definition"] = {"clinical_AES": True}
-                        st.session_state.case_definition_written = True
-                        st.success("✅ Case definition saved!")
+            current_case_def = {
+                "suspected": {
+                    "clinical": st.session_state.get("case_def_suspected_clinical", ""),
+                    "epi_link": st.session_state.get("case_def_suspected_epi", ""),
+                    "lab": st.session_state.get("case_def_suspected_lab", ""),
+                    "time_place": st.session_state.get("case_def_suspected_time_place", ""),
+                },
+                "probable": {
+                    "clinical": st.session_state.get("case_def_probable_clinical", ""),
+                    "epi_link": st.session_state.get("case_def_probable_epi", ""),
+                    "lab": st.session_state.get("case_def_probable_lab", ""),
+                    "time_place": st.session_state.get("case_def_probable_time_place", ""),
+                },
+                "confirmed": {
+                    "clinical": st.session_state.get("case_def_confirmed_clinical", ""),
+                    "epi_link": st.session_state.get("case_def_confirmed_epi", ""),
+                    "lab": st.session_state.get("case_def_confirmed_lab", ""),
+                    "time_place": st.session_state.get("case_def_confirmed_time_place", ""),
+                },
+            }
+
+            st.info(case_definition_feedback(current_case_def))
+
+            rationale = st.text_area("Revision rationale (optional)", key="case_def_rationale", height=60)
+
+            if st.button("Save Case Definition", type="primary"):
+                if not any(
+                    value.strip()
+                    for tier in current_case_def.values()
+                    for value in tier.values()
+                ):
+                    st.error("Please enter at least one case definition element before saving.")
+                else:
+                    st.session_state.case_definition_builder = current_case_def
+                    st.session_state.decisions["case_definition_tiers"] = current_case_def
+                    st.session_state.decisions["case_definition_text"] = build_case_definition_summary(current_case_def)
+                    st.session_state.decisions["case_definition"] = {"clinical_AES": True}
+                    st.session_state.case_definition_written = True
+                    record_case_definition_version(current_case_def, rationale=rationale.strip())
+                    st.success("✅ Case definition saved!")
 
             if st.session_state.case_definition_written:
                 st.info("✓ Case definition recorded")
@@ -3591,7 +3813,7 @@ def view_overview():
                 st.text_area(
                     "Case definition (saved)",
                     value=st.session_state.decisions.get("case_definition_text", ""),
-                    height=140,
+                    height=160,
                     key="case_definition_saved_display",
                     disabled=True,
                     label_visibility="collapsed",
@@ -3903,6 +4125,12 @@ def view_case_finding():
     
     with tab1:
         st.subheader("Nalu Health Center - Patient Register Review")
+
+        if not st.session_state.clinic_abstraction_submitted:
+            st.info("Start with the Clinic Log Abstraction step to build your clean line list.")
+            if st.button("Go to Clinic Log Abstraction", key="go_to_clinic_abstraction"):
+                st.session_state.current_view = "clinic_log_abstraction"
+                st.rerun()
         
         # Resource display and cost warning
         time_cost = TIME_COSTS["clinic_records_review"]
@@ -4074,6 +4302,95 @@ def view_case_finding():
         if record_choice:
             render_hospital_record(hospital_records[record_choice])
 
+            st.markdown("---")
+            st.markdown("### Chart Abstraction")
+            st.caption("Capture structured clinical details and consider differential diagnoses.")
+
+            review = st.session_state.medical_chart_reviews.get(record_choice, {})
+            col1, col2 = st.columns(2)
+            with col1:
+                onset_date = st.date_input(
+                    "Symptom onset date",
+                    value=review.get("onset_date", date.today()),
+                    key=f"chart_onset_{record_choice}",
+                )
+                fever_duration = st.number_input(
+                    "Fever duration (days)",
+                    min_value=0,
+                    max_value=30,
+                    value=review.get("fever_duration", 0),
+                    key=f"chart_fever_{record_choice}",
+                )
+                rash_features = st.text_input(
+                    "Rash characteristics or syndrome features",
+                    value=review.get("rash_features", ""),
+                    key=f"chart_rash_{record_choice}",
+                )
+            with col2:
+                hydration_resp = st.selectbox(
+                    "Dehydration / respiratory status",
+                    ["Normal", "Mild dehydration", "Severe dehydration", "Respiratory distress"],
+                    index=["Normal", "Mild dehydration", "Severe dehydration", "Respiratory distress"].index(
+                        review.get("hydration_resp", "Normal")
+                    ),
+                    key=f"chart_hydration_{record_choice}",
+                )
+                vitals = st.text_input(
+                    "Key vitals (Temp/HR/BP)",
+                    value=review.get("vitals", ""),
+                    key=f"chart_vitals_{record_choice}",
+                )
+                clinical_course = st.selectbox(
+                    "Clinical course",
+                    ["Improving", "Stable", "Worsening", "Hospitalized", "Died"],
+                    index=["Improving", "Stable", "Worsening", "Hospitalized", "Died"].index(
+                        review.get("clinical_course", "Stable")
+                    ),
+                    key=f"chart_course_{record_choice}",
+                )
+
+            st.markdown("### Differential Diagnosis Prompts")
+            differential_prompts = day1_utils.get_differential_prompts(scenario_type)
+            for item in differential_prompts:
+                st.markdown(f"- **{item['dx']}** — *Support:* {item['supporting']} | *Against:* {item['against']}")
+
+            dx_options = [item["dx"] for item in differential_prompts]
+            leading_dx = st.multiselect(
+                "Select 1–2 leading differentials",
+                options=dx_options,
+                default=review.get("leading_differentials", []),
+                max_selections=2,
+                key=f"chart_dx_{record_choice}",
+            )
+            justification = st.text_area(
+                "Justify your leading differentials using chart fields",
+                value=review.get("justification", ""),
+                key=f"chart_justify_{record_choice}",
+            )
+
+            if st.button("Save Chart Abstraction", type="primary", key=f"save_chart_{record_choice}"):
+                if not leading_dx or not justification.strip():
+                    st.error("Select 1–2 differentials and provide justification.")
+                else:
+                    st.session_state.medical_chart_reviews[record_choice] = {
+                        "onset_date": str(onset_date) if onset_date else "Unknown",
+                        "fever_duration": fever_duration,
+                        "rash_features": rash_features,
+                        "hydration_resp": hydration_resp,
+                        "vitals": vitals,
+                        "clinical_course": clinical_course,
+                        "leading_differentials": leading_dx,
+                        "justification": justification.strip(),
+                    }
+                    st.success("✅ Chart abstraction saved.")
+
+    if st.session_state.clinic_records_reviewed:
+        st.markdown("---")
+        st.markdown("Ready to debrief your case finding?")
+        if st.button("Go to Case-finding Debrief", type="primary"):
+            st.session_state.current_view = "case_finding_debrief"
+            st.rerun()
+
 
 def view_medical_records():
     """Day 1: Medical Records view - The Hub for building case definition and line list variables."""
@@ -4089,67 +4406,54 @@ def view_medical_records():
 
     st.markdown("---")
 
-    # STEP 1: Display 2 "Clipboards" side-by-side
-    st.markdown("### Step 1: Review Initial Cases")
-    st.caption("These are two of the cases reported to the district hospital. Review their clinical information.")
+    # STEP 1: Case card set
+    st.markdown("### Step 1: Case Card Review")
+    st.caption("Review these case cards and label each based on your current case definition tier.")
 
-    col1, col2 = st.columns(2)
+    assets = get_day1_assets()
+    case_cards = assets.get("case_cards", [])
+    labels = ["Select...", "Likely case", "Possible", "Unlikely"]
 
-    with col1:
-        if scenario_type == "lepto":
-            with st.expander("Case 1: Flood Cleanup Worker (Index Case)", expanded=True):
-                st.markdown("**ID:** HOSP-L1")
-                st.markdown("**Age/Sex:** 42 years / Male")
-                st.markdown("**Village:** Northbend")
-                st.markdown("**Clinical Presentation:**")
-                st.markdown("- Fever: Yes (39.4°C)")
-                st.markdown("- Calf myalgia: Yes (severe)")
-                st.markdown("- Conjunctival suffusion: Yes")
-                st.markdown("- Jaundice: Mild")
-                st.markdown("- Acute kidney injury: Creatinine 3.9 mg/dL")
-                st.markdown("- Flood cleanup history: 3 days, barefoot, open cuts")
-                st.markdown("**Status:** Hospitalized")
-        else:
-            with st.expander("Case 1: Index Case (First Reported)", expanded=True):
-                st.markdown("**ID:** HOSP-01")
-                st.markdown("**Age/Sex:** 6 years / Male")
-                st.markdown("**Village:** Nalu")
-                st.markdown("**Clinical Presentation:**")
-                st.markdown("- Fever: Yes (39.5°C)")
-                st.markdown("- Seizures: Yes (multiple episodes)")
-                st.markdown("- Altered consciousness: Yes")
-                st.markdown("- Vomiting: Yes")
-                st.markdown("- Rash: No")
-                st.markdown("**Status:** Hospitalized")
+    if not case_cards:
+        st.info("No case cards available for this scenario.")
+    else:
+        cols = st.columns(3)
+        for idx, card in enumerate(case_cards):
+            with cols[idx % 3]:
+                with st.container(border=True):
+                    st.markdown(f"**{card['case_id']}: {card['title']}**")
+                    st.caption(card.get("clinical", ""))
+                    st.markdown(f"- **Exposure:** {card.get('exposure', 'Not documented')}")
+                    st.markdown(f"- **Lab:** {card.get('lab', 'Not available')}")
+                    st.markdown(f"- **Missing data:** {card.get('missing_data', 'None')}")
 
-    with col2:
-        if scenario_type == "lepto":
-            with st.expander("Case 2: ICU Admission (Severe Leptospirosis)", expanded=True):
-                st.markdown("**ID:** HOSP-L4")
-                st.markdown("**Name:** Luz F.")
-                st.markdown("**Age/Sex:** 38 years / Female")
-                st.markdown("**Village:** Northbend")
-                st.markdown("**Clinical Presentation:**")
-                st.markdown("- Fever: Yes (40.0°C)")
-                st.markdown("- Calf myalgia: Yes")
-                st.markdown("- Conjunctival suffusion: Yes")
-                st.markdown("- Jaundice: Marked")
-                st.markdown("- Acute kidney injury: Oliguria, creatinine 4.6 mg/dL")
-                st.markdown("- Flood cleanup history: 2 days, wading in floodwater")
-                st.markdown("**Status:** ICU (dialysis arranged)")
-        else:
-            with st.expander("Case 2: Panya (Deceased)", expanded=True):
-                st.markdown("**ID:** HOSP-04")
-                st.markdown("**Name:** Panya")
-                st.markdown("**Age/Sex:** 7 years / Female")
-                st.markdown("**Village:** Tamu")
-                st.markdown("**Clinical Presentation:**")
-                st.markdown("- Fever: Yes (40.1°C)")
-                st.markdown("- Seizures: Yes (severe)")
-                st.markdown("- Altered consciousness: Yes (coma)")
-                st.markdown("- Vomiting: Yes")
-                st.markdown("- Rash: No")
-                st.markdown("**Status:** Deceased")
+                    current_label = st.session_state.case_card_labels.get(card["case_id"], "Select...")
+                    selection = st.selectbox(
+                        "Classification",
+                        options=labels,
+                        index=labels.index(current_label),
+                        key=f"case_card_label_{card['case_id']}",
+                    )
+                    st.session_state.case_card_labels[card["case_id"]] = selection
+
+        if len(st.session_state.case_card_labels) == len(case_cards) and all(
+            label != "Select..." for label in st.session_state.case_card_labels.values()
+        ):
+            st.session_state.case_cards_reviewed = True
+            summary_counts = pd.Series(st.session_state.case_card_labels.values()).value_counts()
+            st.success("✅ Case cards reviewed.")
+            st.markdown("**Pattern-recognition summary:**")
+            st.markdown(f"- Likely: {summary_counts.get('Likely case', 0)}")
+            st.markdown(f"- Possible: {summary_counts.get('Possible', 0)}")
+            st.markdown(f"- Unlikely: {summary_counts.get('Unlikely', 0)}")
+
+            likely_tags = []
+            for card in case_cards:
+                if st.session_state.case_card_labels.get(card["case_id"]) == "Likely case":
+                    likely_tags.extend(card.get("tags", []))
+            if likely_tags:
+                top_tags = pd.Series(likely_tags).value_counts().head(3).index.tolist()
+                st.caption(f"Common cues among likely cases: {', '.join(top_tags)}")
 
     st.markdown("---")
 
@@ -4221,6 +4525,230 @@ def view_medical_records():
         st.session_state.current_view = "casefinding"
         st.rerun()
 
+
+def view_clinic_log_abstraction():
+    st.title("Clinic Log Abstraction")
+    st.caption("Day 1: Clean raw clinic log entries into a structured line list.")
+
+    scenario_type = st.session_state.get("current_scenario_type", "je")
+    assets = get_day1_assets()
+    entries = assets.get("clinic_log_entries", [])
+    schema = day1_utils.get_clinic_log_schema(scenario_type)
+
+    with st.expander("📋 Working Case Definition Reference", expanded=False):
+        scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+        template_content = load_scenario_content(scenario_id, "case_definition_template")
+        st.markdown(template_content)
+
+    st.markdown("""
+    **Instructions**
+    - Review each raw clinic entry.
+    - Enter structured values for each field.
+    - Use **\"Unknown\"** when the entry does not provide information (do not leave blank).
+    """)
+
+    if not entries:
+        st.info("No clinic log entries available for this scenario.")
+        return
+
+    st.markdown("### Raw clinic log entries")
+    for entry in entries:
+        with st.container(border=True):
+            st.markdown(f"**{entry['entry_id']}** — {entry['raw_text']}")
+
+    if not st.session_state.clinic_line_list:
+        st.session_state.clinic_line_list = [
+            {field: (entry["entry_id"] if field == "patient_id" else "") for field in schema}
+            for entry in entries
+        ]
+
+    st.markdown("### Clean line list (fill in structured fields)")
+    df = pd.DataFrame(st.session_state.clinic_line_list)
+    df = df.reindex(columns=schema)
+    edited_df = st.data_editor(df, num_rows="fixed", use_container_width=True, key="clinic_line_list_editor")
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        if st.button("Submit Clean Line List", type="primary"):
+            cleaned = edited_df.fillna("").to_dict(orient="records")
+            st.session_state.clinic_line_list = cleaned
+            st.session_state.clinic_abstraction_submitted = True
+
+            blanks = sum(
+                1 for row in cleaned for value in row.values() if str(value).strip() == ""
+            )
+            unknowns = sum(
+                1 for row in cleaned for value in row.values() if str(value).strip().lower() == "unknown"
+            )
+
+            answer_key = {entry["entry_id"]: entry["answer_key"] for entry in entries}
+            total_fields = 0
+            matched_fields = 0
+            for row in cleaned:
+                key = answer_key.get(row.get("patient_id", ""), {})
+                for field in schema:
+                    if field == "notes":
+                        continue
+                    expected = str(key.get(field, "")).strip().lower()
+                    actual = str(row.get(field, "")).strip().lower()
+                    if expected:
+                        total_fields += 1
+                        if actual == expected:
+                            matched_fields += 1
+
+            score = round((matched_fields / total_fields) * 100, 1) if total_fields else 0
+            st.session_state.clinic_abstraction_feedback = {
+                "blank_fields": blanks,
+                "unknown_fields": unknowns,
+                "accuracy_percent": score,
+            }
+            st.success("✅ Line list saved.")
+
+    with col2:
+        csv_buffer = io.StringIO()
+        edited_df.to_csv(csv_buffer, index=False)
+        st.download_button(
+            "Download CSV",
+            data=csv_buffer.getvalue(),
+            file_name="day1_clinic_line_list.csv",
+            mime="text/csv",
+        )
+
+    if st.session_state.clinic_abstraction_submitted:
+        feedback = st.session_state.clinic_abstraction_feedback
+        st.markdown("### Feedback")
+        st.markdown(f"- Blank fields: **{feedback.get('blank_fields', 0)}**")
+        st.markdown(f"- Marked as Unknown: **{feedback.get('unknown_fields', 0)}**")
+        st.markdown(f"- Structured field accuracy (vs key): **{feedback.get('accuracy_percent', 0)}%**")
+        st.warning("Common pitfalls: confusing visit date vs onset date, inferring sex from names, or skipping explicit 'Unknown'.")
+
+        with st.expander("Answer Key (available after submission)", expanded=False):
+            key_rows = []
+            for entry in entries:
+                row = {"entry_id": entry["entry_id"]}
+                row.update(entry.get("answer_key", {}))
+                key_rows.append(row)
+            st.dataframe(pd.DataFrame(key_rows), use_container_width=True)
+
+
+def view_case_finding_debrief():
+    st.title("Case-finding Debrief")
+    st.caption("Review how your case definition performed and decide whether to revise it.")
+
+    assets = get_day1_assets()
+    entries = assets.get("clinic_log_entries", [])
+    if not st.session_state.clinic_line_list:
+        st.info("Complete the clinic log abstraction first.")
+        return
+
+    case_def = st.session_state.decisions.get("case_definition_tiers") or st.session_state.case_definition_builder
+    if not case_def:
+        st.info("Save a working case definition first.")
+        return
+
+    keywords = extract_case_definition_keywords(case_def)
+    if not keywords:
+        st.warning("Your case definition does not include recognizable clinical keywords yet.")
+
+    answer_key = {entry["entry_id"]: entry for entry in entries}
+    matches = []
+    for row in st.session_state.clinic_line_list:
+        patient_id = row.get("patient_id", "")
+        is_match = match_case_definition(row, keywords) if keywords else False
+        truth_case = answer_key.get(patient_id, {}).get("truth_case")
+        matches.append({
+            "patient_id": patient_id,
+            "is_match": is_match,
+            "truth_case": truth_case,
+            "raw_text": answer_key.get(patient_id, {}).get("raw_text", "Unknown entry"),
+        })
+
+    match_count = sum(1 for m in matches if m["is_match"])
+    non_match_count = len(matches) - match_count
+    st.metric("Matches working case definition", match_count)
+    st.metric("Does not match", non_match_count)
+
+    false_positives = [m for m in matches if m["is_match"] and m["truth_case"] is False][:3]
+    false_negatives = [m for m in matches if not m["is_match"] and m["truth_case"] is True][:3]
+
+    st.markdown("### Likely false positives (examples)")
+    fp_options = [f"{m['patient_id']}: {m['raw_text']}" for m in false_positives]
+    fp_selected = st.multiselect("Select any likely false positives", options=fp_options)
+
+    st.markdown("### Likely false negatives (examples)")
+    fn_options = [f"{m['patient_id']}: {m['raw_text']}" for m in false_negatives]
+    fn_selected = st.multiselect("Select any likely false negatives", options=fn_options)
+
+    revise_decision = st.radio("Revise case definition?", options=["No", "Yes"], horizontal=True)
+    rationale = st.text_area("Rationale", height=80)
+
+    if st.button("Save Debrief", type="primary"):
+        st.session_state.case_finding_debrief = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M"),
+            "false_positive_examples": fp_selected,
+            "false_negative_examples": fn_selected,
+            "revise_decision": revise_decision,
+            "rationale": rationale.strip(),
+        }
+        if revise_decision == "Yes" and case_def:
+            record_case_definition_version(case_def, rationale=rationale.strip())
+        st.success("✅ Debrief saved.")
+
+
+def view_day1_lab_brief():
+    st.title("Day 1 Lab Mini-Brief")
+    st.caption("Review preliminary lab findings and note limitations.")
+
+    st.session_state.day1_lab_brief_viewed = True
+
+    assets = get_day1_assets()
+    lab_brief = assets.get("lab_brief", {})
+    st.markdown(lab_brief.get("summary", ""))
+
+    results = lab_brief.get("results", [])
+    if results:
+        st.dataframe(pd.DataFrame(results), use_container_width=True)
+
+    st.markdown("**Limitations**")
+    for item in lab_brief.get("limitations", []):
+        st.markdown(f"- {item}")
+
+    st.markdown("**Next steps**")
+    for item in lab_brief.get("next_steps", []):
+        st.markdown(f"- {item}")
+
+    interpretation = st.text_area("Your interpretation", height=80, key="day1_lab_interpretation")
+    if st.button("Save Lab Brief Notes", type="primary"):
+        st.session_state.day1_lab_brief_viewed = True
+        st.session_state.day1_lab_brief_notes = interpretation.strip()
+        st.success("✅ Lab brief notes saved.")
+
+
+def view_triangulation_checkpoint():
+    st.title("Triangulation Checkpoint")
+    st.caption("Summarize epi, clinical, and lab evidence to define working hypotheses for Day 2.")
+
+    with st.form("triangulation_form"):
+        epi_summary = st.text_area("Epi evidence summary", height=80)
+        clinical_summary = st.text_area("Clinical evidence summary", height=80)
+        lab_summary = st.text_area("Lab evidence summary", height=80)
+        hypothesis_1 = st.text_input("Working hypothesis 1")
+        hypothesis_2 = st.text_input("Working hypothesis 2 (optional)")
+        evidence_support = st.text_area("Evidence supporting hypotheses", height=80)
+        next_actions = st.text_area("High-priority data needs / Day 2 actions (2 items)", height=80)
+
+        if st.form_submit_button("Save Triangulation Checkpoint"):
+            st.session_state.triangulation_checkpoint = {
+                "epi_summary": epi_summary.strip(),
+                "clinical_summary": clinical_summary.strip(),
+                "lab_summary": lab_summary.strip(),
+                "hypothesis_1": hypothesis_1.strip(),
+                "hypothesis_2": hypothesis_2.strip(),
+                "evidence_support": evidence_support.strip(),
+                "next_actions": next_actions.strip(),
+            }
+            st.session_state.triangulation_completed = True
+            st.success("✅ Triangulation checkpoint saved.")
 
 def view_clinic_register_scan():
     """Day 1: Clinic Register Scan - Review logbook and select suspect cases."""
@@ -4463,6 +4991,52 @@ def view_descriptive_epi():
     Use this workspace to characterize the outbreak by **Person**, **Place**, and **Time**.
     You can run analyses here or download the data to analyze on your computer.
     """)
+
+    st.markdown("---")
+    st.markdown("### Day 1 Descriptive Epi Worksheet")
+    worksheet_line_list = pd.DataFrame(st.session_state.clinic_line_list) if st.session_state.clinic_line_list else None
+    if worksheet_line_list is not None and not worksheet_line_list.empty:
+        st.caption("Using cleaned clinic line list from abstraction.")
+        st.dataframe(worksheet_line_list, use_container_width=True)
+    else:
+        st.caption("Using initial line list (overview) because a cleaned clinic line list is not available.")
+
+    with st.expander("Epi curve & map reference", expanded=False):
+        st.plotly_chart(make_epi_curve(truth), use_container_width=True)
+        st.plotly_chart(make_village_map(truth), use_container_width=True)
+
+    with st.form("day1_worksheet_form"):
+        person_obs = st.text_area("Person (age/sex distribution observations)", height=80)
+        place_obs = st.text_area("Place (geographic clustering observations)", height=80)
+        time_obs = st.text_area("Time (onset trends / epi curve observations)", height=80)
+        interpretations = st.text_area("Interpretations (3–5 bullet points)", height=120)
+        next_steps = st.text_area("Next-step actions (1–2 items)", height=80)
+
+        if st.form_submit_button("Save Worksheet"):
+            st.session_state.day1_worksheet = {
+                "person_obs": person_obs.strip(),
+                "place_obs": place_obs.strip(),
+                "time_obs": time_obs.strip(),
+                "interpretations": interpretations.strip(),
+                "next_steps": next_steps.strip(),
+            }
+            st.success("✅ Worksheet saved.")
+
+    if st.session_state.day1_worksheet:
+        worksheet_md = (
+            "# Day 1 Descriptive Epi Worksheet\n\n"
+            f"**Person:**\n{st.session_state.day1_worksheet.get('person_obs', '')}\n\n"
+            f"**Place:**\n{st.session_state.day1_worksheet.get('place_obs', '')}\n\n"
+            f"**Time:**\n{st.session_state.day1_worksheet.get('time_obs', '')}\n\n"
+            f"**Interpretations:**\n{st.session_state.day1_worksheet.get('interpretations', '')}\n\n"
+            f"**Next steps:**\n{st.session_state.day1_worksheet.get('next_steps', '')}\n"
+        )
+        st.download_button(
+            "Download Worksheet (Markdown)",
+            data=worksheet_md,
+            file_name="day1_descriptive_epi_worksheet.md",
+            mime="text/markdown",
+        )
 
     # Show case sources if case finding has been done
     if st.session_state.get('found_cases_added', False):
@@ -8153,6 +8727,14 @@ def main():
         view_interventions_and_outcome()
     elif view == "medical_records":
         view_medical_records()
+    elif view == "clinic_log_abstraction":
+        view_clinic_log_abstraction()
+    elif view == "case_finding_debrief":
+        view_case_finding_debrief()
+    elif view == "day1_lab_brief":
+        view_day1_lab_brief()
+    elif view == "triangulation_checkpoint":
+        view_triangulation_checkpoint()
     elif view == "clinic_register":
         view_clinic_register_scan()
     elif view == "nalu_child_register":
