@@ -7103,14 +7103,39 @@ def view_travel_map():
             *Click on a location below to travel there.*
             """)
 
-    # About Sidero District
-    with st.expander("ℹ️ About Sidero District"):
-        st.markdown("""
-        Sidero District is a rural agricultural region known for extensive rice farming.
-        Recent irrigation projects have expanded the paddy fields closer to residential areas.
-        The population is approximately 15,000, spread across 3 main villages (Nalu, Tamu, Kabwe).
-        Livestock farming (pigs, ducks) is common in backyard settings.
-        """)
+    # About the selected scenario
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    scenario_about_meta = {
+        "aes_sidero_valley": {
+            "title": "Sidero District",
+            "fallback": (
+                "Sidero District is a rural agricultural region known for extensive rice farming. "
+                "Recent irrigation projects have expanded the paddy fields closer to residential areas. "
+                "The population is approximately 15,000, spread across 3 main villages (Nalu, Tamu, Kabwe). "
+                "Livestock farming (pigs, ducks) is common in backyard settings."
+            ),
+        },
+        "lepto_rivergate": {
+            "title": "Rivergate Municipality",
+            "fallback": (
+                "Rivergate Municipality sits in the Kantara River basin of northern Aruvia, "
+                "spanning the town center and four surrounding wards (Northbend, East Terrace, "
+                "Southshore, Highridge). Recent typhoon flooding left standing water and widespread "
+                "cleanup exposure across urban and peri-urban areas. The local economy blends rice and "
+                "corn farming, fishing, small businesses, and a major mining operation, with many households "
+                "keeping pigs and water buffalo."
+            ),
+        },
+    }
+    about_meta = scenario_about_meta.get(scenario_id, {
+        "title": "Outbreak Setting",
+        "fallback": "Scenario overview is not available yet.",
+    })
+    about_content = load_scenario_content(scenario_id, "about")
+    if about_content.startswith("⚠️ Content file not found"):
+        about_content = about_meta["fallback"]
+    with st.expander(f"ℹ️ About {about_meta['title']}"):
+        st.markdown(about_content)
 
     # Render the interactive satellite map for destination selection
     render_interactive_map()
