@@ -133,8 +133,8 @@ In `app.py`, locate the scenario selector (around line 7368) and add:
 
 ```python
 scenario_options = [
-    ("aes_sidero_valley", "🦟 Japanese Encephalitis - Sidero Valley"),
-    ("lepto_rivergate", "🌊 Leptospirosis - Rivergate District, Aruvia"),
+    ("aes_sidero_valley", "🦟 Shadows Over Sidero Valley"),
+    ("lepto_rivergate", "🌊 Rivergate After the Storm"),
     ("new_scenario_id", "🔬 New Scenario Name - Location"),
 ]
 ```

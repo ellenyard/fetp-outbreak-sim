@@ -7977,8 +7977,8 @@ def main():
         st.title("📋 Scenario Selection")
 
         scenario_options = [
-            ("aes_sidero_valley", "🦟 Japanese Encephalitis - Sidero Valley"),
-            ("lepto_rivergate", "🌊 Leptospirosis - Rivergate District, Aruvia")
+            ("aes_sidero_valley", "🦟 Shadows Over Sidero Valley"),
+            ("lepto_rivergate", "🌊 Rivergate After the Storm")
         ]
 
         # Find current selection index
