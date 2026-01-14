@@ -838,7 +838,7 @@ SCENARIO_INITIAL_NPCS = {
 AES_AREA_METADATA = {
     "Admin Office": {
         "image_exterior": "assets/Hospital/hospital_exterior.png",
-        "description": "The hospital ward and administrative office where AES patients are treated. Dr. Tran oversees triage and patient charts. Deep-dive clinical data is available here.",
+        "description": "The hospital ward and administrative office where AES patients are treated. {contact_name} oversees triage and patient charts. Deep-dive clinical data is available here.",
         "icon": "🏥",
     },
     "Laboratory": {
@@ -848,7 +848,7 @@ AES_AREA_METADATA = {
     },
     "District Hospital": {
         "image_exterior": "assets/Hospital/hospital_exterior.png",
-        "description": "The district hospital where AES patients are being treated. Contains the administrative office, patient ward, and laboratory facilities. Dr. Tran oversees operations.",
+        "description": "The district hospital where AES patients are being treated. Contains the administrative office, patient ward, and laboratory facilities. {contact_name} oversees operations.",
         "icon": "🏥",
     },
     "Nalu Village": {
@@ -3632,8 +3632,11 @@ def view_hospital_triage():
     st.markdown("## District Hospital Triage")
 
     # Intro Text
-    st.info("Dr. Tran: 'Here are the patients admitted in the last 48 hours. Please review them. "
-            "Mark the ones that fit your Case Definition to add them to your Line List.'")
+    contact_name = get_hospital_records_contact_name()
+    st.info(
+        f"{contact_name}: 'Here are the patients admitted in the last 48 hours. Please review them. "
+        "Mark the ones that fit your Case Definition to add them to your Line List.'"
+    )
 
     # Initialize State
     if 'line_list' not in st.session_state:
@@ -6504,9 +6507,10 @@ def view_travel_map():
     # Day briefing
     if st.session_state.current_day == 1:
         with st.expander("Day 1 Briefing - Situation Assessment", expanded=True):
-            st.markdown("""
+            contact_name = get_hospital_records_contact_name()
+            st.markdown(f"""
             **Your tasks today:**
-            - Visit the **District Hospital** to meet Dr. Tran and review cases
+            - Visit the **District Hospital** to meet {contact_name} and review cases
             - Travel to **Nalu Village** to interview residents and review clinic records
             - Document your initial hypotheses about the outbreak source
 
@@ -6849,7 +6853,7 @@ def view_area_visual(area: str):
         """, unsafe_allow_html=True)
 
     # Area description
-    description = area_meta.get("description", "")
+    description = format_area_description(area_meta.get("description", ""))
     if description:
         st.markdown(f"*{description}*")
 
@@ -6925,8 +6929,9 @@ def view_area_map(area: str):
         with less standing water.
         """)
     elif area == "District Hospital":
-        st.markdown("""
-        **District Hospital** is where the AES cases have been admitted. Dr. Tran oversees
+        contact_name = get_hospital_records_contact_name()
+        st.markdown(f"""
+        **District Hospital** is where the AES cases have been admitted. {contact_name} oversees
         patient care and the laboratory can process some samples.
         """)
     elif area == "District Office":
