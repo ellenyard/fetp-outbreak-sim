@@ -1,0 +1,110 @@
+{
+  "scenario_id": "lepto_rivergate",
+  "scenario_type": "lepto",
+  "display_name": "🌊 Rivergate After the Storm",
+  "disease_name": "Leptospirosis",
+  "simulation_start_date": "2024-10-14",
+  "case_definition_defaults": {
+    "onset_start": "2024-10-12",
+    "onset_end": "2024-10-22",
+    "villages": ["V1", "V2", "V3", "V4"]
+  },
+  "symptoms": [
+    {"key": "fever", "label": "Fever"},
+    {"key": "myalgia", "label": "Calf myalgia"},
+    {"key": "conjunctival_suffusion", "label": "Conjunctival suffusion"},
+    {"key": "jaundice", "label": "Jaundice"},
+    {"key": "renal_failure", "label": "Renal failure"}
+  ],
+  "symptom_field_map": {
+    "fever": {"individuals": "symptoms_fever", "clinic": "fever_y_n"},
+    "myalgia": {"individuals": "symptoms_myalgia", "clinic": "myalgia_y_n"},
+    "conjunctival_suffusion": {"individuals": "symptoms_conjunctival_suffusion", "clinic": "conjunctival_suffusion_y_n"},
+    "jaundice": {"individuals": "symptoms_jaundice", "clinic": "jaundice_y_n"},
+    "renal_failure": {"individuals": "symptoms_renal_failure", "clinic": "notes"}
+  },
+  "epi_link_fields": [
+    {"key": "exposure_cleanup_work", "label": "Flood cleanup work"},
+    {"key": "exposure_barefoot_water", "label": "Barefoot floodwater exposure"},
+    {"key": "exposure_skin_wounds", "label": "Skin wounds"},
+    {"key": "exposure_animal_contact", "label": "Animal contact"},
+    {"key": "exposure_rat_contact", "label": "Rat contact"}
+  ],
+  "lab_tests": [
+    {
+      "code": "LEPTO_ELISA_IGM",
+      "label_generic": "Leptospira IgM ELISA",
+      "label_confirmed": "Leptospira IgM ELISA",
+      "sample_types": ["blood"]
+    },
+    {
+      "code": "LEPTO_PCR_BLOOD",
+      "label_generic": "Leptospira PCR (blood)",
+      "label_confirmed": "Leptospira PCR (blood)",
+      "sample_types": ["blood"]
+    },
+    {
+      "code": "LEPTO_PCR_URINE",
+      "label_generic": "Leptospira PCR (urine)",
+      "label_confirmed": "Leptospira PCR (urine)",
+      "sample_types": ["urine"]
+    },
+    {
+      "code": "LEPTO_MAT",
+      "label_generic": "Leptospira MAT",
+      "label_confirmed": "Leptospira MAT",
+      "sample_types": ["blood"]
+    },
+    {
+      "code": "LEPTO_ENV_WATER_PCR",
+      "label_generic": "Leptospira PCR (water)",
+      "label_confirmed": "Leptospira PCR (water)",
+      "sample_types": ["environmental_water"]
+    },
+    {
+      "code": "RODENT_PCR",
+      "label_generic": "Rodent kidney PCR",
+      "label_confirmed": "Rodent kidney PCR",
+      "sample_types": ["rodent_kidney"]
+    },
+    {
+      "code": "MALARIA_RDT",
+      "label_generic": "Malaria RDT",
+      "label_confirmed": "Malaria RDT",
+      "sample_types": ["blood"]
+    },
+    {
+      "code": "DENGUE_NS1",
+      "label_generic": "Dengue NS1",
+      "label_confirmed": "Dengue NS1",
+      "sample_types": ["blood"]
+    }
+  ],
+  "confirmatory_tests": ["LEPTO_PCR_BLOOD", "LEPTO_PCR_URINE", "LEPTO_MAT"],
+  "supportive_tests": ["LEPTO_ELISA_IGM", "LEPTO_ENV_WATER_PCR", "RODENT_PCR"],
+  "exclusion_conditions": [
+    "Dengue fever",
+    "Malaria",
+    "Viral hepatitis"
+  ],
+  "exclusion_tests": [
+    {"code": "MALARIA_RDT", "condition": "Malaria"},
+    {"code": "DENGUE_NS1", "condition": "Dengue fever"}
+  ],
+  "study_design": {
+    "recommended": "cohort",
+    "label": "Retrospective cohort",
+    "sampling_frame_prompt": "Cleanup workers and residents in flooded wards.",
+    "bias_prompts": [
+      "Survivor bias among severe cases",
+      "Exposure misclassification from recall",
+      "Healthy worker effect in cleanup crews"
+    ]
+  },
+  "one_health_contacts": ["vet_amina", "mr_osei"],
+  "one_health_samples": ["environmental_water", "rodent_kidney", "animal_serum"],
+  "scoring": {
+    "diagnosis_synonyms": ["leptospirosis", "lepto"],
+    "avoid_interventions": ["vector_control", "mosquito_spraying"]
+  }
+}

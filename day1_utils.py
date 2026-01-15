@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import numpy as np
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List
@@ -642,6 +643,61 @@ def load_day1_assets(scenario_id: str) -> Dict[str, Any]:
     return _deep_merge(defaults, data)
 
 
+def get_case_finding_sources(assets: Dict[str, Any]) -> List[Dict[str, Any]]:
+    sources = assets.get("case_finding_sources")
+    if sources:
+        return sources
+    clinic_entries = assets.get("clinic_log_entries", [])
+    return [
+        {
+            "source_id": "clinic_log",
+            "label": "Clinic register",
+            "entries": clinic_entries,
+            "detection_probability": 0.8,
+            "reporting_delay_days": 0,
+        }
+    ]
+
+
+def run_case_finding(
+    sources: List[Dict[str, Any]],
+    case_def: Dict[str, Any],
+    scenario_config: Dict[str, Any],
+    current_day: int,
+    random_seed: int = 42,
+) -> Dict[str, Any]:
+    """Return definition-driven case finding results with under-ascertainment and delays."""
+    rng = np.random.default_rng(random_seed)
+    results = {"sources": []}
+    for source in sources:
+        detected_entries = []
+        detection_prob = float(source.get("detection_probability", 0.8))
+        delay_days = int(source.get("reporting_delay_days", 0) or 0)
+        if current_day <= delay_days:
+            results["sources"].append({
+                "source_id": source.get("source_id"),
+                "label": source.get("label"),
+                "matches": [],
+                "pending": True,
+            })
+            continue
+
+        for entry in source.get("entries", []):
+            row = entry.get("answer_key", entry)
+            if rng.random() > detection_prob:
+                continue
+            classification = match_case_definition_structured(row, case_def, scenario_config)
+            if classification in {"suspected", "probable", "confirmed"}:
+                detected_entries.append({**row, "classification": classification})
+        results["sources"].append({
+            "source_id": source.get("source_id"),
+            "label": source.get("label"),
+            "matches": detected_entries,
+            "pending": False,
+        })
+    return results
+
+
 def get_clinic_log_schema(scenario_type: str) -> List[str]:
     if scenario_type == "lepto":
         return [
@@ -671,6 +727,50 @@ def get_clinic_log_schema(scenario_type: str) -> List[str]:
         "seizure_y_n",
         "notes",
     ]
+
+
+def _normalize_yes_no(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"yes", "y", "true", "1"}:
+        return True
+    if text in {"no", "n", "false", "0"}:
+        return False
+    if text in {"unknown", "unsure", "na", "n/a", ""}:
+        return None
+    return None
+
+
+def _symptom_value_from_row(row: Dict[str, Any], symptom_key: str, scenario_config: Dict[str, Any]) -> Any:
+    mapping = scenario_config.get("symptom_field_map", {}).get(symptom_key, {})
+    field = mapping.get("clinic")
+    if field and field in row:
+        if field == "notes":
+            return symptom_key.replace("_", " ") in str(row.get(field, "")).lower()
+        return _normalize_yes_no(row.get(field))
+    return None
+
+
+def match_case_definition_structured(row: Dict[str, Any], case_def: Dict[str, Any], scenario_config: Dict[str, Any]) -> str:
+    """Classify a clinic log row using structured case definition criteria."""
+    if not case_def:
+        return "not_a_case"
+    tiers = case_def.get("tiers", {})
+    for tier_name in ["confirmed", "probable", "suspected"]:
+        tier = tiers.get(tier_name, {})
+        required_any = tier.get("required_any", []) or []
+        optional = tier.get("optional_symptoms", []) or []
+        min_optional = int(tier.get("min_optional", 0) or 0)
+        any_ok = True
+        if required_any:
+            any_ok = any(_symptom_value_from_row(row, s, scenario_config) is True for s in required_any)
+        optional_true = sum(_symptom_value_from_row(row, s, scenario_config) is True for s in optional)
+        if any_ok and optional_true >= min_optional:
+            return tier_name
+    return "not_a_case"
 
 
 def parse_case_definition_template(md_text: str) -> Dict[str, str]:

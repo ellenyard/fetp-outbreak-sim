@@ -9,40 +9,14 @@
     "admission_time": "08:40",
     "brought_by": "Wife (Elena Vale)",
     "chief_complaint": "High fever, severe calf pain, red eyes",
-    "history_present_illness": """
-Patient was well until 4 days ago when he developed sudden high fever and chills. 
-Reports severe myalgia, especially calves and lower back, making it difficult to walk. 
-Eyes noted to be markedly red with tearing. Nausea and dark urine began yesterday. 
-
-History of flood cleanup work after Typhoon Halcyon (Oct 10-12). Patient worked barefoot in 
-contaminated floodwater with multiple foot cuts from debris. No mosquito nets or PPE used.
-""",
+    "history_present_illness": "\nPatient was well until 4 days ago when he developed sudden high fever and chills. \nReports severe myalgia, especially calves and lower back, making it difficult to walk. \nEyes noted to be markedly red with tearing. Nausea and dark urine began yesterday. \n\nHistory of flood cleanup work after Typhoon Halcyon (Oct 10-12). Patient worked barefoot in \ncontaminated floodwater with multiple foot cuts from debris. No mosquito nets or PPE used.\n",
     "past_medical_history": "No known chronic illnesses. No diabetes or hypertension. No known drug allergies.",
-    "physical_exam": """
-Temp 39.6C, HR 118, BP 100/60. Ill-appearing, scleral icterus present.
-Conjunctival suffusion noted. Marked calf tenderness bilaterally. No rash.
-""",
-    "investigations": """
-- CBC: WBC 14,200 (neutrophils 80%)
-- Creatinine 3.9 mg/dL, BUN 58
-- AST/ALT mildly elevated, total bilirubin 3.2 mg/dL
-- Urinalysis: protein 2+, blood 1+
-- Dengue RDT: Negative
-""",
+    "physical_exam": "\nTemp 39.6C, HR 118, BP 100/60. Ill-appearing, scleral icterus present.\nConjunctival suffusion noted. Marked calf tenderness bilaterally. No rash.\n",
+    "investigations": "\n- CBC: WBC 14,200 (neutrophils 80%)\n- Creatinine 3.9 mg/dL, BUN 58\n- AST/ALT mildly elevated, total bilirubin 3.2 mg/dL\n- Urinalysis: protein 2+, blood 1+\n- Dengue RDT: Negative\n",
     "initial_diagnosis": "Suspected leptospirosis with acute kidney injury",
     "differential": "Leptospirosis vs severe dengue vs bacterial sepsis",
-    "treatment": """
-- IV fluids with close urine output monitoring
-- IV ceftriaxone started empirically
-- Paracetamol for fever
-- Strict input/output charting
-""",
-    "progress_notes": """
-Day 2: Persistent fever, oliguria noted. Creatinine rising.
-Day 3: Developed jaundice and shortness of breath; transferred to ICU.
-Day 4: Dialysis arranged; hemodynamics stabilized.
-Day 6: Fever improving, urine output better. Planned to continue antibiotics 7 days.
-""",
+    "treatment": "\n- IV fluids with close urine output monitoring\n- IV ceftriaxone started empirically\n- Paracetamol for fever\n- Strict input/output charting\n",
+    "progress_notes": "\nDay 2: Persistent fever, oliguria noted. Creatinine rising.\nDay 3: Developed jaundice and shortness of breath; transferred to ICU.\nDay 4: Dialysis arranged; hemodynamics stabilized.\nDay 6: Fever improving, urine output better. Planned to continue antibiotics 7 days.\n",
     "discharge_diagnosis": "Leptospirosis with AKI and jaundice",
     "outcome": "Survived after ICU stay"
   },
@@ -56,40 +30,14 @@ Day 6: Fever improving, urine output better. Planned to continue antibiotics 7 d
     "admission_time": "21:05",
     "brought_by": "Husband (Mario Fernandez)",
     "chief_complaint": "Fever, jaundice, decreased urine",
-    "history_present_illness": """
-Patient developed high fever 3 days ago with severe myalgia and headache. 
-Two days later, noted red eyes and dark urine. Today she became jaundiced and 
-reported decreased urine output. 
-
-Participated in flood cleanup for 2 days after typhoon; waded waist-deep in 
-contaminated water with open hand and foot wounds.
-""",
+    "history_present_illness": "\nPatient developed high fever 3 days ago with severe myalgia and headache. \nTwo days later, noted red eyes and dark urine. Today she became jaundiced and \nreported decreased urine output. \n\nParticipated in flood cleanup for 2 days after typhoon; waded waist-deep in \ncontaminated water with open hand and foot wounds.\n",
     "past_medical_history": "No known chronic illness. Two prior uncomplicated pregnancies.",
-    "physical_exam": """
-Temp 40.0C, HR 124, BP 90/55. Marked jaundice and conjunctival suffusion.
-Diffuse muscle tenderness, especially calves. Mild hepatomegaly.
-""",
-    "investigations": """
-- CBC: WBC 15,800
-- Creatinine 4.6 mg/dL, BUN 76
-- Total bilirubin 5.1 mg/dL
-- Platelets 130,000
-- Dengue NS1: Negative
-""",
+    "physical_exam": "\nTemp 40.0C, HR 124, BP 90/55. Marked jaundice and conjunctival suffusion.\nDiffuse muscle tenderness, especially calves. Mild hepatomegaly.\n",
+    "investigations": "\n- CBC: WBC 15,800\n- Creatinine 4.6 mg/dL, BUN 76\n- Total bilirubin 5.1 mg/dL\n- Platelets 130,000\n- Dengue NS1: Negative\n",
     "initial_diagnosis": "Severe leptospirosis (Weil's disease)",
     "differential": "Leptospirosis vs viral hepatitis vs severe dengue",
-    "treatment": """
-- ICU admission
-- IV ceftriaxone
-- Aggressive IV fluids with electrolyte monitoring
-- Nephrology consult for dialysis
-""",
-    "progress_notes": """
-Day 2: Oliguria persists, started hemodialysis.
-Day 3: Fever trending down, jaundice persistent.
-Day 5: Urine output improving, creatinine down to 2.8 mg/dL.
-Day 7: Transferred out of ICU to ward.
-""",
+    "treatment": "\n- ICU admission\n- IV ceftriaxone\n- Aggressive IV fluids with electrolyte monitoring\n- Nephrology consult for dialysis\n",
+    "progress_notes": "\nDay 2: Oliguria persists, started hemodialysis.\nDay 3: Fever trending down, jaundice persistent.\nDay 5: Urine output improving, creatinine down to 2.8 mg/dL.\nDay 7: Transferred out of ICU to ward.\n",
     "discharge_diagnosis": "Severe leptospirosis with AKI",
     "outcome": "Recovering; discharged with follow-up"
   }

@@ -2,14 +2,14 @@
   "clinic_log_entries": [
     {
       "entry_id": "CL-01",
-      "raw_text": "08/14 09:00 Northbend RHU - 32y M, fever 39C, calf pain, red eyes after flood cleanup. Onset 8/12.",
+      "raw_text": "10/14 09:00 Northbend RHU - 32y M, fever 39C, calf pain, red eyes after flood cleanup. Onset 10/12.",
       "answer_key": {
         "patient_id": "CL-01",
-        "visit_date": "2025-08-14",
+        "visit_date": "2024-10-14",
         "age": "32",
         "sex": "M",
         "village": "Northbend",
-        "symptom_onset_date": "2025-08-12",
+        "symptom_onset_date": "2024-10-12",
         "fever_y_n": "Yes",
         "myalgia_y_n": "Yes",
         "conjunctival_suffusion_y_n": "Yes",
@@ -20,10 +20,10 @@
     },
     {
       "entry_id": "CL-02",
-      "raw_text": "08/14 10:30 Southbank - 24y F, fever and cough, no myalgia, no red eyes.",
+      "raw_text": "10/14 10:30 Southbank - 24y F, fever and cough, no myalgia, no red eyes.",
       "answer_key": {
         "patient_id": "CL-02",
-        "visit_date": "2025-08-14",
+        "visit_date": "2024-10-14",
         "age": "24",
         "sex": "F",
         "village": "Southbank",
@@ -38,14 +38,14 @@
     },
     {
       "entry_id": "CL-03",
-      "raw_text": "08/15 08:15 Northbend - 41y F, fever, severe calf pain, yellow eyes. Onset 8/13.",
+      "raw_text": "10/14 10:15 Northbend - 41y F, fever, severe calf pain, yellow eyes. Onset 10/12.",
       "answer_key": {
         "patient_id": "CL-03",
-        "visit_date": "2025-08-15",
+        "visit_date": "2024-10-14",
         "age": "41",
         "sex": "F",
         "village": "Northbend",
-        "symptom_onset_date": "2025-08-13",
+        "symptom_onset_date": "2024-10-12",
         "fever_y_n": "Yes",
         "myalgia_y_n": "Yes",
         "conjunctival_suffusion_y_n": "Unknown",
@@ -56,10 +56,10 @@
     },
     {
       "entry_id": "CL-04",
-      "raw_text": "08/15 11:05 East Pier - 19y M, mild fever, no myalgia, wading in flood water.",
+      "raw_text": "10/15 11:05 East Pier - 19y M, mild fever, no myalgia, wading in flood water.",
       "answer_key": {
         "patient_id": "CL-04",
-        "visit_date": "2025-08-15",
+        "visit_date": "2024-10-15",
         "age": "19",
         "sex": "M",
         "village": "East Pier",
@@ -74,10 +74,10 @@
     },
     {
       "entry_id": "CL-05",
-      "raw_text": "08/15 14:20 Northbend - 55y M, fever, severe myalgia, conjunctival suffusion, oliguria.",
+      "raw_text": "10/15 14:20 Northbend - 55y M, fever, severe myalgia, conjunctival suffusion, oliguria.",
       "answer_key": {
         "patient_id": "CL-05",
-        "visit_date": "2025-08-15",
+        "visit_date": "2024-10-15",
         "age": "55",
         "sex": "M",
         "village": "Northbend",
@@ -92,10 +92,10 @@
     },
     {
       "entry_id": "CL-06",
-      "raw_text": "08/16 09:10 Southbank - 7y F, fever and diarrhea after street food.",
+      "raw_text": "10/15 09:10 Southbank - 7y F, fever and diarrhea after street food.",
       "answer_key": {
         "patient_id": "CL-06",
-        "visit_date": "2025-08-16",
+        "visit_date": "2024-10-15",
         "age": "7",
         "sex": "F",
         "village": "Southbank",
@@ -110,10 +110,10 @@
     },
     {
       "entry_id": "CL-07",
-      "raw_text": "08/16 13:40 Northbend - 28y F, fever, headache, calf pain, red eyes.",
+      "raw_text": "10/16 13:40 Northbend - 28y F, fever, headache, calf pain, red eyes.",
       "answer_key": {
         "patient_id": "CL-07",
-        "visit_date": "2025-08-16",
+        "visit_date": "2024-10-16",
         "age": "28",
         "sex": "F",
         "village": "Northbend",
@@ -128,10 +128,10 @@
     },
     {
       "entry_id": "CL-08",
-      "raw_text": "08/16 16:25 East Pier - 30y M, fever, cough, no flood exposure mentioned.",
+      "raw_text": "10/16 16:25 East Pier - 30y M, fever, cough, no flood exposure mentioned.",
       "answer_key": {
         "patient_id": "CL-08",
-        "visit_date": "2025-08-16",
+        "visit_date": "2024-10-16",
         "age": "30",
         "sex": "M",
         "village": "East Pier",
@@ -146,10 +146,10 @@
     },
     {
       "entry_id": "CL-09",
-      "raw_text": "08/17 08:30 Northbend - 44y M, fever, jaundice, calf pain, cleaned barns after flood.",
+      "raw_text": "10/16 10:30 Northbend - 44y M, fever, jaundice, calf pain, cleaned barns after flood.",
       "answer_key": {
         "patient_id": "CL-09",
-        "visit_date": "2025-08-17",
+        "visit_date": "2024-10-16",
         "age": "44",
         "sex": "M",
         "village": "Northbend",
@@ -164,10 +164,10 @@
     },
     {
       "entry_id": "CL-10",
-      "raw_text": "08/17 11:10 Southbank - 60y F, fatigue only, no fever.",
+      "raw_text": "10/17 11:10 Southbank - 60y F, fatigue only, no fever.",
       "answer_key": {
         "patient_id": "CL-10",
-        "visit_date": "2025-08-17",
+        "visit_date": "2024-10-17",
         "age": "60",
         "sex": "F",
         "village": "Southbank",
@@ -182,14 +182,14 @@
     },
     {
       "entry_id": "CL-11",
-      "raw_text": "08/17 15:00 Northbend - 35y M, fever 38.7, red eyes, muscle aches. Onset 8/15.",
+      "raw_text": "10/17 15:00 Northbend - 35y M, fever 38.7, red eyes, muscle aches. Onset 10/15.",
       "answer_key": {
         "patient_id": "CL-11",
-        "visit_date": "2025-08-17",
+        "visit_date": "2024-10-17",
         "age": "35",
         "sex": "M",
         "village": "Northbend",
-        "symptom_onset_date": "2025-08-15",
+        "symptom_onset_date": "2024-10-15",
         "fever_y_n": "Yes",
         "myalgia_y_n": "Yes",
         "conjunctival_suffusion_y_n": "Yes",
@@ -200,10 +200,10 @@
     },
     {
       "entry_id": "CL-12",
-      "raw_text": "08/18 09:30 East Pier - 22y F, fever and headache, no red eyes, no myalgia.",
+      "raw_text": "10/17 09:30 East Pier - 22y F, fever and headache, no red eyes, no myalgia.",
       "answer_key": {
         "patient_id": "CL-12",
-        "visit_date": "2025-08-18",
+        "visit_date": "2024-10-17",
         "age": "22",
         "sex": "F",
         "village": "East Pier",
@@ -225,7 +225,11 @@
       "exposure": "Flood cleanup, barefoot.",
       "lab": "Creatinine elevated.",
       "missing_data": "MAT pending.",
-      "tags": ["fever", "jaundice", "renal"]
+      "tags": [
+        "fever",
+        "jaundice",
+        "renal"
+      ]
     },
     {
       "case_id": "CARD-02",
@@ -234,7 +238,9 @@
       "exposure": "No flood exposure reported.",
       "lab": "No labs.",
       "missing_data": "No exposure history.",
-      "tags": ["fever"]
+      "tags": [
+        "fever"
+      ]
     },
     {
       "case_id": "CARD-03",
@@ -243,7 +249,10 @@
       "exposure": "Waded in flood water 1 week ago.",
       "lab": "IgM pending.",
       "missing_data": "No jaundice noted.",
-      "tags": ["fever", "myalgia"]
+      "tags": [
+        "fever",
+        "myalgia"
+      ]
     },
     {
       "case_id": "CARD-04",
@@ -252,7 +261,9 @@
       "exposure": "No animal exposure.",
       "lab": "No labs.",
       "missing_data": "No flood exposure history.",
-      "tags": ["respiratory"]
+      "tags": [
+        "respiratory"
+      ]
     },
     {
       "case_id": "CARD-05",
@@ -261,7 +272,10 @@
       "exposure": "Sewer worker after flood.",
       "lab": "CBC only.",
       "missing_data": "No myalgia recorded.",
-      "tags": ["fever", "exposure"]
+      "tags": [
+        "fever",
+        "exposure"
+      ]
     },
     {
       "case_id": "CARD-06",
@@ -270,17 +284,41 @@
       "exposure": "Barn cleanup after flood.",
       "lab": "Platelets low.",
       "missing_data": "MAT pending.",
-      "tags": ["fever", "hemorrhage", "jaundice"]
+      "tags": [
+        "fever",
+        "hemorrhage",
+        "jaundice"
+      ]
     }
   ],
   "lab_brief": {
     "summary": "Preliminary testing returned IgM ELISA results on a small subset of samples.",
     "results": [
-      {"sample_id": "LAB-01", "test": "Leptospira IgM ELISA", "result": "Positive"},
-      {"sample_id": "LAB-02", "test": "Leptospira IgM ELISA", "result": "Negative"},
-      {"sample_id": "LAB-03", "test": "MAT", "result": "Pending"},
-      {"sample_id": "LAB-04", "test": "Dengue NS1", "result": "Negative"},
-      {"sample_id": "LAB-05", "test": "Malaria RDT", "result": "Negative"}
+      {
+        "sample_id": "LAB-01",
+        "test": "Leptospira IgM ELISA",
+        "result": "Positive"
+      },
+      {
+        "sample_id": "LAB-02",
+        "test": "Leptospira IgM ELISA",
+        "result": "Negative"
+      },
+      {
+        "sample_id": "LAB-03",
+        "test": "MAT",
+        "result": "Pending"
+      },
+      {
+        "sample_id": "LAB-04",
+        "test": "Dengue NS1",
+        "result": "Negative"
+      },
+      {
+        "sample_id": "LAB-05",
+        "test": "Malaria RDT",
+        "result": "Negative"
+      }
     ],
     "limitations": [
       "IgM may be negative early in infection.",
@@ -292,5 +330,65 @@
       "Send PCR on blood/urine for early cases.",
       "Continue differential testing for dengue/malaria."
     ]
-  }
+  },
+  "case_finding_sources": [
+    {
+      "source_id": "hospital_ward",
+      "label": "District hospital ward log",
+      "detection_probability": 0.9,
+      "reporting_delay_days": 1,
+      "entries": [
+        {
+          "patient_id": "HW-01",
+          "visit_date": "2024-10-16",
+          "age": "46",
+          "sex": "M",
+          "village": "Northbend",
+          "symptom_onset_date": "2024-10-14",
+          "fever_y_n": "Yes",
+          "myalgia_y_n": "Yes",
+          "conjunctival_suffusion_y_n": "Yes",
+          "jaundice_y_n": "No",
+          "notes": "Severe calf pain.",
+          "truth_case": true
+        },
+        {
+          "patient_id": "HW-02",
+          "visit_date": "2024-10-16",
+          "age": "29",
+          "sex": "F",
+          "village": "Southbank",
+          "symptom_onset_date": "Unknown",
+          "fever_y_n": "Yes",
+          "myalgia_y_n": "No",
+          "conjunctival_suffusion_y_n": "No",
+          "jaundice_y_n": "No",
+          "notes": "Respiratory symptoms.",
+          "truth_case": false
+        }
+      ]
+    },
+    {
+      "source_id": "community_search",
+      "label": "CHW community search",
+      "detection_probability": 0.6,
+      "reporting_delay_days": 2,
+      "entries": [
+        {
+          "patient_id": "CHW-01",
+          "visit_date": "2024-10-17",
+          "age": "34",
+          "sex": "M",
+          "village": "East Pier",
+          "symptom_onset_date": "2024-10-15",
+          "fever_y_n": "Yes",
+          "myalgia_y_n": "Yes",
+          "conjunctival_suffusion_y_n": "Unknown",
+          "jaundice_y_n": "No",
+          "notes": "Cleanup crew, chills.",
+          "truth_case": true
+        }
+      ]
+    }
+  ]
 }

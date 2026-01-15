@@ -89,37 +89,27 @@ def test_check_case_definition():
     print("✓ Valid: Clinical/Person/Place/Time criteria accepted")
     print(f"  Message: {result['message']}")
 
-    # Invalid criteria (includes pigs)
-    invalid_criteria_pigs = {
+    # Invalid criteria (missing time/place boundaries)
+    invalid_criteria_missing_time = {
         'symptoms': 'fever',
         'exposure': 'contact with pigs'
     }
 
-    result = outbreak_logic.check_case_definition(invalid_criteria_pigs)
-    assert result['valid'] == False, "Should reject pig exposure criteria"
-    print("\n✓ Invalid: Rejected criteria with 'pigs'")
+    result = outbreak_logic.check_case_definition(invalid_criteria_missing_time)
+    assert result['valid'] == False, "Should reject missing time/place boundaries"
+    print("\n✓ Invalid: Rejected criteria missing time/place")
     print(f"  Message: {result['message']}")
 
-    # Invalid criteria (includes mosquitoes)
-    invalid_criteria_mosquitoes = {
-        'symptoms': 'fever',
-        'risk_factor': 'mosquito exposure'
+    # Invalid criteria (missing clinical criteria)
+    invalid_criteria_missing_clinical = {
+        'village': 'Nalu',
+        'onset_date': 'June 2025'
     }
 
-    result = outbreak_logic.check_case_definition(invalid_criteria_mosquitoes)
-    assert result['valid'] == False, "Should reject mosquito exposure criteria"
-    print("\n✓ Invalid: Rejected criteria with 'mosquitoes'")
+    result = outbreak_logic.check_case_definition(invalid_criteria_missing_clinical)
+    assert result['valid'] == False, "Should reject missing clinical criteria"
+    print("\n✓ Invalid: Rejected criteria missing clinical elements")
     print(f"  Message: {result['message']}")
-
-    # Invalid criteria (includes water)
-    invalid_criteria_water = {
-        'symptoms': 'fever',
-        'exposure': 'rice paddy water'
-    }
-
-    result = outbreak_logic.check_case_definition(invalid_criteria_water)
-    assert result['valid'] == False, "Should reject water exposure criteria"
-    print("\n✓ Invalid: Rejected criteria with 'water/rice paddy'")
 
 
 if __name__ == '__main__':

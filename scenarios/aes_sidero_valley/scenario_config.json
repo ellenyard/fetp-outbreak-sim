@@ -1,0 +1,105 @@
+{
+  "scenario_id": "aes_sidero_valley",
+  "scenario_type": "je",
+  "display_name": "🦟 Shadows Over Sidero Valley",
+  "disease_name": "Japanese Encephalitis",
+  "simulation_start_date": "2025-06-03",
+  "case_definition_defaults": {
+    "onset_start": "2025-06-01",
+    "onset_end": "2025-06-15",
+    "villages": ["V1", "V2", "V3"]
+  },
+  "symptoms": [
+    {"key": "fever", "label": "Fever"},
+    {"key": "seizure", "label": "Seizure"},
+    {"key": "altered_mental_status", "label": "Altered mental status"},
+    {"key": "stiff_neck", "label": "Stiff neck"},
+    {"key": "vomiting", "label": "Vomiting"},
+    {"key": "rash", "label": "Rash"}
+  ],
+  "symptom_field_map": {
+    "fever": {"individuals": "symptomatic_AES", "clinic": "fever_y_n"},
+    "seizure": {"individuals": "severe_neuro", "clinic": "seizure_y_n"},
+    "altered_mental_status": {"individuals": "severe_neuro", "clinic": "seizure_y_n"},
+    "stiff_neck": {"individuals": "severe_neuro", "clinic": "notes"},
+    "vomiting": {"individuals": "symptomatic_AES", "clinic": "vomiting_y_n"},
+    "rash": {"individuals": "symptomatic_AES", "clinic": "rash_y_n"}
+  },
+  "epi_link_fields": [
+    {"key": "evening_outdoor_exposure", "label": "Evening outdoor exposure"},
+    {"key": "pigs_near_home", "label": "Pigs near home"},
+    {"key": "rice_field_nearby", "label": "Rice field nearby"},
+    {"key": "uses_mosquito_nets", "label": "No mosquito net use"}
+  ],
+  "lab_tests": [
+    {
+      "code": "JE_IgM_CSF",
+      "label_generic": "Arbovirus IgM (CSF)",
+      "label_confirmed": "Japanese Encephalitis IgM (CSF)",
+      "sample_types": ["human_CSF"]
+    },
+    {
+      "code": "JE_IgM_serum",
+      "label_generic": "Arbovirus IgM (serum)",
+      "label_confirmed": "Japanese Encephalitis IgM (serum)",
+      "sample_types": ["human_serum"]
+    },
+    {
+      "code": "JE_PCR_CSF",
+      "label_generic": "Arbovirus PCR (CSF)",
+      "label_confirmed": "Japanese Encephalitis PCR (CSF)",
+      "sample_types": ["human_CSF"]
+    },
+    {
+      "code": "JE_PCR_mosquito",
+      "label_generic": "Arbovirus PCR (mosquito pool)",
+      "label_confirmed": "Japanese Encephalitis PCR (mosquito pool)",
+      "sample_types": ["mosquito_pool"]
+    },
+    {
+      "code": "JE_Ab_pig",
+      "label_generic": "Arbovirus antibodies (pig serum)",
+      "label_confirmed": "Japanese Encephalitis antibodies (pig serum)",
+      "sample_types": ["pig_serum"]
+    },
+    {
+      "code": "MALARIA_RDT",
+      "label_generic": "Malaria RDT",
+      "label_confirmed": "Malaria RDT",
+      "sample_types": ["human_serum"]
+    },
+    {
+      "code": "BACTERIAL_MENINGITIS_CSF",
+      "label_generic": "Bacterial meningitis panel (CSF)",
+      "label_confirmed": "Bacterial meningitis panel (CSF)",
+      "sample_types": ["human_CSF"]
+    }
+  ],
+  "confirmatory_tests": ["JE_IgM_CSF", "JE_IgM_serum", "JE_PCR_CSF"],
+  "supportive_tests": ["JE_PCR_mosquito", "JE_Ab_pig"],
+  "exclusion_conditions": [
+    "Bacterial meningitis",
+    "Cerebral malaria",
+    "Toxic ingestion"
+  ],
+  "exclusion_tests": [
+    {"code": "MALARIA_RDT", "condition": "Cerebral malaria"},
+    {"code": "BACTERIAL_MENINGITIS_CSF", "condition": "Bacterial meningitis"}
+  ],
+  "study_design": {
+    "recommended": "case_control",
+    "label": "Case-control",
+    "sampling_frame_prompt": "Cases from AES line list; controls from community or clinic.",
+    "bias_prompts": [
+      "Selection bias in clinic-based controls",
+      "Misclassification of neuro-syndrome",
+      "Overmatching on village"
+    ]
+  },
+  "one_health_contacts": ["vet_amina", "mr_osei"],
+  "one_health_samples": ["pig_serum", "mosquito_pool"],
+  "scoring": {
+    "diagnosis_synonyms": ["japanese encephalitis", "je"],
+    "avoid_interventions": ["water", "chlorination"]
+  }
+}

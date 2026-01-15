@@ -147,6 +147,14 @@ SUPPORTED_XLSFORM_BASE_TYPES = {"text", "integer", "decimal", "date", "select_on
 # DATA LOADING
 # ============================================================================
 
+def load_scenario_config(scenario_id: str) -> Dict[str, Any]:
+    """Load scenario configuration metadata."""
+    config_path = Path(f"scenarios/{scenario_id}/scenario_config.json")
+    if not config_path.exists():
+        return {}
+    return json.loads(config_path.read_text(encoding="utf-8"))
+
+
 def load_truth_data(data_dir: str = "scenarios/aes_sidero_valley"):
     """
     Load all truth tables from CSV/JSON files.
@@ -730,8 +738,8 @@ def check_nurse_rapport(session_state=None):
 
 def check_case_definition(criteria, patient=None):
     """
-    Validates case definition criteria to ensure they rely on Clinical/Person/Place/Time
-    data, NOT risk factors like pigs or mosquitoes.
+    Validates case definition criteria to ensure they include Clinical + Time/Place
+    elements, with optional epi link and lab criteria.
 
     Args:
         criteria: Dictionary or list of criteria fields/terms
@@ -739,7 +747,7 @@ def check_case_definition(criteria, patient=None):
 
     Returns:
         Dictionary with 'valid' (bool) and 'message' (str) keys.
-        If invalid, includes error message about risk factors.
+        If invalid, includes error message about missing elements.
     """
     # Log the event
     log_event(
@@ -750,35 +758,31 @@ def check_case_definition(criteria, patient=None):
         payload={'criteria': criteria}
     )
 
-    # Define prohibited risk factor terms
-    prohibited_terms = [
-        'pig', 'pigs', 'swine',
-        'mosquito', 'mosquitoes', 'culex',
-        'water', 'rice paddy', 'paddies',
-        'exposure', 'animal contact',
-        'vector', 'insect'
-    ]
-
     # Convert criteria to searchable format
     if isinstance(criteria, dict):
-        criteria_text = ' '.join(str(v).lower() for v in criteria.values())
+        criteria_text = ' '.join(list(str(k).lower() for k in criteria.keys()) + [str(v).lower() for v in criteria.values()])
     elif isinstance(criteria, list):
         criteria_text = ' '.join(str(c).lower() for c in criteria)
     else:
         criteria_text = str(criteria).lower()
 
-    # Check for prohibited terms
-    found_prohibited = []
-    for term in prohibited_terms:
-        if term in criteria_text:
-            found_prohibited.append(term)
+    clinical_terms = [
+        "fever", "seizure", "confusion", "jaundice", "myalgia",
+        "vomiting", "rash", "stiff neck", "altered", "renal"
+    ]
+    time_place_terms = ["date", "onset", "village", "district", "ward", "area", "between"]
+    has_clinical = any(term in criteria_text for term in clinical_terms)
+    has_time_place = any(term in criteria_text for term in time_place_terms)
 
-    if found_prohibited:
+    if not has_clinical or not has_time_place:
+        missing = []
+        if not has_clinical:
+            missing.append("clinical criteria")
+        if not has_time_place:
+            missing.append("time/place boundaries")
         return {
             'valid': False,
-            'message': f"Case Definitions must rely on Clinical/Person/Place/Time data, not risk factors. "
-                      f"Prohibited terms found: {', '.join(found_prohibited)}. "
-                      f"Please remove references to exposures, animals, or environmental factors."
+            'message': f"Case Definitions should include {' and '.join(missing)}."
         }
 
     # If patient is provided, validate patient matches criteria
@@ -1502,50 +1506,269 @@ def assign_lepto_infections(individuals_df, households_df):
 # CASE DEFINITION & DATASET GENERATION
 # ============================================================================
 
+CASE_CLASSIFICATIONS = ("confirmed", "probable", "suspected", "excluded", "not_a_case")
+
+
+def _normalize_yes_no(value: Any) -> Optional[bool]:
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"yes", "y", "true", "1", "positive", "pos"}:
+        return True
+    if text in {"no", "n", "false", "0", "negative", "neg"}:
+        return False
+    if text in {"unknown", "unsure", "na", "n/a", ""}:
+        return None
+    return None
+
+
+def _parse_date(value: Any) -> Optional[datetime]:
+    if not value or (isinstance(value, float) and np.isnan(value)):
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return pd.to_datetime(value).to_pydatetime()
+    except Exception:
+        return None
+
+
+def _default_case_definition_structured(scenario_config: Dict[str, Any]) -> Dict[str, Any]:
+    defaults = scenario_config.get("case_definition_defaults", {})
+    symptoms = [s.get("key") for s in scenario_config.get("symptoms", []) if s.get("key")]
+    core_symptom = symptoms[0:1] if symptoms else []
+    return {
+        "time_window": {
+            "start": defaults.get("onset_start"),
+            "end": defaults.get("onset_end"),
+        },
+        "villages": defaults.get("villages", []),
+        "exclusions": scenario_config.get("exclusion_conditions", []),
+        "tiers": {
+            "suspected": {
+                "required_any": core_symptom,
+                "optional_symptoms": symptoms[1:],
+                "min_optional": 0,
+                "epi_link_required": False,
+                "lab_required": False,
+                "lab_tests": [],
+            },
+            "probable": {
+                "required_any": core_symptom,
+                "optional_symptoms": symptoms[1:],
+                "min_optional": 0,
+                "epi_link_required": True,
+                "lab_required": False,
+                "lab_tests": [],
+            },
+            "confirmed": {
+                "required_any": core_symptom,
+                "optional_symptoms": symptoms[1:],
+                "min_optional": 0,
+                "epi_link_required": False,
+                "lab_required": True,
+                "lab_tests": scenario_config.get("confirmatory_tests", []),
+            },
+        },
+    }
+
+
+def _normalize_case_definition(case_def: Optional[Dict[str, Any]], scenario_config: Dict[str, Any]) -> Dict[str, Any]:
+    base = _default_case_definition_structured(scenario_config)
+    if not case_def:
+        return base
+    normalized = copy.deepcopy(base)
+    normalized.update({k: v for k, v in case_def.items() if k in {"time_window", "villages", "exclusions", "tiers"}})
+    tiers = normalized.get("tiers", {})
+    for tier in ("suspected", "probable", "confirmed"):
+        if tier in case_def.get("tiers", {}):
+            tiers[tier].update(case_def["tiers"][tier])
+    normalized["tiers"] = tiers
+    return normalized
+
+
+def _get_symptom_value(row: pd.Series, symptom_key: str, scenario_config: Dict[str, Any], source: str) -> Optional[bool]:
+    mapping = scenario_config.get("symptom_field_map", {}).get(symptom_key, {})
+    field = mapping.get(source)
+    if field and field in row:
+        if field == "notes":
+            text = str(row.get(field, "")).lower()
+            if symptom_key.replace("_", " ") in text:
+                return True
+            return None
+        return _normalize_yes_no(row.get(field))
+    if symptom_key in row:
+        return _normalize_yes_no(row.get(symptom_key))
+    return None
+
+
+def _epi_link_present(row: pd.Series, epi_fields: List[Dict[str, Any]]) -> bool:
+    for field in epi_fields:
+        key = field.get("key")
+        if key and key in row and _normalize_yes_no(row.get(key)) is True:
+            return True
+    return False
+
+
+def _within_time_place(row: pd.Series, case_def: Dict[str, Any]) -> bool:
+    time_window = case_def.get("time_window", {})
+    start = _parse_date(time_window.get("start"))
+    end = _parse_date(time_window.get("end"))
+    onset = _parse_date(row.get("onset_date"))
+    if start and onset and onset < start:
+        return False
+    if end and onset and onset > end:
+        return False
+    villages = case_def.get("villages", [])
+    if villages and row.get("village_id") not in villages:
+        return False
+    return True
+
+
+def _build_lab_index(lab_results: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    lab_index: Dict[str, List[Dict[str, Any]]] = {}
+    for result in lab_results or []:
+        pid = str(result.get("patient_id") or result.get("linked_person_id") or "").strip()
+        if not pid:
+            continue
+        lab_index.setdefault(pid, []).append(result)
+    return lab_index
+
+
+def _lab_status_for_patient(patient_id: str, lab_index: Dict[str, List[Dict[str, Any]]], scenario_config: Dict[str, Any]) -> Dict[str, Any]:
+    results = lab_index.get(str(patient_id), [])
+    confirmatory = set(scenario_config.get("confirmatory_tests", []))
+    supportive = set(scenario_config.get("supportive_tests", []))
+    exclusion_map = {e.get("code"): e.get("condition") for e in scenario_config.get("exclusion_tests", [])}
+    status = {
+        "confirmatory_positive": False,
+        "supportive_positive": False,
+        "exclusion_condition": None,
+    }
+    for r in results:
+        test_code = r.get("test")
+        result = str(r.get("result", "")).upper()
+        if result != "POSITIVE":
+            continue
+        if test_code in confirmatory:
+            status["confirmatory_positive"] = True
+        if test_code in supportive:
+            status["supportive_positive"] = True
+        if test_code in exclusion_map:
+            status["exclusion_condition"] = exclusion_map[test_code]
+    return status
+
+
+def _positive_tests(patient_id: str, lab_index: Dict[str, List[Dict[str, Any]]]) -> List[str]:
+    results = lab_index.get(str(patient_id), [])
+    return [r.get("test") for r in results if str(r.get("result", "")).upper() == "POSITIVE"]
+
+
+def _clinical_match(row: pd.Series, tier: Dict[str, Any], scenario_config: Dict[str, Any], source: str) -> bool:
+    required_any = tier.get("required_any", []) or []
+    optional = tier.get("optional_symptoms", []) or []
+    min_optional = int(tier.get("min_optional", 0) or 0)
+
+    any_ok = True
+    if required_any:
+        any_ok = any(_get_symptom_value(row, s, scenario_config, source) is True for s in required_any)
+    optional_true = sum(_get_symptom_value(row, s, scenario_config, source) is True for s in optional)
+    return any_ok and optional_true >= min_optional
+
+
+def classify_record(
+    row: pd.Series,
+    case_def: Dict[str, Any],
+    scenario_config: Dict[str, Any],
+    lab_index: Dict[str, List[Dict[str, Any]]],
+    source: str = "individuals",
+) -> Tuple[str, Optional[str]]:
+    case_def = _normalize_case_definition(case_def, scenario_config)
+    if not _within_time_place(row, case_def):
+        return "not_a_case", "Outside time/place window"
+
+    lab_status = _lab_status_for_patient(str(row.get("person_id", "")), lab_index, scenario_config)
+    if lab_status.get("exclusion_condition"):
+        return "excluded", f"Rule-out: {lab_status['exclusion_condition']}"
+
+    epi_required = case_def.get("tiers", {}).get("probable", {}).get("epi_link_required", False)
+    epi_link = _epi_link_present(row, scenario_config.get("epi_link_fields", []))
+    if epi_required and not epi_link:
+        epi_link = False
+
+    tiers = case_def.get("tiers", {})
+    confirmed = tiers.get("confirmed", {})
+    probable = tiers.get("probable", {})
+    suspected = tiers.get("suspected", {})
+
+    if confirmed and _clinical_match(row, confirmed, scenario_config, source):
+        if confirmed.get("lab_required", True):
+            allowed_tests = confirmed.get("lab_tests") or scenario_config.get("confirmatory_tests", [])
+            positive_tests = _positive_tests(str(row.get("person_id", "")), lab_index)
+            if any(test in allowed_tests for test in positive_tests):
+                return "confirmed", None
+        else:
+            return "confirmed", None
+
+    if probable and _clinical_match(row, probable, scenario_config, source):
+        if probable.get("epi_link_required") and not epi_link:
+            pass
+        else:
+            if probable.get("lab_required"):
+                allowed_tests = probable.get("lab_tests") or scenario_config.get("supportive_tests", [])
+                positive_tests = _positive_tests(str(row.get("person_id", "")), lab_index)
+                if any(test in allowed_tests for test in positive_tests):
+                    return "probable", None
+            else:
+                return "probable", None
+
+    if suspected and _clinical_match(row, suspected, scenario_config, source):
+        return "suspected", None
+
+    return "not_a_case", None
+
+
+def classify_individuals(
+    individuals_df: pd.DataFrame,
+    case_def: Optional[Dict[str, Any]],
+    scenario_config: Dict[str, Any],
+    lab_results: Optional[List[Dict[str, Any]]] = None,
+) -> pd.DataFrame:
+    df = individuals_df.copy()
+    lab_index = _build_lab_index(lab_results or [])
+    classifications = []
+    exclusion_reasons = []
+    for _, row in df.iterrows():
+        classification, reason = classify_record(row, case_def, scenario_config, lab_index, source="individuals")
+        classifications.append(classification)
+        exclusion_reasons.append(reason)
+    df["case_classification"] = classifications
+    df["exclusion_reason"] = exclusion_reasons
+    return df
+
+
 def apply_case_definition(individuals_df: pd.DataFrame, case_criteria: dict) -> pd.DataFrame:
     """
     Apply case definition criteria to filter individuals.
-    
+
     Args:
         individuals_df: DataFrame with individual records
-        case_criteria: Dictionary with criteria, e.g. {"clinical_AES": True}
-    
+        case_criteria: Dictionary with structured case definition and scenario metadata
+
     Returns:
-        DataFrame filtered to individuals meeting case definition
+        DataFrame filtered to individuals meeting case definition tiers
     """
     df = individuals_df.copy()
-    
-    # Handle None or empty case_criteria - default to clinical AES
-    if not case_criteria:
-        case_criteria = {"clinical_AES": True}
-    
-    scenario_type = case_criteria.get("scenario_type")
-    symptomatic_column = "symptomatic_lepto" if scenario_type == "lepto" else "symptomatic_AES"
-
-    # Default: use symptomatic column as proxy for clinical AES criteria
-    if case_criteria.get("clinical_AES", False):
-        if symptomatic_column in df.columns:
-            df = df[df[symptomatic_column] == True]
-        else:
-            df = df[df["symptomatic_AES"] == True]
-    
-    # Additional filters can be added based on case_criteria
-    if "village_ids" in case_criteria and case_criteria["village_ids"]:
-        df = df[df["village_id"].isin(case_criteria["village_ids"])]
-    
-    if "min_age" in case_criteria:
-        df = df[df["age"] >= case_criteria["min_age"]]
-    
-    if "max_age" in case_criteria:
-        df = df[df["age"] <= case_criteria["max_age"]]
-    
-    if "onset_after" in case_criteria:
-        df = df[pd.to_datetime(df["onset_date"]) >= pd.to_datetime(case_criteria["onset_after"])]
-    
-    if "onset_before" in case_criteria:
-        df = df[pd.to_datetime(df["onset_date"]) <= pd.to_datetime(case_criteria["onset_before"])]
-    
-    return df
+    scenario_id = case_criteria.get("scenario_id")
+    scenario_config = load_scenario_config(scenario_id) if scenario_id else {}
+    case_def = case_criteria.get("case_definition_structured", case_criteria.get("case_definition", case_criteria))
+    lab_results = case_criteria.get("lab_results", [])
+    classified = classify_individuals(df, case_def, scenario_config, lab_results)
+    return classified[classified["case_classification"].isin({"suspected", "probable", "confirmed"})].copy()
 
 
 # ============================================================================
@@ -2410,19 +2633,12 @@ def generate_study_dataset(individuals_df, households_df, decisions, random_seed
     individuals_df = ensure_reported_to_hospital(individuals_df, random_seed=random_seed)
 
     # Determine case pool based on case definition (scenario-aware)
-    case_criteria = decisions.get("case_definition", {"clinical_AES": True})
-    scenario_type = decisions.get("scenario_type")
-    if scenario_type:
-        case_criteria = dict(case_criteria)
-        case_criteria["scenario_type"] = scenario_type
+    case_criteria = {
+        "scenario_id": decisions.get("scenario_id"),
+        "case_definition_structured": decisions.get("case_definition_structured"),
+        "lab_results": decisions.get("lab_results", []),
+    }
     cases_pool = apply_case_definition(individuals_df, case_criteria)
-
-    symptomatic_column = "symptomatic_AES"
-    if scenario_type == "lepto":
-        symptomatic_column = "symptomatic_lepto"
-    elif scenario_type is None:
-        if "symptomatic_lepto" in individuals_df.columns and individuals_df["symptomatic_lepto"].any():
-            symptomatic_column = "symptomatic_lepto"
 
     study_design = decisions.get("study_design", {"type": "case_control"})
     design_type = study_design.get("type", "case_control")
@@ -3305,22 +3521,40 @@ def _sample_date(start_ymd: str, end_ymd: str) -> str:
 
 
 LAB_TESTS = {
-    # Human
-    "JE_IgM_CSF": {"sensitivity": 0.85, "specificity": 0.98, "cost": 2, "days": 3, "inconclusive_rate": 0.06},
-    "JE_IgM_serum": {"sensitivity": 0.80, "specificity": 0.95, "cost": 1, "days": 3, "inconclusive_rate": 0.08},
-    "JE_PCR_CSF": {"sensitivity": 0.40, "specificity": 0.99, "cost": 3, "days": 4, "inconclusive_rate": 0.10},
+    # Human (arbovirus)
+    "JE_IgM_CSF": {"sensitivity": 0.85, "specificity": 0.98, "cost": 2, "days": 3, "inconclusive_rate": 0.06,
+                   "sensitivity_by_days": [(0, 4, 0.4), (5, 999, 0.9)]},
+    "JE_IgM_serum": {"sensitivity": 0.80, "specificity": 0.95, "cost": 1, "days": 3, "inconclusive_rate": 0.08,
+                     "sensitivity_by_days": [(0, 4, 0.35), (5, 999, 0.85)]},
+    "JE_PCR_CSF": {"sensitivity": 0.40, "specificity": 0.99, "cost": 3, "days": 4, "inconclusive_rate": 0.10,
+                   "sensitivity_by_days": [(0, 3, 0.65), (4, 7, 0.45), (8, 999, 0.2)]},
 
-    # Vector / animal
+    # Vector / animal (arbovirus)
     "JE_PCR_mosquito": {"sensitivity": 0.95, "specificity": 0.98, "cost": 2, "days": 5, "inconclusive_rate": 0.12},
     "JE_IgG_pig": {"sensitivity": 0.90, "specificity": 0.95, "cost": 1, "days": 4, "inconclusive_rate": 0.08},
+
+    # Leptospirosis human tests
+    "LEPTO_ELISA_IGM": {"sensitivity": 0.75, "specificity": 0.94, "cost": 1, "days": 3, "inconclusive_rate": 0.07,
+                        "sensitivity_by_days": [(0, 4, 0.35), (5, 10, 0.75), (11, 999, 0.85)]},
+    "LEPTO_PCR_BLOOD": {"sensitivity": 0.80, "specificity": 0.98, "cost": 2, "days": 3, "inconclusive_rate": 0.06,
+                        "sensitivity_by_days": [(0, 5, 0.85), (6, 10, 0.55), (11, 999, 0.3)]},
+    "LEPTO_PCR_URINE": {"sensitivity": 0.70, "specificity": 0.98, "cost": 2, "days": 3, "inconclusive_rate": 0.06,
+                        "sensitivity_by_days": [(0, 4, 0.3), (5, 10, 0.65), (11, 999, 0.8)]},
+    "LEPTO_MAT": {"sensitivity": 0.85, "specificity": 0.99, "cost": 3, "days": 4, "inconclusive_rate": 0.08,
+                  "sensitivity_by_days": [(0, 7, 0.2), (8, 999, 0.9)]},
+
+    # Environmental / animal (lepto)
+    "LEPTO_ENV_WATER_PCR": {"sensitivity": 0.65, "specificity": 0.9, "cost": 1, "days": 4, "inconclusive_rate": 0.12},
+    "RODENT_PCR": {"sensitivity": 0.8, "specificity": 0.9, "cost": 2, "days": 4, "inconclusive_rate": 0.1},
+
+    # Differential / rule-out
+    "MALARIA_RDT": {"sensitivity": 0.95, "specificity": 0.95, "cost": 1, "days": 1, "inconclusive_rate": 0.02, "min_ready_day": 1},
+    "DENGUE_NS1": {"sensitivity": 0.8, "specificity": 0.95, "cost": 1, "days": 2, "inconclusive_rate": 0.05, "min_ready_day": 2},
+    "BACTERIAL_MENINGITIS_CSF": {"sensitivity": 0.85, "specificity": 0.98, "cost": 2, "days": 2, "inconclusive_rate": 0.08, "min_ready_day": 2},
 
     # Aliases (UI-friendly labels that map to canonical tests)
     "JE_Ab_pig": {"alias_for": "JE_IgG_pig"},
     "JE_PCR_mosquito_pool": {"alias_for": "JE_PCR_mosquito"},
-
-    # Differential / environmental
-    "bacterial_culture": {"sensitivity": 0.70, "specificity": 0.99, "cost": 1, "days": 3, "inconclusive_rate": 0.10},
-    "water_quality": {"sensitivity": 0.95, "specificity": 0.90, "cost": 1, "days": 2, "inconclusive_rate": 0.08},
 }
 
 def _resolve_lab_test(test_name: str) -> Tuple[str, Dict[str, Any]]:
@@ -3332,6 +3566,16 @@ def _resolve_lab_test(test_name: str) -> Tuple[str, Dict[str, Any]]:
         canonical = str(params["alias_for"])
         return canonical, (LAB_TESTS.get(canonical, {}) or {})
     return test_name, params
+
+def _resolve_sensitivity_by_day(test_params: Dict[str, Any], days_since_onset: Optional[int]) -> float:
+    base = float(test_params.get("sensitivity", 0.8))
+    if days_since_onset is None:
+        return base
+    for start, end, sens in test_params.get("sensitivity_by_days", []):
+        if int(start) <= days_since_onset <= int(end):
+            return float(sens)
+    return base
+
 
 def process_lab_order(order, lab_samples_truth, random_seed=None):
     """Create a lab order record with realistic delay + imperfect tests.
@@ -3355,6 +3599,17 @@ def process_lab_order(order, lab_samples_truth, random_seed=None):
 
     placed_day = int(order.get("placed_day", 1) or 1)
     queue_delay = int(order.get("queue_delay_days", 0) or 0)
+    patient_id = order.get("patient_id")
+    onset_date = order.get("onset_date")
+    days_since_onset = order.get("days_since_onset")
+    if days_since_onset is None and onset_date:
+        try:
+            onset_dt = pd.to_datetime(onset_date)
+            collection_dt = pd.to_datetime(order.get("collection_date")) if order.get("collection_date") else None
+            if collection_dt is not None:
+                days_since_onset = max(0, (collection_dt - onset_dt).days)
+        except Exception:
+            days_since_onset = None
 
     canonical_test, test_params = _resolve_lab_test(order.get("test", ""))
     if not test_params:
@@ -3367,16 +3622,24 @@ def process_lab_order(order, lab_samples_truth, random_seed=None):
     ]
 
     if len(matching) > 0:
-        true_positive = bool(matching.iloc[0]["true_JEV_positive"])
+        truth_col = None
+        for col in ["true_JEV_positive", "true_lepto_positive"]:
+            if col in matching.columns:
+                truth_col = col
+                break
+        true_positive = bool(matching.iloc[0][truth_col]) if truth_col else False
     else:
         # Default based on sample type + village
         if order.get("village_id") in ["V1", "V2"]:
-            true_positive = order.get("sample_type") in ["human_CSF", "human_serum", "pig_serum", "mosquito_pool"]
+            true_positive = order.get("sample_type") in [
+                "human_CSF", "human_serum", "pig_serum", "mosquito_pool",
+                "blood", "urine", "environmental_water", "rodent_kidney", "animal_serum"
+            ]
         else:
             true_positive = False
 
-    # Apply test performance
-    sens = float(test_params.get("sensitivity", 0.80))
+    # Apply test performance (time since onset dependent)
+    sens = _resolve_sensitivity_by_day(test_params, None if days_since_onset is None else int(days_since_onset))
     spec = float(test_params.get("specificity", 0.95))
     if true_positive:
         result_positive = np.random.random() < sens
@@ -3385,18 +3648,28 @@ def process_lab_order(order, lab_samples_truth, random_seed=None):
 
     base_result = "POSITIVE" if result_positive else "NEGATIVE"
 
-    # Inconclusive rate (worse for mosquitoes / degraded samples)
+    # Inconclusive / QNS / contamination
     inconc = float(test_params.get("inconclusive_rate", 0.10))
+    qns_rate = float(test_params.get("qns_rate", 0.0))
+    contaminated = bool(order.get("contaminated", False))
+    volume_ok = bool(order.get("volume_ok", True))
     if str(order.get("sample_type", "")).lower() in {"mosquito_pool", "pig_serum"}:
         inconc = min(0.25, inconc + 0.05)
-    if np.random.random() < inconc:
+    if contaminated:
+        final_result = "CONTAMINATED"
+    elif not volume_ok and np.random.random() < max(0.4, qns_rate):
+        final_result = "QNS"
+    elif np.random.random() < inconc:
         final_result = "INCONCLUSIVE"
     else:
         final_result = base_result
 
     days_to_result = int(test_params.get("days", 3) or 3)
     # Inclusive day counting: a 3-day test ordered on Day 2 returns on Day 4 (2 + 3 - 1)
+    min_ready_day = int(test_params.get("min_ready_day", 3) or 0)
     ready_day = placed_day + max(days_to_result - 1, 0) + queue_delay
+    if min_ready_day:
+        ready_day = max(ready_day, min_ready_day)
 
     return {
         "sample_id": f"LAB-{np.random.randint(1000, 9999)}",
@@ -3405,6 +3678,9 @@ def process_lab_order(order, lab_samples_truth, random_seed=None):
         "test": canonical_test,
         "test_requested": order.get("test"),
         "source_description": order.get("source_description", "Unspecified source"),
+        "patient_id": patient_id,
+        "onset_date": onset_date,
+        "days_since_onset": days_since_onset,
         "placed_day": placed_day,
         "ready_day": int(ready_day),
         "result": "PENDING",
@@ -3462,16 +3738,24 @@ def evaluate_interventions(decisions, interview_history):
     counterfactuals = []
 
     # -------------------------
-    # Diagnosis
+    # Diagnosis (scenario-specific)
     # -------------------------
+    scenario_id = decisions.get("scenario_id")
+    scenario_config = decisions.get("scenario_config") or (load_scenario_config(scenario_id) if scenario_id else {})
+    scoring_cfg = scenario_config.get("scoring", {}) if scenario_config else {}
+    diagnosis_synonyms = [s.lower() for s in scoring_cfg.get("diagnosis_synonyms", [])]
+    disease_name = scenario_config.get("disease_name", "the target disease")
+
     diagnosis = (decisions.get("final_diagnosis") or "").strip()
-    if "japanese encephalitis" in diagnosis.lower() or re.fullmatch(r"je", diagnosis.lower() or ""):
+    if diagnosis and diagnosis.lower() in diagnosis_synonyms:
         score += 25
-        outcomes.append("✅ Correct diagnosis: Japanese Encephalitis")
+        outcomes.append(f"✅ Correct diagnosis: {disease_name}")
     elif diagnosis:
         score -= 10
         outcomes.append(f"❌ Incorrect diagnosis: {diagnosis}")
-        counterfactuals.append("If JE had been suspected earlier, you could have prioritized vector/animal sampling and vaccination messaging sooner.")
+        counterfactuals.append(
+            f"If {disease_name} had been suspected earlier, you could have prioritized scenario-appropriate sampling and control messaging sooner."
+        )
     else:
         score -= 5
         outcomes.append("⚠️ No final diagnosis recorded")
@@ -3479,10 +3763,11 @@ def evaluate_interventions(decisions, interview_history):
     # -------------------------
     # One Health engagement (via interviews and/or field findings)
     # -------------------------
-    if "vet_amina" in (interview_history or {}):
+    one_health_contacts = set(scenario_config.get("one_health_contacts", []))
+    if one_health_contacts and one_health_contacts.intersection(set((interview_history or {}).keys())):
         score += 10
-        outcomes.append("✅ Consulted veterinary officer (One Health)")
-        because.append("Because you brought in the veterinary officer, your team considered pig/vector links earlier.")
+        outcomes.append("✅ Consulted One Health counterpart")
+        because.append("Because you engaged One Health partners, your team integrated animal/environmental signals earlier.")
     else:
         outcomes.append("⚠️ Veterinary perspective not documented")
 
@@ -3508,7 +3793,7 @@ def evaluate_interventions(decisions, interview_history):
                 unmapped_n += 1
 
     # Reward: key domains present (regardless of variable names)
-    key_markers = ["pigs_owned", "pigs_near_home", "uses_mosquito_nets", "evening_outdoor_exposure", "JE_vaccinated", "rice_field_nearby"]
+    key_markers = [m.get("key") for m in scenario_config.get("epi_link_fields", []) if m.get("key")]
     key_hits = len({k for k in key_markers if k in set(mapped_vars)})
     if key_hits >= 4:
         score += 15
@@ -3547,18 +3832,16 @@ def evaluate_interventions(decisions, interview_history):
 
     # breadth
     sample_types = [str(o.get("sample_type", "")) for o in lab_orders]
-    has_human = any("human" in s for s in sample_types)
-    has_pig = any("pig" in s for s in sample_types)
-    has_mosquito = any("mosquito" in s for s in sample_types)
+    human_samples = {"human_csf", "human_serum", "blood", "urine"}
+    one_health_samples = {s.lower() for s in scenario_config.get("one_health_samples", [])}
+    has_human = any(s.lower() in human_samples for s in sample_types)
+    has_one_health = any(s.lower() in one_health_samples for s in sample_types) if one_health_samples else False
 
-    if has_human and has_pig and has_mosquito:
-        score += 15
-        outcomes.append("✅ Comprehensive sampling (human + animal + vector)")
-    elif has_human and (has_pig or has_mosquito):
-        score += 8
-        outcomes.append("⚡ Partial One Health sampling")
+    if has_human and has_one_health:
+        score += 12
+        outcomes.append("✅ Human + One Health sampling coverage")
     elif has_human:
-        score += 3
+        score += 4
         outcomes.append("⚠️ Human samples only")
     elif lab_orders:
         score += 1
@@ -3602,9 +3885,10 @@ def evaluate_interventions(decisions, interview_history):
     rec_scores = {
         "vaccination": any(w in recommendations_text for w in ["vaccin", "immuniz"]),
         "vector_control": any(w in recommendations_text for w in ["bed net", "bednet", "mosquito net", "larvicid", "spray", "vector"]),
-        "pig_management": any(w in recommendations_text for w in ["pig", "relocat", "pen", "sty"]),
+        "animal_management": any(w in recommendations_text for w in ["pig", "livestock", "rodent", "rat control", "animal pen"]),
+        "water_sanitation": any(w in recommendations_text for w in ["chlorin", "borehole", "water treatment", "boil water"]),
         "surveillance": any(w in recommendations_text for w in ["surveill", "monitor", "reporting"]),
-        "education": any(w in recommendations_text for w in ["educat", "awareness", "risk communication"]),
+        "education": any(w in recommendations_text for w in ["educat", "awareness", "risk communication", "ppe"]),
     }
     recs_count = sum(rec_scores.values())
     if recs_count >= 4:
@@ -3626,15 +3910,12 @@ def evaluate_interventions(decisions, interview_history):
     if rec_scores["vaccination"] and rec_day <= 4:
         score += 4
     if rec_scores["vaccination"] and rec_day == 5:
-        counterfactuals.append("If vaccination messaging and microplanning had started by Day 3–4, fewer children would have been exposed before control measures scaled up.")
+        counterfactuals.append("Earlier preventive messaging would likely reduce exposure risk.")
 
-    # Penalize irrelevant approaches
-    if any(w in recommendations_text for w in ["chlorin", "borehole", "water treatment"]):
+    avoid_terms = scoring_cfg.get("avoid_interventions", [])
+    if avoid_terms and any(term in recommendations_text for term in avoid_terms):
         score -= 4
-        outcomes.append("⚠️ Water interventions are unlikely to address JE transmission")
-    if any(w in recommendations_text for w in ["close school", "close market"]):
-        score -= 2
-        outcomes.append("⚠️ Closures are not strongly evidence-based for this vector-borne scenario")
+        outcomes.append("⚠️ Some recommendations were not aligned with the suspected transmission route")
 
     # -------------------------
     # Convert score → projected new cases (simple outcome model)
@@ -3644,16 +3925,18 @@ def evaluate_interventions(decisions, interview_history):
 
     # Interventions reduce onward risk; earlier action is stronger
     if rec_scores["vaccination"]:
-        effect += 0.45 if rec_day <= 4 else 0.25
+        effect += 0.35 if rec_day <= 4 else 0.2
     if rec_scores["vector_control"]:
-        effect += 0.30 if rec_day <= 4 else 0.18
-    if rec_scores["pig_management"]:
-        effect += 0.15 if rec_day <= 4 else 0.10
+        effect += 0.25 if rec_day <= 4 else 0.15
+    if rec_scores["animal_management"]:
+        effect += 0.15 if rec_day <= 4 else 0.1
+    if rec_scores["water_sanitation"]:
+        effect += 0.2 if rec_day <= 4 else 0.12
 
     # Evidence strength boosts effectiveness (better targeting/credibility)
     if key_hits >= 4:
         effect += 0.05
-    if has_human and (has_mosquito or has_pig) and any(_ready_by_day5(o) for o in lab_orders):
+    if has_human and has_one_health and any(_ready_by_day5(o) for o in lab_orders):
         effect += 0.05
     if analysis_day is not None:
         effect += 0.03
@@ -3848,6 +4131,11 @@ def check_day_prerequisites(current_day, session_state):
     elif day == 2:
         if not decisions.get("study_design"):
             missing.append("prereq.day2.study_design")
+        else:
+            scenario_config = decisions.get("scenario_config") or load_scenario_config(decisions.get("scenario_id")) if decisions.get("scenario_id") else {}
+            ok, missing_items = validate_study_design_requirements(decisions, scenario_config) if "validate_study_design_requirements" in globals() else (True, [])
+            if not ok:
+                missing.append("prereq.day2.study_design")
         if not get_val("questionnaire_submitted", False):
             missing.append("prereq.day2.questionnaire")
         if get_val("generated_dataset", None) is None:
@@ -3872,6 +4160,26 @@ def check_day_prerequisites(current_day, session_state):
             missing.append("prereq.day4.draft_interventions")
 
     return (len(missing) == 0), missing
+
+
+def validate_study_design_requirements(decisions: Dict[str, Any], scenario_config: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    """Validate that study design selection includes justification and sampling frame."""
+    missing: List[str] = []
+    study_design = decisions.get("study_design", {}) or {}
+    if not study_design.get("type"):
+        missing.append("study_design")
+    if not decisions.get("study_design_justification"):
+        missing.append("justification")
+    if not decisions.get("study_design_sampling_frame"):
+        missing.append("sampling_frame")
+    if not decisions.get("study_design_bias_notes"):
+        missing.append("bias_notes")
+
+    recommended = scenario_config.get("study_design", {}).get("recommended")
+    if recommended and study_design.get("type") and study_design.get("type") != recommended:
+        missing.append("recommended_design_mismatch")
+
+    return len(missing) == 0, missing
 
 
 # ============================================================================
