@@ -237,7 +237,11 @@
       "exposure": "Lives near rice paddies; no net use.",
       "lab": "CSF pleocytosis pending.",
       "missing_data": "Exact onset date unclear.",
-      "tags": ["fever", "seizure", "neuro"]
+      "tags": [
+        "fever",
+        "seizure",
+        "neuro"
+      ]
     },
     {
       "case_id": "CARD-02",
@@ -246,7 +250,10 @@
       "exposure": "School cluster reported.",
       "lab": "No labs ordered yet.",
       "missing_data": "No neuro exam documented.",
-      "tags": ["fever", "rash"]
+      "tags": [
+        "fever",
+        "rash"
+      ]
     },
     {
       "case_id": "CARD-03",
@@ -255,7 +262,11 @@
       "exposure": "Sibling with fever last week.",
       "lab": "Pending CSF.",
       "missing_data": "No seizure history.",
-      "tags": ["fever", "vomiting", "neuro"]
+      "tags": [
+        "fever",
+        "vomiting",
+        "neuro"
+      ]
     },
     {
       "case_id": "CARD-04",
@@ -264,7 +275,9 @@
       "exposure": "No notable exposures.",
       "lab": "No labs.",
       "missing_data": "Onset date uncertain.",
-      "tags": ["trauma"]
+      "tags": [
+        "trauma"
+      ]
     },
     {
       "case_id": "CARD-05",
@@ -273,7 +286,9 @@
       "exposure": "Lives in Nalu, vaccinated per mother.",
       "lab": "No labs yet.",
       "missing_data": "Temperature not measured.",
-      "tags": ["seizure"]
+      "tags": [
+        "seizure"
+      ]
     },
     {
       "case_id": "CARD-06",
@@ -282,17 +297,41 @@
       "exposure": "Mosquito bites noted; pig pen nearby.",
       "lab": "IgM JE pending.",
       "missing_data": "Exposure timing uncertain.",
-      "tags": ["fever", "seizure", "neuro"]
+      "tags": [
+        "fever",
+        "seizure",
+        "neuro"
+      ]
     }
   ],
   "lab_brief": {
     "summary": "The regional lab returned preliminary IgM testing on a subset of CSF/serum samples. Results are early and limited.",
     "results": [
-      {"sample_id": "LAB-01", "test": "JE IgM (serum)", "result": "Positive"},
-      {"sample_id": "LAB-02", "test": "JE IgM (CSF)", "result": "Pending"},
-      {"sample_id": "LAB-03", "test": "JE IgM (serum)", "result": "Negative"},
-      {"sample_id": "LAB-04", "test": "Malaria RDT", "result": "Negative"},
-      {"sample_id": "LAB-05", "test": "Bacterial culture", "result": "Pending"}
+      {
+        "sample_id": "LAB-01",
+        "test": "JE IgM (serum)",
+        "result": "Positive"
+      },
+      {
+        "sample_id": "LAB-02",
+        "test": "JE IgM (CSF)",
+        "result": "Pending"
+      },
+      {
+        "sample_id": "LAB-03",
+        "test": "JE IgM (serum)",
+        "result": "Negative"
+      },
+      {
+        "sample_id": "LAB-04",
+        "test": "Malaria RDT",
+        "result": "Negative"
+      },
+      {
+        "sample_id": "LAB-05",
+        "test": "Bacterial culture",
+        "result": "Pending"
+      }
     ],
     "limitations": [
       "IgM can be negative early in illness.",
@@ -304,5 +343,68 @@
       "Request PCR for JE virus on available CSF.",
       "Continue to rule out bacterial meningitis."
     ]
-  }
+  },
+  "case_finding_sources": [
+    {
+      "source_id": "hospital_ward",
+      "label": "District hospital ward log",
+      "detection_probability": 0.85,
+      "reporting_delay_days": 1,
+      "entries": [
+        {
+          "patient_id": "HW-01",
+          "visit_date": "2025-06-05",
+          "age": "9",
+          "sex": "F",
+          "village": "Nalu",
+          "symptom_onset_date": "2025-06-03",
+          "fever_y_n": "Yes",
+          "rash_y_n": "No",
+          "vomiting_y_n": "Yes",
+          "diarrhea_y_n": "Unknown",
+          "seizure_y_n": "Yes",
+          "notes": "Seizure overnight.",
+          "truth_case": true
+        },
+        {
+          "patient_id": "HW-02",
+          "visit_date": "2025-06-05",
+          "age": "3",
+          "sex": "M",
+          "village": "Tamu",
+          "symptom_onset_date": "2025-06-04",
+          "fever_y_n": "No",
+          "rash_y_n": "No",
+          "vomiting_y_n": "No",
+          "diarrhea_y_n": "Yes",
+          "seizure_y_n": "No",
+          "notes": "Gastroenteritis.",
+          "truth_case": false
+        }
+      ]
+    },
+    {
+      "source_id": "community_search",
+      "label": "Community health worker search",
+      "detection_probability": 0.6,
+      "reporting_delay_days": 2,
+      "entries": [
+        {
+          "patient_id": "CHW-01",
+          "visit_date": "2025-06-06",
+          "age": "6",
+          "sex": "M",
+          "village": "Kabwe",
+          "symptom_onset_date": "2025-06-04",
+          "fever_y_n": "Yes",
+          "rash_y_n": "Unknown",
+          "vomiting_y_n": "Unknown",
+          "diarrhea_y_n": "Unknown",
+          "seizure_y_n": "Yes",
+          "notes": "Family reports confusion.",
+          "truth_case": true
+        }
+      ]
+    }
+  ]
 }

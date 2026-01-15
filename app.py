@@ -36,6 +36,7 @@ _missing_required = []
 for _name in [
     "load_truth_data",
     "generate_full_population",
+    "load_scenario_config",
     "apply_case_definition",
     "ensure_reported_to_hospital",
     "generate_study_dataset",
@@ -56,12 +57,15 @@ if _missing_required:
 
 load_truth_data = jl.load_truth_data
 generate_full_population = jl.generate_full_population
+load_scenario_config = jl.load_scenario_config
 apply_case_definition = jl.apply_case_definition
 ensure_reported_to_hospital = jl.ensure_reported_to_hospital
 generate_study_dataset = jl.generate_study_dataset
 process_lab_order = jl.process_lab_order
 evaluate_interventions = jl.evaluate_interventions
 check_day_prerequisites = jl.check_day_prerequisites
+validate_study_design_requirements = getattr(jl, "validate_study_design_requirements", None)
+classify_individuals = getattr(jl, "classify_individuals", None)
 get_day_spec = getattr(jl, "get_day_spec", None)
 
 # Game state management
@@ -1261,9 +1265,12 @@ def init_session_state():
         st.session_state.decisions = {
             "case_definition": None,
             "case_definition_text": "",
-            "case_definition_tiers": {},
+            "case_definition_structured": {},
             "case_definition_history": [],
             "study_design": None,
+            "study_design_justification": "",
+            "study_design_sampling_frame": "",
+            "study_design_bias_notes": "",
             "mapped_columns": [],
             "sample_size": {"cases": 15, "controls_per_case": 2},
             "lab_orders": [],
@@ -1354,20 +1361,21 @@ def init_session_state():
     st.session_state.setdefault("triangulation_checkpoint", {})
     st.session_state.setdefault("triangulation_completed", False)
 
-    if st.session_state.case_definition_builder and "case_def_suspected_clinical" not in st.session_state:
+    if st.session_state.case_definition_builder and "case_def_onset_start" not in st.session_state:
         builder = st.session_state.case_definition_builder
-        st.session_state.case_def_suspected_clinical = builder.get("suspected", {}).get("clinical", "")
-        st.session_state.case_def_suspected_epi = builder.get("suspected", {}).get("epi_link", "")
-        st.session_state.case_def_suspected_lab = builder.get("suspected", {}).get("lab", "")
-        st.session_state.case_def_suspected_time_place = builder.get("suspected", {}).get("time_place", "")
-        st.session_state.case_def_probable_clinical = builder.get("probable", {}).get("clinical", "")
-        st.session_state.case_def_probable_epi = builder.get("probable", {}).get("epi_link", "")
-        st.session_state.case_def_probable_lab = builder.get("probable", {}).get("lab", "")
-        st.session_state.case_def_probable_time_place = builder.get("probable", {}).get("time_place", "")
-        st.session_state.case_def_confirmed_clinical = builder.get("confirmed", {}).get("clinical", "")
-        st.session_state.case_def_confirmed_epi = builder.get("confirmed", {}).get("epi_link", "")
-        st.session_state.case_def_confirmed_lab = builder.get("confirmed", {}).get("lab", "")
-        st.session_state.case_def_confirmed_time_place = builder.get("confirmed", {}).get("time_place", "")
+        tw = builder.get("time_window", {})
+        st.session_state.case_def_onset_start = pd.to_datetime(tw.get("start", date.today())).date()
+        st.session_state.case_def_onset_end = pd.to_datetime(tw.get("end", date.today())).date()
+        st.session_state.case_def_villages = builder.get("villages", [])
+        st.session_state.case_def_exclusions = builder.get("exclusions", [])
+        for tier_key in ["suspected", "probable", "confirmed"]:
+            tier = builder.get("tiers", {}).get(tier_key, {})
+            st.session_state[f"case_def_{tier_key}_required_any"] = tier.get("required_any", [])
+            st.session_state[f"case_def_{tier_key}_optional"] = tier.get("optional_symptoms", [])
+            st.session_state[f"case_def_{tier_key}_min_optional"] = tier.get("min_optional", 0)
+            st.session_state[f"case_def_{tier_key}_epi_required"] = tier.get("epi_link_required", False)
+            st.session_state[f"case_def_{tier_key}_lab_required"] = tier.get("lab_required", False)
+            st.session_state[f"case_def_{tier_key}_lab_tests"] = tier.get("lab_tests", [])
 
     # Restore found cases from session persistence (if loading a saved session)
     # This is needed because truth is regenerated from CSV files, losing found cases
@@ -1391,6 +1399,14 @@ def get_symptomatic_column(truth: dict) -> str:
     if scenario_type == "lepto":
         return "symptomatic_lepto"
     return "symptomatic_AES"
+
+
+def scenario_config_label(scenario_type: str) -> str:
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    available_sample_types = sorted(
+        {stype for test in scenario_config.get("lab_tests", []) for stype in test.get("sample_types", [])}
+    ) or ["human_CSF", "human_serum", "pig_serum", "mosquito_pool"]
+    return scenario_config.get("disease_name", "Case")
 
 
 def get_day1_assets() -> dict:
@@ -1433,16 +1449,32 @@ def derive_unlocked_domains() -> set[str]:
 
 def build_case_definition_summary(case_def: dict) -> str:
     lines = []
+    tiers = case_def.get("tiers", {}) if isinstance(case_def, dict) else {}
+    if "time_window" in case_def:
+        tw = case_def.get("time_window", {})
+        lines.append(f"Time: {tw.get('start', '')} to {tw.get('end', '')}")
+    if case_def.get("villages"):
+        lines.append(f"Place: {', '.join(case_def.get('villages', []))}")
+    if case_def.get("exclusions"):
+        lines.append(f"Exclusions: {', '.join(case_def.get('exclusions', []))}")
     for tier in ["suspected", "probable", "confirmed"]:
-        tier_data = case_def.get(tier, {})
+        tier_data = tiers.get(tier, {})
         if not tier_data:
             continue
         lines.append(f"{tier.title()} Case:")
-        for key in ["clinical", "epi_link", "lab", "time_place"]:
-            text = tier_data.get(key, "").strip()
-            if text:
-                label = key.replace("_", " ").title()
-                lines.append(f"- {label}: {text}")
+        required_any = tier_data.get("required_any", [])
+        optional = tier_data.get("optional_symptoms", [])
+        min_opt = tier_data.get("min_optional", 0)
+        if required_any:
+            lines.append(f"- Clinical: at least one of {', '.join(required_any)}")
+        if optional:
+            lines.append(f"- Additional: ≥{min_opt} of {', '.join(optional)}")
+        if tier_data.get("epi_link_required"):
+            lines.append("- Epi link required")
+        if tier_data.get("lab_required"):
+            labs = tier_data.get("lab_tests", [])
+            lab_text = ", ".join(labs) if labs else "lab confirmation"
+            lines.append(f"- Lab: {lab_text}")
     return "\n".join(lines)
 
 
@@ -1461,50 +1493,28 @@ def record_case_definition_version(case_def: dict, rationale: str = "") -> None:
 
 
 def case_definition_feedback(case_def: dict) -> str:
-    filled = 0
-    for tier_data in case_def.values():
-        if isinstance(tier_data, dict):
-            filled += sum(1 for value in tier_data.values() if str(value).strip())
-    if filled <= 3:
+    if not case_def:
+        return "⚠️ Add clinical, time/place, and exclusion criteria to tighten the definition."
+    time_window = case_def.get("time_window", {})
+    villages = case_def.get("villages", [])
+    exclusions = case_def.get("exclusions", [])
+    missing = []
+    if not time_window.get("start") or not time_window.get("end"):
+        missing.append("time window")
+    if not villages:
+        missing.append("geographic boundary")
+    if not exclusions:
+        missing.append("exclusions")
+    if missing:
+        return f"⚠️ Missing elements: {', '.join(missing)}."
+
+    tiers = case_def.get("tiers", {})
+    filled = sum(len(tier.get("required_any", [])) + len(tier.get("optional_symptoms", [])) for tier in tiers.values())
+    if filled <= 2:
         return "⚠️ The definition is broad and may capture many non-cases (specificity risk)."
-    if filled >= 10:
+    if filled >= 8:
         return "⚠️ The definition is very restrictive and may miss true cases (sensitivity risk)."
     return "✅ Balance looks reasonable; monitor sensitivity/specificity as you collect more data."
-
-
-def extract_case_definition_keywords(case_def: dict) -> list[str]:
-    keywords = []
-    text = " ".join(
-        str(section)
-        for tier in case_def.values()
-        if isinstance(tier, dict)
-        for section in tier.values()
-    ).lower()
-    for key in ["fever", "seizure", "rash", "vomiting", "diarrhea", "myalgia", "jaundice", "conjunctival"]:
-        if key in text:
-            keywords.append(key)
-    return keywords
-
-
-def match_case_definition(row: dict, keywords: list[str]) -> bool:
-    mapping = {
-        "fever": "fever_y_n",
-        "seizure": "seizure_y_n",
-        "rash": "rash_y_n",
-        "vomiting": "vomiting_y_n",
-        "diarrhea": "diarrhea_y_n",
-        "myalgia": "myalgia_y_n",
-        "jaundice": "jaundice_y_n",
-        "conjunctival": "conjunctival_suffusion_y_n",
-    }
-    for key in keywords:
-        field = mapping.get(key)
-        if not field:
-            continue
-        value = str(row.get(field, "")).strip().lower()
-        if value not in {"yes", "y", "true"}:
-            return False
-    return True
 
 
 def build_epidemiologic_context(truth: dict) -> str:
@@ -1526,14 +1536,16 @@ def build_epidemiologic_context(truth: dict) -> str:
             merged[optional_col] = pd.NA
 
     scenario_type = truth.get("scenario_type")
-    symptomatic_column = get_symptomatic_column(truth)
-    cases = merged[merged[symptomatic_column] == True]
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
+    cases = apply_case_definition(merged, case_criteria)
     total_cases = len(cases)
 
     if total_cases == 0:
-        if scenario_type == "lepto":
-            return "No symptomatic leptospirosis cases have been assigned in the truth model."
-        return "No symptomatic AES cases have been assigned in the truth model."
+        return f"No symptomatic {scenario_config_label(scenario_type).lower()} cases have been assigned in the truth model."
 
     if scenario_type == "lepto":
         adult_male_cases = cases[
@@ -1552,7 +1564,7 @@ def build_epidemiologic_context(truth: dict) -> str:
         else:
             flood_exposed_cases = cases.iloc[0:0]
         context = (
-            f"There are currently about {total_cases} symptomatic leptospirosis cases in the district. "
+            f"There are currently about {total_cases} symptomatic {scenario_config_label(scenario_type).lower()} cases in the district. "
             f"Adult men account for {len(adult_male_cases)} cases. "
             f"{len(cleanup_cases)} cases report flood cleanup work, and {len(flood_exposed_cases)} "
             "come from households with moderate or deep flooding exposure."
@@ -1567,10 +1579,10 @@ def build_epidemiologic_context(truth: dict) -> str:
     age_counts = age_groups.value_counts().to_dict()
 
     context = (
-        f"There are currently about {total_cases} symptomatic AES cases in the district. "
+        f"There are currently about {total_cases} symptomatic {scenario_config_label(scenario_type).lower()} cases in the district. "
         f"Cases by village: {village_counts}. "
         f"Cases by age group: {age_counts}. "
-        "Most cases are children and come from villages with rice paddies and pigs."
+        "Most cases are children and cluster around key exposure areas."
     )
     return context
 
@@ -1580,8 +1592,7 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     npc = truth["npc_truth"][npc_key]
     data_access = npc.get("data_access")
     scenario_type = truth.get("scenario_type")
-    symptomatic_column = get_symptomatic_column(truth)
-    case_label = "leptospirosis" if scenario_type == "lepto" else "AES"
+    case_label = scenario_config_label(scenario_type).lower()
 
     individuals = truth["individuals"]
     households = truth["households"]
@@ -1591,6 +1602,12 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     merged = individuals.merge(
         hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
     )
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
+    cases = apply_case_definition(merged, case_criteria)
 
     epi_context = build_epidemiologic_context(truth)
     trust_level = get_npc_trust(npc_key)
@@ -1612,7 +1629,6 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "hospital_cases":
-        cases = merged[merged[symptomatic_column] == True]
         summary = cases.groupby("village_name").size().to_dict()
         return (
             epi_context
@@ -1621,7 +1637,6 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "triage_logs":
-        cases = merged[merged[symptomatic_column] == True]
         earliest = cases["onset_date"].min()
         latest = cases["onset_date"].max()
         return (
@@ -1631,10 +1646,7 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "private_clinic":
-        cases = merged[
-            (merged[symptomatic_column] == True)
-            & (merged["village_name"] == "Nalu Village")
-        ]
+        cases = cases[cases["village_name"] == "Nalu Village"]
         n = len(cases)
         return (
             epi_context
@@ -1643,8 +1655,8 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
         )
 
     if data_access == "school_attendance":
-        school_age = merged[(merged["age"] >= 5) & (merged["age"] <= 18)]
-        cases = school_age[school_age[symptomatic_column] == True]
+        school_age = cases[(cases["age"] >= 5) & (cases["age"] <= 18)]
+        cases = school_age
         n = len(cases)
         by_village = cases["village_name"].value_counts().to_dict()
         return (
@@ -1990,16 +2002,41 @@ def npc_style_hint(npc_key: str, question_count: int, npc_state: str) -> str:
 # =========================
 
 LAB_TEST_CATALOG = {
-    # The keys match outbreak_logic.LAB_TESTS / aliases; labels are trainee-facing.
     "JE_IgM_CSF": {"generic": "Arbovirus IgM (CSF)", "confirmed": "Japanese Encephalitis IgM (CSF)"},
     "JE_IgM_serum": {"generic": "Arbovirus IgM (serum)", "confirmed": "Japanese Encephalitis IgM (serum)"},
+    "JE_PCR_CSF": {"generic": "Arbovirus PCR (CSF)", "confirmed": "Japanese Encephalitis PCR (CSF)"},
     "JE_PCR_mosquito": {"generic": "Arbovirus PCR (mosquito pool)", "confirmed": "Japanese Encephalitis PCR (mosquito pool)"},
     "JE_Ab_pig": {"generic": "Arbovirus antibodies (pig serum)", "confirmed": "Japanese Encephalitis antibodies (pig serum)"},
+    "LEPTO_ELISA_IGM": {"generic": "Leptospira IgM ELISA", "confirmed": "Leptospira IgM ELISA"},
+    "LEPTO_PCR_BLOOD": {"generic": "Leptospira PCR (blood)", "confirmed": "Leptospira PCR (blood)"},
+    "LEPTO_PCR_URINE": {"generic": "Leptospira PCR (urine)", "confirmed": "Leptospira PCR (urine)"},
+    "LEPTO_MAT": {"generic": "Leptospira MAT", "confirmed": "Leptospira MAT"},
+    "LEPTO_ENV_WATER_PCR": {"generic": "Leptospira PCR (water)", "confirmed": "Leptospira PCR (water)"},
+    "RODENT_PCR": {"generic": "Rodent kidney PCR", "confirmed": "Rodent kidney PCR"},
+    "MALARIA_RDT": {"generic": "Malaria RDT", "confirmed": "Malaria RDT"},
+    "DENGUE_NS1": {"generic": "Dengue NS1", "confirmed": "Dengue NS1"},
+    "BACTERIAL_MENINGITIS_CSF": {"generic": "Bacterial meningitis panel (CSF)", "confirmed": "Bacterial meningitis panel (CSF)"},
 }
+
+
+def _scenario_lab_catalog() -> dict:
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    catalog = {}
+    for entry in scenario_config.get("lab_tests", []):
+        code = entry.get("code")
+        if not code:
+            continue
+        catalog[code] = {
+            "generic": entry.get("label_generic", code),
+            "confirmed": entry.get("label_confirmed", entry.get("label_generic", code)),
+        }
+    return catalog
+
 
 def lab_test_label(test_code: str) -> str:
     stage = investigation_stage()
-    entry = LAB_TEST_CATALOG.get(test_code, {})
+    catalog = _scenario_lab_catalog()
+    entry = catalog.get(test_code) or LAB_TEST_CATALOG.get(test_code, {})
     if stage == "confirmed":
         return entry.get("confirmed", test_code)
     return entry.get("generic", test_code)
@@ -2017,10 +2054,12 @@ def refresh_lab_queue_for_day(day: int) -> None:
         if str(r.get("result", "")).upper() == "PENDING" and day >= ready_day:
             r["result"] = r.get("final_result_hidden", r.get("result", "PENDING"))
 
-    # Reveal etiology if an arbovirus test returns POSITIVE (only after Day 4)
-    if day >= 4 and stage_before != "confirmed":
+    # Reveal etiology if confirmatory test returns POSITIVE (only after Day 3+)
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    confirmatory = set(scenario_config.get("confirmatory_tests", []))
+    if day >= 3 and stage_before != "confirmed":
         for r in st.session_state.lab_results:
-            if str(r.get("result", "")).upper() == "POSITIVE" and str(r.get("test", "")).startswith("JE_"):
+            if str(r.get("result", "")).upper() == "POSITIVE" and r.get("test") in confirmatory:
                 st.session_state.etiology_revealed = True
                 break
 
@@ -2765,6 +2804,14 @@ def parse_clinic_record_village(village_str: str) -> str:
         return 'V2'
     elif 'tamu' in village_lower:
         return 'V3'
+    if 'north' in village_lower:
+        return 'V1'
+    if 'east' in village_lower:
+        return 'V2'
+    if 'south' in village_lower:
+        return 'V3'
+    if 'high' in village_lower:
+        return 'V4'
     return 'V1'  # Default to Nalu
 
 
@@ -2788,7 +2835,7 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
     # Find true positive selections (correctly identified AES cases)
     true_positive_records = [
         r for r in clinic_records
-        if r['record_id'] in selected_record_ids and r.get('is_aes', False)
+        if r['record_id'] in selected_record_ids and (r.get('truth_case', r.get('is_aes', False)))
     ]
 
     if not true_positive_records:
@@ -2816,6 +2863,7 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
     new_individuals = []
     new_households = []
 
+    scenario_type = st.session_state.get("current_scenario_type")
     for i, record in enumerate(true_positive_records):
         # Create unique IDs for case-finding discovered cases
         person_id = f"P_CF{max_person_num + 1000 + i:03d}"
@@ -2854,17 +2902,28 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
             'age': age,
             'sex': sex,
             'occupation': occupation,
-            'JE_vaccinated': False,  # Assume unvaccinated (part of the outbreak)
-            'evening_outdoor_exposure': True,  # Common exposure pattern
-            'true_je_infection': True,  # These are true AES cases
-            'symptomatic_AES': True,  # This is what makes them appear in line list
-            'severe_neuro': severe_neuro,
             'onset_date': onset_date,
             'outcome': outcome,
             'name_hint': record.get('patient', ''),
-            'found_via_case_finding': True,  # Flag to track source
+            'found_via_case_finding': True,
             'clinic_record_id': record.get('record_id', ''),
         }
+        if scenario_type == "lepto":
+            individual.update({
+                "symptoms_fever": "fever" in combined_text,
+                "symptoms_myalgia": "myalgia" in combined_text or "calf" in combined_text,
+                "symptoms_conjunctival_suffusion": "red eye" in combined_text or "conjunctival" in combined_text,
+                "symptoms_jaundice": "jaundice" in combined_text or "yellow" in combined_text,
+                "symptoms_renal_failure": "oliguria" in combined_text or "renal" in combined_text,
+            })
+        else:
+            individual.update({
+                'JE_vaccinated': False,
+                'evening_outdoor_exposure': True,
+                'true_je_infection': True,
+                'symptomatic_AES': True,
+                'severe_neuro': severe_neuro,
+            })
         new_individuals.append(individual)
 
         # Create household record with typical outbreak characteristics
@@ -2872,16 +2931,94 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
         household = {
             'hh_id': hh_id,
             'village_id': village_id,
-            'pigs_owned': 2 if 'pig' in combined_text else 1,
-            'pig_pen_distance_m': 20.0,
-            'uses_mosquito_nets': 'no net' in combined_text or 'no mosquito' in combined_text,
-            'rice_field_distance_m': 50.0 if 'rice' in combined_text or 'paddy' in combined_text else 100.0,
-            'children_under_15': 2,
-            'JE_vaccination_children': 'none',
         }
-        # Correct net usage - False if "no net" mentioned
-        household['uses_mosquito_nets'] = not ('no net' in combined_text or 'no mosquito' in combined_text)
+        if scenario_type == "lepto":
+            household.update({
+                "cleanup_participation": "cleanup" in combined_text,
+                "flood_depth_category": "deep" if "deep" in combined_text else "moderate",
+            })
+        else:
+            household.update({
+                'pigs_owned': 2 if 'pig' in combined_text else 1,
+                'pig_pen_distance_m': 20.0,
+                'uses_mosquito_nets': 'no net' in combined_text or 'no mosquito' in combined_text,
+                'rice_field_distance_m': 50.0 if 'rice' in combined_text or 'paddy' in combined_text else 100.0,
+                'children_under_15': 2,
+                'JE_vaccination_children': 'none',
+            })
+            household['uses_mosquito_nets'] = not ('no net' in combined_text or 'no mosquito' in combined_text)
         new_households.append(household)
+
+    return pd.DataFrame(new_individuals), pd.DataFrame(new_households)
+
+
+def create_structured_case_records(
+    entries: list,
+    existing_individuals: pd.DataFrame,
+    existing_households: pd.DataFrame,
+    scenario_config: dict,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Create case records from structured case-finding entries."""
+    import pandas as pd
+
+    if not entries:
+        return pd.DataFrame(), pd.DataFrame()
+
+    existing_person_nums = []
+    for pid in existing_individuals["person_id"]:
+        try:
+            num = int(str(pid).replace("P", "").replace("_CF", ""))
+            existing_person_nums.append(num)
+        except Exception:
+            continue
+    max_person_num = max(existing_person_nums) if existing_person_nums else 0
+
+    existing_hh_nums = []
+    for hid in existing_households["hh_id"]:
+        try:
+            num = int(str(hid).replace("HH", "").replace("_CF", ""))
+            existing_hh_nums.append(num)
+        except Exception:
+            continue
+    max_hh_num = max(existing_hh_nums) if existing_hh_nums else 0
+
+    symptom_map = scenario_config.get("symptom_field_map", {})
+    new_individuals = []
+    new_households = []
+    for i, entry in enumerate(entries):
+        person_id = f"P_CF{max_person_num + 2000 + i:03d}"
+        hh_id = f"HH_CF{max_hh_num + 2000 + i:03d}"
+        age = int(entry.get("age") or 0)
+        sex = str(entry.get("sex") or "U")
+        village_id = parse_clinic_record_village(entry.get("village", entry.get("village_id", "")))
+        onset_date = entry.get("symptom_onset_date") or entry.get("onset_date")
+
+        individual = {
+            "person_id": person_id,
+            "hh_id": hh_id,
+            "village_id": village_id,
+            "age": age,
+            "sex": sex,
+            "occupation": "other",
+            "onset_date": onset_date,
+            "outcome": "recovering",
+            "name_hint": entry.get("patient_id", ""),
+            "found_via_case_finding": True,
+        }
+
+        for _, mapping in symptom_map.items():
+            indiv_field = mapping.get("individuals")
+            clinic_field = mapping.get("clinic")
+            if not indiv_field or not clinic_field:
+                continue
+            value = str(entry.get(clinic_field, "")).strip().lower()
+            if value in {"yes", "y", "true"}:
+                individual[indiv_field] = True
+            elif value in {"no", "n", "false"}:
+                individual[indiv_field] = False
+
+        new_individuals.append(individual)
+        new_households.append({"hh_id": hh_id, "village_id": village_id})
 
     return pd.DataFrame(new_individuals), pd.DataFrame(new_households)
 
@@ -3296,14 +3433,18 @@ def get_initial_cases(truth: dict, n: int = 12) -> pd.DataFrame:
     individuals = truth["individuals"]
     households = truth["households"]
     villages = truth["villages"][["village_id", "village_name"]]
-    symptomatic_column = get_symptomatic_column(truth)
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
 
     hh_vil = households.merge(villages, on="village_id", how="left")
     merged = individuals.merge(
         hh_vil[["hh_id", "village_name"]], on="hh_id", how="left"
     )
 
-    cases = merged[merged[symptomatic_column] == True].copy()
+    cases = apply_case_definition(merged, case_criteria).copy()
     if "onset_date" in cases.columns:
         cases = cases.sort_values("onset_date")
 
@@ -3324,10 +3465,14 @@ def get_initial_cases(truth: dict, n: int = 12) -> pd.DataFrame:
 def make_epi_curve(truth: dict) -> go.Figure:
     """Epi curve of cases by onset date."""
     individuals = truth["individuals"]
-    symptomatic_column = get_symptomatic_column(truth)
     scenario_type = truth.get("scenario_type")
-    case_label = "leptospirosis" if scenario_type == "lepto" else "AES"
-    cases = individuals[individuals[symptomatic_column] == True].copy()
+    case_label = scenario_config_label(scenario_type)
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
+    cases = apply_case_definition(individuals, case_criteria).copy()
     if "onset_date" not in cases.columns:
         fig = go.Figure()
         fig.update_layout(title="Epi curve not available")
@@ -3346,7 +3491,7 @@ def make_epi_curve(truth: dict) -> go.Figure:
         )
     )
     fig.update_layout(
-        title=f"{case_label.title()} cases by onset date",
+        title=f"{case_label} cases by onset date",
         xaxis_title="Onset date",
         yaxis_title="Number of cases",
         height=300,
@@ -3799,7 +3944,8 @@ def view_overview():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### Line list (initial AES cases)")
+        case_label = scenario_config_label(truth.get("scenario_type"))
+        st.markdown(f"#### Line list (initial {case_label} cases)")
         line_list = get_initial_cases(truth)
         st.dataframe(line_list)
         st.session_state.line_list_viewed = True
@@ -3837,90 +3983,100 @@ def view_overview():
                 st.session_state.case_def_confirmed_clinical = template_sections.get("confirmed", "")
                 st.success("Template loaded into the builder.")
 
-            st.markdown("#### Suspected Case")
-            st.text_area(
-                "Clinical criteria",
-                key="case_def_suspected_clinical",
-                height=80,
+            scenario_config = st.session_state.get("scenario_config", {}) or {}
+            symptom_map = {s.get("label"): s.get("key") for s in scenario_config.get("symptoms", [])}
+            symptom_labels = list(symptom_map.keys())
+            exclusion_options = scenario_config.get("exclusion_conditions", [])
+            village_options = truth["villages"]["village_id"].tolist()
+
+            st.markdown("#### Time/Place Boundaries")
+            defaults = scenario_config.get("case_definition_defaults", {})
+            c1, c2 = st.columns(2)
+            with c1:
+                st.date_input(
+                    "Onset start",
+                    key="case_def_onset_start",
+                    value=pd.to_datetime(defaults.get("onset_start", date.today())).date(),
+                )
+            with c2:
+                st.date_input(
+                    "Onset end",
+                    key="case_def_onset_end",
+                    value=pd.to_datetime(defaults.get("onset_end", date.today())).date(),
+                )
+            st.multiselect(
+                "Affected villages/wards",
+                options=village_options,
+                default=defaults.get("villages", village_options),
+                key="case_def_villages",
             )
-            st.text_area(
-                "Epi link / exposure criteria",
-                key="case_def_suspected_epi",
-                height=60,
-            )
-            st.text_area(
-                "Lab criteria (if any)",
-                key="case_def_suspected_lab",
-                height=60,
-            )
-            st.text_area(
-                "Time/place restrictions",
-                key="case_def_suspected_time_place",
-                height=60,
+            st.multiselect(
+                "Explicit exclusions (rule-outs)",
+                options=exclusion_options,
+                default=exclusion_options,
+                key="case_def_exclusions",
             )
 
-            st.markdown("#### Probable Case")
-            st.text_area(
-                "Clinical criteria",
-                key="case_def_probable_clinical",
-                height=80,
-            )
-            st.text_area(
-                "Epi link / exposure criteria",
-                key="case_def_probable_epi",
-                height=60,
-            )
-            st.text_area(
-                "Lab criteria (if any)",
-                key="case_def_probable_lab",
-                height=60,
-            )
-            st.text_area(
-                "Time/place restrictions",
-                key="case_def_probable_time_place",
-                height=60,
-            )
+            def _tier_builder(tier_key: str, title: str) -> dict:
+                st.markdown(f"#### {title} Case")
+                required_any = st.multiselect(
+                    "At least one required symptom",
+                    options=symptom_labels,
+                    key=f"{tier_key}_required_any",
+                )
+                optional_symptoms = st.multiselect(
+                    "Additional symptoms (optional)",
+                    options=[s for s in symptom_labels if s not in required_any],
+                    key=f"{tier_key}_optional",
+                )
+                min_optional = st.number_input(
+                    "Minimum optional symptoms",
+                    min_value=0,
+                    max_value=len(optional_symptoms),
+                    value=0,
+                    step=1,
+                    key=f"{tier_key}_min_optional",
+                )
+                epi_required = st.checkbox(
+                    "Require epi link (exposure or contact)",
+                    value=(tier_key == "probable"),
+                    key=f"{tier_key}_epi_required",
+                )
+                lab_required = st.checkbox(
+                    "Require lab evidence",
+                    value=(tier_key == "confirmed"),
+                    key=f"{tier_key}_lab_required",
+                )
+                lab_tests = st.multiselect(
+                    "Accepted lab tests",
+                    options=[t.get("code") for t in scenario_config.get("lab_tests", [])],
+                    key=f"{tier_key}_lab_tests",
+                    disabled=not lab_required,
+                )
+                return {
+                    "required_any": [symptom_map[label] for label in required_any],
+                    "optional_symptoms": [symptom_map[label] for label in optional_symptoms],
+                    "min_optional": int(min_optional),
+                    "epi_link_required": epi_required,
+                    "lab_required": lab_required,
+                    "lab_tests": lab_tests,
+                }
 
-            st.markdown("#### Confirmed Case")
-            st.text_area(
-                "Clinical criteria",
-                key="case_def_confirmed_clinical",
-                height=80,
-            )
-            st.text_area(
-                "Epi link / exposure criteria",
-                key="case_def_confirmed_epi",
-                height=60,
-            )
-            st.text_area(
-                "Lab criteria (required)",
-                key="case_def_confirmed_lab",
-                height=60,
-            )
-            st.text_area(
-                "Time/place restrictions",
-                key="case_def_confirmed_time_place",
-                height=60,
-            )
+            suspected = _tier_builder("case_def_suspected", "Suspected")
+            probable = _tier_builder("case_def_probable", "Probable")
+            confirmed = _tier_builder("case_def_confirmed", "Confirmed")
 
             current_case_def = {
-                "suspected": {
-                    "clinical": st.session_state.get("case_def_suspected_clinical", ""),
-                    "epi_link": st.session_state.get("case_def_suspected_epi", ""),
-                    "lab": st.session_state.get("case_def_suspected_lab", ""),
-                    "time_place": st.session_state.get("case_def_suspected_time_place", ""),
+                "time_window": {
+                    "start": str(st.session_state.get("case_def_onset_start")),
+                    "end": str(st.session_state.get("case_def_onset_end")),
                 },
-                "probable": {
-                    "clinical": st.session_state.get("case_def_probable_clinical", ""),
-                    "epi_link": st.session_state.get("case_def_probable_epi", ""),
-                    "lab": st.session_state.get("case_def_probable_lab", ""),
-                    "time_place": st.session_state.get("case_def_probable_time_place", ""),
-                },
-                "confirmed": {
-                    "clinical": st.session_state.get("case_def_confirmed_clinical", ""),
-                    "epi_link": st.session_state.get("case_def_confirmed_epi", ""),
-                    "lab": st.session_state.get("case_def_confirmed_lab", ""),
-                    "time_place": st.session_state.get("case_def_confirmed_time_place", ""),
+                "villages": st.session_state.get("case_def_villages", []),
+                "exclusions": st.session_state.get("case_def_exclusions", []),
+                "tiers": {
+                    "suspected": suspected,
+                    "probable": probable,
+                    "confirmed": confirmed,
                 },
             }
 
@@ -3937,9 +4093,11 @@ def view_overview():
                     st.error("Please enter at least one case definition element before saving.")
                 else:
                     st.session_state.case_definition_builder = current_case_def
-                    st.session_state.decisions["case_definition_tiers"] = current_case_def
+                    st.session_state.decisions["case_definition_structured"] = current_case_def
                     st.session_state.decisions["case_definition_text"] = build_case_definition_summary(current_case_def)
-                    st.session_state.decisions["case_definition"] = {"clinical_AES": True}
+                    st.session_state.decisions["case_definition"] = current_case_def
+                    st.session_state.decisions["scenario_id"] = scenario_id
+                    st.session_state.decisions["scenario_config"] = scenario_config
                     st.session_state.case_definition_written = True
                     record_case_definition_version(current_case_def, rationale=rationale.strip())
                     st.success("✅ Case definition saved!")
@@ -4256,9 +4414,11 @@ def view_case_finding():
             st.rerun()
 
     st.header("Case Finding")
+    scenario_type = st.session_state.get("current_scenario_type", "je")
+    case_label = scenario_config_label(scenario_type)
 
     # Tabs for different record sources
-    tab1, tab2 = st.tabs(["Clinic Records", "Hospital Records"])
+    tab1, tab2, tab3 = st.tabs(["Clinic Records", "Hospital Records", "Multi-source Sweep"])
     
     with tab1:
         st.subheader("Nalu Health Center - Patient Register Review")
@@ -4292,15 +4452,14 @@ def view_case_finding():
             else:
                 st.markdown("""
                 You've obtained permission to review records from the **Nalu Health Center**.
-                Look through these handwritten clinic notes to identify potential AES cases 
+                Look through these handwritten clinic notes to identify potential cases 
                 that may not have been reported to the district hospital.
                 
                 **Your task:** Review each record and select any that might be related to the outbreak.
-                Consider: fever, neurological symptoms (confusion, seizures, altered consciousness), 
-                and geographic/temporal clustering.
+                Consider: fever, syndrome-specific symptoms, and geographic/temporal clustering.
                 """)
                 
-                st.info("💡 Tip: Not every fever is AES. Look for the combination of fever AND neurological symptoms.")
+                st.info(f"💡 Tip: Not every fever is {case_label}. Look for the combination of fever AND key syndrome features.")
                 
                 # Generate clinic records
                 if 'clinic_records' not in st.session_state:
@@ -4319,7 +4478,7 @@ def view_case_finding():
                     with col1 if i % 2 == 0 else col2:
                         render_clinic_record(record, show_checkbox=False)
                         is_selected = st.checkbox(
-                            f"Potential AES case",
+                            f"Potential {case_label} case",
                             key=f"clinic_select_{record['record_id']}",
                             value=record['record_id'] in st.session_state.selected_clinic_cases
                         )
@@ -4349,7 +4508,7 @@ def view_case_finding():
                                            for r in records if r['record_id'] == rid and r.get('is_aes'))
                         false_positives = len(selected) - true_positives
                         
-                        # Count total true AES cases
+                        # Count total true cases
                         total_aes = sum(1 for r in records if r.get('is_aes'))
                         false_negatives = total_aes - true_positives
                         
@@ -4388,12 +4547,12 @@ def view_case_finding():
                             }
                         )
 
-                        st.success(f"✅ Case finding complete! You identified {true_positives} of {total_aes} potential AES cases.")
+                        st.success(f"✅ Case finding complete! You identified {true_positives} of {total_aes} potential {case_label} cases.")
                         
                         if false_positives > 0:
-                            st.warning(f"⚠️ {false_positives} record(s) you selected may not be AES cases.")
+                            st.warning(f"⚠️ {false_positives} record(s) you selected may not be {case_label} cases.")
                         if false_negatives > 0:
-                            st.info(f"📝 {false_negatives} potential AES case(s) were missed. Review records with fever + neurological symptoms.")
+                            st.info(f"📝 {false_negatives} potential {case_label} case(s) were missed. Review records with fever + key syndrome symptoms.")
                         
                         st.rerun()
         else:
@@ -4519,7 +4678,57 @@ def view_case_finding():
                         "leading_differentials": leading_dx,
                         "justification": justification.strip(),
                     }
-                    st.success("✅ Chart abstraction saved.")
+                st.success("✅ Chart abstraction saved.")
+
+    with tab3:
+        st.subheader("Definition-driven case finding")
+        assets = get_day1_assets()
+        sources = day1_utils.get_case_finding_sources(assets)
+        case_def = st.session_state.decisions.get("case_definition_structured")
+        scenario_config = st.session_state.get("scenario_config", {}) or {}
+
+        if not case_def:
+            st.info("Save a working case definition to run the sweep.")
+            return
+
+        st.caption("Run case finding across multiple sources. You can re-run after refining the case definition.")
+        if st.button("Run case finding sweep", type="primary"):
+            st.session_state.case_finding_results = day1_utils.run_case_finding(
+                sources,
+                case_def,
+                scenario_config,
+                current_day=int(st.session_state.get("current_day", 1)),
+            )
+
+        results = st.session_state.get("case_finding_results")
+        if results:
+            for source in results.get("sources", []):
+                with st.expander(f"{source.get('label', 'Source')}"):
+                    if source.get("pending"):
+                        st.info("Reports pending due to reporting delay.")
+                        continue
+                    matches = source.get("matches", [])
+                    st.metric("Matches", len(matches))
+                    if matches:
+                        st.dataframe(pd.DataFrame(matches), use_container_width=True, hide_index=True)
+                        if st.button(f"Add {len(matches)} matches to line list", key=f"add_{source.get('source_id')}"):
+                            new_inds, new_hhs = create_structured_case_records(
+                                matches,
+                                st.session_state.truth["individuals"],
+                                st.session_state.truth["households"],
+                                scenario_config,
+                            )
+                            if not new_inds.empty:
+                                st.session_state.truth["individuals"] = pd.concat(
+                                    [st.session_state.truth["individuals"], new_inds], ignore_index=True
+                                )
+                                st.session_state.truth["households"] = pd.concat(
+                                    [st.session_state.truth["households"], new_hhs], ignore_index=True
+                                )
+                                st.session_state['found_case_individuals'] = new_inds
+                                st.session_state['found_case_households'] = new_hhs
+                                st.session_state.found_cases_added = True
+                                st.success("Added cases to line list.")
 
     if st.session_state.clinic_records_reviewed:
         st.markdown("---")
@@ -4778,20 +4987,20 @@ def view_case_finding_debrief():
         st.info("Complete the clinic log abstraction first.")
         return
 
-    case_def = st.session_state.decisions.get("case_definition_tiers") or st.session_state.case_definition_builder
+    case_def = st.session_state.decisions.get("case_definition_structured") or st.session_state.case_definition_builder
     if not case_def:
         st.info("Save a working case definition first.")
         return
-
-    keywords = extract_case_definition_keywords(case_def)
-    if not keywords:
-        st.warning("Your case definition does not include recognizable clinical keywords yet.")
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    if not case_def.get("tiers"):
+        st.warning("Your case definition is missing tiered symptom criteria.")
 
     answer_key = {entry["entry_id"]: entry for entry in entries}
     matches = []
     for row in st.session_state.clinic_line_list:
         patient_id = row.get("patient_id", "")
-        is_match = match_case_definition(row, keywords) if keywords else False
+        classification = day1_utils.match_case_definition_structured(row, case_def, scenario_config)
+        is_match = classification in {"suspected", "probable", "confirmed"}
         truth_case = answer_key.get(patient_id, {}).get("truth_case")
         matches.append({
             "patient_id": patient_id,
@@ -5124,10 +5333,12 @@ def view_descriptive_epi():
     individuals = truth["individuals"]
     households = truth["households"]
     villages = truth["villages"]
-    symptomatic_column = get_symptomatic_column(truth)
-    
-    # Get all symptomatic cases
-    cases = individuals[individuals[symptomatic_column] == True].copy()
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
+    cases = apply_case_definition(individuals, case_criteria).copy()
     
     # Merge with location info
     hh_vil = households.merge(villages[["village_id", "village_name"]], on="village_id", how="left")
@@ -5544,20 +5755,54 @@ def view_study_design():
             st.warning("No case definition saved yet.")
 
         st.markdown("### Study Design")
-        sd_type = st.radio("Choose a study design:", ["Case-control", "Retrospective cohort"], horizontal=True,
-                          index=0 if st.session_state.decisions.get("study_design", {}).get("type") == "case_control" else 1)
+        scenario_config = st.session_state.get("scenario_config", {}) or {}
+        recommended = scenario_config.get("study_design", {}).get("recommended", "case_control")
+        sd_type = st.radio(
+            "Choose a study design:",
+            ["Case-control", "Retrospective cohort"],
+            horizontal=True,
+            index=0 if st.session_state.decisions.get("study_design", {}).get("type") == "case_control" else 1,
+        )
 
         if sd_type == "Case-control":
             st.session_state.decisions["study_design"] = {"type": "case_control"}
-            st.info("**Case-control study**: Compare exposures between cases (people with AES) and controls (people without AES).")
+            st.info("**Case-control study**: Compare exposures between cases and controls.")
         else:
             st.session_state.decisions["study_design"] = {"type": "cohort"}
-            st.info("**Retrospective cohort study**: Follow a group back in time to compare disease occurrence between exposed and unexposed individuals.")
+            st.info("**Retrospective cohort study**: Compare attack rates between exposed and unexposed groups.")
+
+        if recommended and st.session_state.decisions["study_design"]["type"] != recommended:
+            st.warning(f"Scenario guidance suggests a **{scenario_config.get('study_design', {}).get('label', 'preferred')}** design.")
+
+        st.markdown("### Design Justification")
+        st.session_state.decisions["study_design_justification"] = st.text_area(
+            "Justify your design choice (2-3 sentences)",
+            value=st.session_state.decisions.get("study_design_justification", ""),
+            height=80,
+        )
+        st.session_state.decisions["study_design_sampling_frame"] = st.text_area(
+            "Describe the sampling frame",
+            value=st.session_state.decisions.get("study_design_sampling_frame", scenario_config.get("study_design", {}).get("sampling_frame_prompt", "")),
+            height=60,
+        )
+        st.session_state.decisions["study_design_bias_notes"] = st.text_area(
+            "Bias/matching/feasibility notes",
+            value=st.session_state.decisions.get("study_design_bias_notes", ""),
+            height=80,
+            help="Note potential biases, matching considerations, and feasibility constraints.",
+        )
 
         # Navigation
         if st.button("Next: Exposure Domains", type="primary"):
-            st.session_state.wizard_step = 2
-            st.rerun()
+            if validate_study_design_requirements:
+                ok, missing = validate_study_design_requirements(st.session_state.decisions, scenario_config)
+            else:
+                ok, missing = True, []
+            if not ok:
+                st.error("Please complete the study design justification, sampling frame, and bias notes before continuing.")
+            else:
+                st.session_state.wizard_step = 2
+                st.rerun()
 
     # ========================================
     # STEP 2: EXPOSURE DOMAINS (ONE HEALTH)
@@ -5665,11 +5910,11 @@ def view_study_design():
             individuals = ensure_reported_to_hospital(individuals, random_seed=42)
             st.session_state.truth["individuals"] = individuals
 
-        case_criteria = st.session_state.decisions.get("case_definition", {"clinical_AES": True})
-        scenario_type = st.session_state.truth.get("scenario_type")
-        if scenario_type:
-            case_criteria = dict(case_criteria)
-            case_criteria["scenario_type"] = scenario_type
+        case_criteria = {
+            "scenario_id": st.session_state.get("current_scenario"),
+            "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+            "lab_results": st.session_state.lab_results,
+        }
         cases_pool = apply_case_definition(individuals, case_criteria).copy()
         cases_pool = cases_pool.sort_values(["village_id", "onset_date"], na_position="last")
 
@@ -5765,7 +6010,8 @@ def view_study_design():
         def _build_control_pool():
             pool = individuals.copy()
             # non-cases only (by default)
-            pool = pool[pool.get("symptomatic_AES", False).astype(bool) == False].copy()
+            case_ids = set(cases_pool["person_id"].astype(str).tolist())
+            pool = pool[~pool["person_id"].astype(str).isin(case_ids)].copy()
             pool = pool[pool["village_id"].isin(eligible_villages)].copy()
             if control_age_range:
                 pool = pool[(pool["age"] >= int(control_age_range["min"])) & (pool["age"] <= int(control_age_range["max"]))].copy()
@@ -5930,7 +6176,8 @@ def view_study_design():
             try:
                 decisions = dict(st.session_state.decisions)
                 decisions["return_sampling_report"] = True
-                decisions["scenario_type"] = st.session_state.truth.get("scenario_type")
+                decisions["scenario_id"] = st.session_state.get("current_scenario")
+                decisions["scenario_config"] = st.session_state.get("scenario_config", {})
                 decisions["unlocked_domains"] = sorted(derive_unlocked_domains())
                 st.session_state.decisions["unlocked_domains"] = decisions["unlocked_domains"]
                 df, report = generate_study_dataset(individuals, households, decisions)
@@ -5973,8 +6220,8 @@ def view_study_design():
 
 def view_lab_and_environment():
     st.header(t("lab", default="Lab & Environment"))
-    if int(st.session_state.get("current_day", 1)) < 4:
-        st.info(t("locked_until_day", day=4))
+    if not st.session_state.get("case_definition_written"):
+        st.info("Save a working case definition before ordering lab tests.")
         return
     refresh_lab_queue_for_day(int(st.session_state.get("current_day", 1)))
     
@@ -5993,26 +6240,44 @@ def view_lab_and_environment():
     time and budget costs for collection.
     """)
     
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    sample_costs = {
+        "human_CSF": {"time": 1.0, "budget": 25, "credits": 3},
+        "human_serum": {"time": 0.5, "budget": 25, "credits": 2},
+        "pig_serum": {"time": 1.0, "budget": 35, "credits": 2},
+        "mosquito_pool": {"time": 1.5, "budget": 40, "credits": 3},
+        "blood": {"time": 0.5, "budget": 20, "credits": 2},
+        "urine": {"time": 0.5, "budget": 15, "credits": 2},
+        "environmental_water": {"time": 1.0, "budget": 20, "credits": 2},
+        "environmental_soil": {"time": 1.0, "budget": 20, "credits": 2},
+        "rodent_kidney": {"time": 1.5, "budget": 35, "credits": 3},
+        "animal_serum": {"time": 1.0, "budget": 25, "credits": 2},
+    }
+
     # Sample costs table
     with st.expander("📋 Sample Collection Costs"):
-        cost_data = {
-            "Sample Type": ["Human CSF", "Human Serum", "Pig Serum", "Mosquito Pool"],
-            "Time (hours)": [1.0, 0.5, 1.0, 1.5],
-            "Budget ($)": [25, 25, 35, 40],
-            "Lab Credits": [3, 2, 2, 3]
-        }
-        st.dataframe(pd.DataFrame(cost_data), hide_index=True)
+        sample_costs_table = []
+        for sample, costs in sample_costs.items():
+            if available_sample_types and sample not in available_sample_types:
+                continue
+            sample_costs_table.append({
+                "Sample Type": sample.replace("_", " ").title(),
+                "Time (hours)": costs["time"],
+                "Budget ($)": costs["budget"],
+                "Lab Credits": costs["credits"],
+            })
+        st.dataframe(pd.DataFrame(sample_costs_table), hide_index=True)
 
     truth = st.session_state.truth
     villages = truth["villages"]
 
     st.markdown("### Submit New Sample")
-    
+
     col1, col2, col3 = st.columns(3)
     with col1:
         sample_type = st.selectbox(
             "Sample type",
-            ["human_CSF", "human_serum", "pig_serum", "mosquito_pool"],
+            available_sample_types,
         )
     with col2:
         village_id = st.selectbox(
@@ -6021,22 +6286,45 @@ def view_lab_and_environment():
             format_func=lambda vid: villages.set_index("village_id").loc[vid, "village_name"],
         )
     with col3:
+        available_tests = [t["code"] for t in scenario_config.get("lab_tests", []) if sample_type in t.get("sample_types", [])]
         test = st.selectbox(
             t("lab_test", default="Test"),
-            list(LAB_TEST_CATALOG.keys()),
+            available_tests or list(LAB_TEST_CATALOG.keys()),
             format_func=lab_test_label,
         )
 
     source_description = st.text_input("Source description (e.g., 'Case from Nalu')", "")
+
+    # Patient linkage for human samples
+    cases_pool = apply_case_definition(
+        truth["individuals"],
+        {
+            "scenario_id": st.session_state.get("current_scenario"),
+            "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+            "lab_results": st.session_state.lab_results,
+        },
+    )
+    patient_options = ["Unlinked"] + cases_pool["person_id"].astype(str).tolist()
+    selected_patient = None
+    onset_date = None
+    days_since_onset = None
+    if sample_type in {"human_CSF", "human_serum", "blood", "urine"} and patient_options:
+        selected = st.selectbox("Link to patient", patient_options)
+        if selected != "Unlinked":
+            selected_patient = selected
+            case_row = cases_pool[cases_pool["person_id"].astype(str) == selected].head(1)
+            if not case_row.empty:
+                onset_date = case_row.iloc[0].get("onset_date")
+                if onset_date:
+                    scenario_start = pd.to_datetime(scenario_config.get("simulation_start_date", date.today()))
+                    current_day = int(st.session_state.get("current_day", 1))
+                    current_date = scenario_start + pd.Timedelta(days=current_day - 1)
+                    days_since_onset = max(0, (current_date - pd.to_datetime(onset_date)).days)
+
+    volume_ok = st.checkbox("Sample volume sufficient", value=True)
+    contaminated = st.checkbox("Sample contaminated", value=False)
     
     # Calculate costs based on sample type
-    sample_costs = {
-        "human_CSF": {"time": 1.0, "budget": 25, "credits": 3},
-        "human_serum": {"time": 0.5, "budget": 25, "credits": 2},
-        "pig_serum": {"time": 1.0, "budget": 35, "credits": 2},
-        "mosquito_pool": {"time": 1.5, "budget": 40, "credits": 3},
-    }
-    
     costs = sample_costs.get(sample_type, {"time": 1.0, "budget": 25, "credits": 2})
     
     st.caption(f"This sample will cost: ⏱️ {costs['time']}h | 💰 ${costs['budget']} | 🧪 {costs['credits']} credits")
@@ -6059,10 +6347,18 @@ def view_lab_and_environment():
                 "village_id": village_id,
                 "test": test,
                 "source_description": source_description or "Unspecified source",
+                "patient_id": selected_patient,
+                "onset_date": onset_date,
+                "days_since_onset": days_since_onset,
+                "placed_day": st.session_state.current_day,
+                "volume_ok": volume_ok,
+                "contaminated": contaminated,
             }
             result = process_lab_order(order, truth["lab_samples"])
             st.session_state.lab_results.append(result)
             st.session_state.lab_samples_submitted.append(order)
+            st.session_state.lab_orders.append(order)
+            st.session_state.decisions["lab_orders"] = st.session_state.lab_orders
 
             # Log the lab test event
             jl.log_event(
@@ -6077,6 +6373,7 @@ def view_lab_and_environment():
                     'sample_id': result.get('sample_id'),
                     'placed_day': st.session_state.current_day,
                     'ready_day': result.get('ready_day'),
+                    'patient_id': selected_patient,
                     'credits_used': costs['credits']
                 }
             )
@@ -6110,7 +6407,7 @@ def view_lab_and_environment():
     
         show_cols = [
             "sample_id", "sample_type", "village", "test_display",
-            "source_description", "placed_day", "ready_day",
+            "source_description", "patient_id", "placed_day", "ready_day",
             "days_remaining", "result"
         ]
         show_cols = [c for c in show_cols if c in df.columns]
@@ -6537,8 +6834,12 @@ def view_spot_map():
     households = truth["households"]
     villages = truth["villages"]
     
-    # Get symptomatic cases
-    cases = individuals[individuals["symptomatic_AES"] == True].copy()
+    case_criteria = {
+        "scenario_id": st.session_state.get("current_scenario"),
+        "case_definition_structured": st.session_state.decisions.get("case_definition_structured"),
+        "lab_results": st.session_state.lab_results,
+    }
+    cases = apply_case_definition(individuals, case_criteria).copy()
     
     # Also include found cases from clinic records if any
     found_cases_count = 0
@@ -6569,6 +6870,25 @@ def view_spot_map():
     
     # Count cases by village
     village_counts = cases['village_name'].value_counts().to_dict()
+    scenario_type = st.session_state.truth.get("scenario_type")
+    if scenario_type == "lepto":
+        st.markdown("### Village-level case counts")
+        summary = pd.DataFrame(
+            [{"village": k, "cases": v} for k, v in village_counts.items()]
+        ).sort_values("cases", ascending=False)
+        st.dataframe(summary, use_container_width=True, hide_index=True)
+        fig = px.scatter(
+            villages,
+            x="longitude",
+            y="latitude",
+            size=villages["village_id"].map(village_counts).fillna(0),
+            color=villages["village_id"].map(village_counts).fillna(0),
+            hover_name="village_name",
+            title="Spot map (cases by village)",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        return
+
     nalu_cases = village_counts.get('Nalu Village', 0)
     kabwe_cases = village_counts.get('Kabwe Village', 0)
     tamu_cases = village_counts.get('Tamu Village', 0)
@@ -8594,7 +8914,7 @@ def adventure_sidebar():
         st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.title("AES Investigation")
+    st.sidebar.title(f"{scenario_config_label(st.session_state.truth.get('scenario_type'))} Investigation")
 
     if not st.session_state.alert_acknowledged:
         st.sidebar.info("Review the alert to begin.")
@@ -8931,14 +9251,10 @@ def main():
             st.caption(f"**Active:** {st.session_state.current_scenario_name}")
         st.markdown("---")
 
-    # Determine scenario type and data directory
-    if "lepto" in scenario_id:
-        scenario_type = "lepto"
-        data_dir = f"scenarios/{scenario_id}/data"
-    else:
-        scenario_type = "je"
-        scenario_root = Path(f"scenarios/{scenario_id}")
-        data_dir = str(scenario_root / "data") if (scenario_root / "data").exists() else str(scenario_root)
+    scenario_config = load_scenario_config(scenario_id)
+    scenario_type = scenario_config.get("scenario_type") or ("lepto" if "lepto" in scenario_id else "je")
+    scenario_root = Path(f"scenarios/{scenario_id}")
+    data_dir = str(scenario_root / "data") if (scenario_root / "data").exists() else str(scenario_root)
 
     # Check if we need to load or reload data
     need_reload = (
@@ -8949,9 +9265,10 @@ def main():
     if need_reload:
         with st.spinner(f"Loading {scenario_name}..."):
             st.session_state.current_scenario = scenario_id
-            st.session_state.current_scenario_name = scenario_name
+            st.session_state.current_scenario_name = scenario_config.get("display_name") or scenario_name
             st.session_state.current_scenario_type = scenario_type
             st.session_state.data_dir = data_dir
+            st.session_state.scenario_config = scenario_config
 
             # Load truth data for selected scenario
             try:
