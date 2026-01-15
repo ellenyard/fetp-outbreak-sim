@@ -11,6 +11,7 @@ import time
 import base64
 from datetime import date
 from pathlib import Path
+from typing import Optional
 from PIL import Image, UnidentifiedImageError
 
 import day1_utils
@@ -61,6 +62,7 @@ generate_study_dataset = jl.generate_study_dataset
 process_lab_order = jl.process_lab_order
 evaluate_interventions = jl.evaluate_interventions
 check_day_prerequisites = jl.check_day_prerequisites
+get_day_spec = getattr(jl, "get_day_spec", None)
 
 # Game state management
 init_game_state = getattr(jl, "init_game_state", None)
@@ -406,6 +408,8 @@ def spend_time(hours: float, activity: str = "") -> bool:
     Always returns True - time can go negative in Sprint 2.
     """
     st.session_state.time_remaining -= hours
+    if st.session_state.time_remaining < 0:
+        st.session_state.time_debt = abs(st.session_state.time_remaining)
     return True
 
 
@@ -1159,6 +1163,23 @@ def load_scenario_content(scenario_id: str, content_type: str) -> str:
         return f"⚠️ Content file not found: {content_path}"
 
 
+def load_storyline_excerpt(scenario_id: str, max_lines: int = 6) -> Optional[str]:
+    storyline_path = Path(f"scenarios/{scenario_id}/storyline.md")
+    if not storyline_path.exists():
+        return None
+    lines = [line.strip() for line in storyline_path.read_text().splitlines()]
+    excerpt = []
+    for line in lines:
+        if not line:
+            if excerpt:
+                break
+            continue
+        excerpt.append(line)
+        if len(excerpt) >= max_lines:
+            break
+    return "\n".join(excerpt) if excerpt else None
+
+
 def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
     """Load truth data and generate a full population.
 
@@ -1229,6 +1250,7 @@ def init_session_state():
     # Resources - budget AND time
     st.session_state.setdefault("budget", 1000)
     st.session_state.setdefault("time_remaining", 8)  # hours per day
+    st.session_state.setdefault("time_debt", 0)
     st.session_state.setdefault("lab_credits", 20)
     
     # Language setting
@@ -1374,6 +1396,39 @@ def get_symptomatic_column(truth: dict) -> str:
 def get_day1_assets() -> dict:
     scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
     return day1_utils.load_day1_assets(scenario_id)
+
+
+def derive_unlocked_domains() -> set[str]:
+    domains = {"demographics", "clinical"}
+    npc_truth = st.session_state.truth.get("npc_truth", {})
+    interview_history = st.session_state.get("interview_history", {})
+
+    data_access_domains = {
+        "vet_surveillance": {"animals"},
+        "environmental_data": {"environment", "vector"},
+        "mining_environmental_compliance_records": {"environment"},
+    }
+
+    for npc_key in interview_history.keys():
+        npc = npc_truth.get(npc_key, {})
+        access = npc.get("data_access")
+        if access in data_access_domains:
+            domains.update(data_access_domains[access])
+        if "nurse" in npc.get("role", "").lower() or "doctor" in npc.get("role", "").lower():
+            domains.add("vaccination")
+
+    if st.session_state.get("nurse_pig_clue_shown"):
+        domains.add("animals")
+
+    lab_orders = st.session_state.get("lab_orders", []) or []
+    if any(order.get("sample_type") == "mosquito_pool" for order in lab_orders):
+        domains.add("vector")
+
+    env_findings = st.session_state.get("environment_findings", []) or []
+    if env_findings:
+        domains.add("environment")
+
+    return domains
 
 
 def build_case_definition_summary(case_def: dict) -> str:
@@ -1538,6 +1593,13 @@ def build_npc_data_context(npc_key: str, truth: dict) -> str:
     )
 
     epi_context = build_epidemiologic_context(truth)
+    trust_level = get_npc_trust(npc_key)
+
+    if data_access and trust_level < 1:
+        return (
+            epi_context
+            + " You are cautious about sharing detailed records until the team earns more trust."
+        )
 
     # Override for Dr. Tran - restrict his knowledge to prevent omniscience
     if npc_key == "dr_chen":
@@ -1645,6 +1707,10 @@ def update_npc_emotion(npc_key: str, user_tone: str):
     - Polite tone causes mild softening
     - Neutral slowly heals annoyance over time
     """
+    if "npc_trust" not in st.session_state:
+        st.session_state.npc_trust = {}
+    st.session_state.npc_trust.setdefault(npc_key, 0)
+
     state = st.session_state.npc_state.setdefault(
         npc_key,
         {
@@ -1668,11 +1734,13 @@ def update_npc_emotion(npc_key: str, user_tone: str):
         state["polite_count"] += 1
         # polite helps but not too fast
         state["emotion"] = shift(state["emotion"], -1)
+        st.session_state.npc_trust[npc_key] = min(5, st.session_state.npc_trust[npc_key] + 1)
 
     elif user_tone == "rude":
         state["rude_count"] += 1
         # rude pushes 2 steps more negative — very reactive
         state["emotion"] = shift(state["emotion"], +2)
+        st.session_state.npc_trust[npc_key] = max(-3, st.session_state.npc_trust[npc_key] - 1)
 
     else:  # neutral tone
         # slow natural recovery only after several interactions
@@ -1717,6 +1785,11 @@ def describe_emotional_state(state: dict) -> str:
         base += " They've also been respectful at times, which softens you a little."
 
     return base
+
+
+def get_npc_trust(npc_key: str) -> int:
+    npc_trust = st.session_state.get("npc_trust", {})
+    return int(npc_trust.get(npc_key, 0))
 
 
 def classify_question_scope(user_input: str) -> str:
@@ -1980,6 +2053,7 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
     user_tone = analyze_user_tone(user_input)
     npc_state = update_npc_emotion(npc_key, user_tone)
     emotional_description = describe_emotional_state(npc_state)
+    trust_level = get_npc_trust(npc_key)
 
     epi_context = build_npc_data_context(npc_key, truth)
     epi_context = redact_spoilers(epi_context, stage)
@@ -2008,6 +2082,8 @@ Personality:
 
 Your current emotional state toward the investigation team:
 {emotional_description}
+
+Your level of trust toward the investigation team (range -3 to 5): {trust_level}
 
 The investigator has asked about {meaningful_questions} meaningful questions so far in this conversation.
 
@@ -2068,9 +2144,26 @@ INFORMATION RULES:
     # Decide which conditional clues are allowed in this answer
     lower_q = user_input.lower()
     conditional_to_use = []
+    topic_synonyms = {
+        "water": ["well", "river", "stream", "paddies", "irrigation", "pond"],
+        "pigs": ["pig", "pork", "swine", "hog", "sow", "litter"],
+        "animals": ["livestock", "cattle", "goat", "chicken", "duck"],
+        "mosquito": ["vector", "bite", "mosquitoes", "dusk", "nets"],
+        "vaccine": ["vaccination", "immunization", "shot", "campaign"],
+        "market": ["bazaar", "marketplace", "vendors"],
+        "travel": ["bus", "trip", "journey", "visited", "overnight"],
+    }
+
+    def topic_matches(keyword: str, text: str) -> bool:
+        if keyword in text:
+            return True
+        for synonym in topic_synonyms.get(keyword, []):
+            if synonym in text:
+                return True
+        return False
+
     for keyword, clue in npc_truth.get("conditional_clues", {}).items():
-        # Require keyword substring AND a question mark for a clearer "ask"
-        if keyword.lower() in lower_q and "?" in lower_q and clue not in st.session_state.revealed_clues[npc_key]:
+        if topic_matches(keyword.lower(), lower_q) and clue not in st.session_state.revealed_clues[npc_key]:
             conditional_to_use.append(redact_spoilers(clue, stage))
             st.session_state.revealed_clues[npc_key].append(clue)
 
@@ -3316,6 +3409,30 @@ def sidebar_navigation():
         f"**{t('lab_credits')}:** {st.session_state.lab_credits}"
     )
 
+    if callable(get_day_spec):
+        day_spec = get_day_spec(st.session_state.current_day)
+        if day_spec:
+            st.sidebar.markdown("---")
+            st.sidebar.markdown("### 🎯 Day Goals")
+            for item in day_spec.get("required_outputs", []):
+                st.sidebar.markdown(f"- **Required:** {item}")
+            for item in day_spec.get("optional_actions", []):
+                st.sidebar.markdown(f"- Optional: {item}")
+
+            st.sidebar.markdown("**Quick links**")
+            quick_links = {
+                "Case definition": "overview",
+                "Clinic log": "clinic_log_abstraction",
+                "Interviews": "interviews",
+                "Lab": "lab",
+                "Study design": "study",
+                "Outcome": "outcome",
+            }
+            for label, view_key in quick_links.items():
+                if st.sidebar.button(label, key=f"goal_link_{view_key}", use_container_width=True):
+                    st.session_state.current_view = view_key
+                    st.rerun()
+
     # Investigation Hub (Day 1 specific)
     if st.session_state.current_day == 1:
         st.sidebar.markdown("---")
@@ -3474,7 +3591,10 @@ def sidebar_navigation():
             can_advance, missing = check_day_prerequisites(st.session_state.current_day, st.session_state)
             if can_advance:
                 st.session_state.current_day += 1
-                st.session_state.time_remaining = 8  # Reset time for new day
+                base_hours = 8
+                overtime_penalty = min(2, int(st.session_state.get("time_debt", 0)))
+                st.session_state.time_remaining = base_hours - overtime_penalty
+                st.session_state.time_debt = 0
                 refresh_lab_queue_for_day(int(st.session_state.current_day))
                 st.session_state.advance_missing_tasks = []
                 # Show SITREP view for new day
@@ -3606,6 +3726,7 @@ def view_intro():
             if set_game_state:
                 set_game_state('DASHBOARD', st.session_state)
             st.session_state.alert_acknowledged = True
+            unlock_day1_locations()
             st.session_state.current_view = "map"
             st.rerun()
 
@@ -3626,6 +3747,7 @@ def view_alert():
     if st.button(t("begin_investigation")):
         st.session_state.alert_acknowledged = True
         st.session_state.current_day = 1
+        unlock_day1_locations()
         st.session_state.current_view = "overview"
         st.rerun()
 
@@ -3681,6 +3803,9 @@ def view_overview():
         line_list = get_initial_cases(truth)
         st.dataframe(line_list)
         st.session_state.line_list_viewed = True
+        estimated_cases = st.session_state.decisions.get("line_list_case_count")
+        if estimated_cases is not None:
+            st.caption(f"Adjusted line list estimate (after data quality): {estimated_cases} cases.")
 
     with col2:
         st.markdown("#### Epi curve")
@@ -4680,6 +4805,10 @@ def view_case_finding_debrief():
     st.metric("Matches working case definition", match_count)
     st.metric("Does not match", non_match_count)
 
+    accuracy = st.session_state.clinic_abstraction_feedback.get("accuracy_percent", 100) if st.session_state.get("clinic_abstraction_feedback") else 100
+    estimated_cases = int(round(match_count * (accuracy / 100))) if match_count else 0
+    st.metric("Estimated cases after data quality adjustment", estimated_cases)
+
     false_positives = [m for m in matches if m["is_match"] and m["truth_case"] is False][:3]
     false_negatives = [m for m in matches if not m["is_match"] and m["truth_case"] is True][:3]
 
@@ -4701,7 +4830,12 @@ def view_case_finding_debrief():
             "false_negative_examples": fn_selected,
             "revise_decision": revise_decision,
             "rationale": rationale.strip(),
+            "data_quality_accuracy": accuracy,
+            "estimated_case_count": estimated_cases,
         }
+        st.session_state.decisions["line_list_case_count"] = estimated_cases
+        if accuracy < 80:
+            st.session_state.decisions["data_quality_flag"] = True
         if revise_decision == "Yes" and case_def:
             record_case_definition_version(case_def, rationale=rationale.strip())
         st.success("✅ Debrief saved.")
@@ -5797,12 +5931,25 @@ def view_study_design():
                 decisions = dict(st.session_state.decisions)
                 decisions["return_sampling_report"] = True
                 decisions["scenario_type"] = st.session_state.truth.get("scenario_type")
+                decisions["unlocked_domains"] = sorted(derive_unlocked_domains())
+                st.session_state.decisions["unlocked_domains"] = decisions["unlocked_domains"]
                 df, report = generate_study_dataset(individuals, households, decisions)
 
                 st.session_state.generated_dataset = df
                 st.session_state.sampling_report = report
                 st.session_state.descriptive_analysis_done = True  # proxy
                 st.success("Dataset generated. Preview below; export for analysis as needed.")
+
+                locked_domains = (
+                    st.session_state.decisions.get("questionnaire_xlsform", {})
+                    .get("meta", {})
+                    .get("locked_domains", [])
+                )
+                if locked_domains:
+                    st.warning(
+                        "Some exposure domains were locked because they were not investigated yet: "
+                        + ", ".join(locked_domains)
+                    )
 
                 with st.expander("Sampling frame summary", expanded=True):
                     st.json({
@@ -6777,6 +6924,47 @@ def view_interventions_and_outcome():
 # ADVENTURE MODE VIEWS
 # =========================
 
+# Day 1 navigation helpers
+def get_day1_location_unlocks(scenario_id: str) -> list[str]:
+    if scenario_id == "lepto_rivergate":
+        return ["District Hospital", "Ward Northbend", "RHU"]
+    return ["District Hospital", "Nalu Village", "Kabwe Village"]
+
+
+def unlock_day1_locations():
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    unlocked = get_day1_location_unlocks(scenario_id)
+    st.session_state.locations_unlocked = unlocked
+
+
+def handle_travel(target_location: str) -> bool:
+    previous_location = st.session_state.get("current_area")
+    if previous_location == target_location:
+        return True
+
+    travel_time = TIME_COSTS.get("travel_to_village", 0.5)
+    travel_cost = BUDGET_COSTS.get("transport_per_trip", 20)
+
+    can_proceed, msg = check_resources(travel_time, travel_cost)
+    if not can_proceed:
+        st.error(msg)
+        return False
+
+    spend_time(travel_time, f"Travel to {target_location}")
+    spend_budget(travel_cost, f"Travel to {target_location}")
+
+    jl.log_event(
+        event_type="travel",
+        location_id=target_location,
+        cost_time=travel_time,
+        cost_budget=travel_cost,
+        payload={"from": previous_location, "to": target_location},
+    )
+
+    visited = st.session_state.setdefault("visited_locations", set())
+    visited.add(target_location)
+    return True
+
 # Location coordinates for interactive map (0-100 scale, 0,0 is bottom-left)
 AES_MAP_LOCATIONS = {
     "Nalu Village": {"x": 35, "y": 45, "icon": "🌾", "desc": "Large rice-farming village. Pig cooperative nearby."},
@@ -6995,6 +7183,10 @@ def render_interactive_map():
 
     # Display the map with click handling
     st.markdown("### Click a location to travel there")
+    st.caption(
+        f"Travel costs {TIME_COSTS.get('travel_to_village', 0.5)}h and "
+        f"${BUDGET_COSTS.get('transport_per_trip', 20)} per trip."
+    )
 
     # Use plotly_events for click detection
     selected_point = st.plotly_chart(
@@ -7017,9 +7209,10 @@ def render_interactive_map():
                 is_unlocked = is_location_unlocked(selected_location, st.session_state)
 
             if is_unlocked:
-                st.session_state.current_area = selected_location
-                st.session_state.current_view = "area"
-                st.rerun()
+                if handle_travel(selected_location):
+                    st.session_state.current_area = selected_location
+                    st.session_state.current_view = "area"
+                    st.rerun()
             else:
                 st.warning("🔒 This location is locked. Complete previous objectives to unlock.")
 
@@ -7039,9 +7232,10 @@ def render_interactive_map():
 
             if st.button(button_label, key=f"map_btn_{loc_name}", use_container_width=True, disabled=button_disabled):
                 if is_unlocked:
-                    st.session_state.current_area = loc_name
-                    st.session_state.current_view = "area"
-                    st.rerun()
+                    if handle_travel(loc_name):
+                        st.session_state.current_area = loc_name
+                        st.session_state.current_view = "area"
+                        st.rerun()
             st.caption(loc_data['desc'])
 
 
@@ -7921,6 +8115,25 @@ def render_interview_modal():
                 with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
                     st.write(msg["content"])
 
+    trust_level = get_npc_trust(npc_key)
+    if npc_key != "nurse_joy":
+        with chat_col:
+            st.info(f"**Trust Level:** {trust_level} (range -3 to 5)")
+
+    if npc.get("conditional_clues"):
+        with chat_col:
+            st.markdown("**Suggested prompts:**")
+            prompt_key = f"npc_prompt_{npc_key}"
+            st.session_state.setdefault(prompt_key, "")
+            prompt_cols = st.columns(3)
+            topics = list(npc.get("conditional_clues", {}).keys())[:3]
+            for idx, topic in enumerate(topics):
+                label = f"Ask about {topic.replace('_', ' ')}"
+                with prompt_cols[idx % 3]:
+                    if st.button(label, key=f"suggest_{npc_key}_{idx}"):
+                        st.session_state[prompt_key] = f"Can you tell me about {topic.replace('_', ' ')}?"
+                        st.rerun()
+
     # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
     if npc_key == "nurse_joy":
         # Import outbreak_logic for rapport functions
@@ -7987,10 +8200,16 @@ def render_interview_modal():
     # Chat input
     with chat_col:
         with st.form(key=f"npc_chat_form_{npc_key}", clear_on_submit=True):
-            user_q = st.text_input(f"Ask {npc.get('name', 'NPC')} a question...")
+            prompt_key = f"npc_prompt_{npc_key}"
+            st.session_state.setdefault(prompt_key, "")
+            user_q = st.text_input(
+                f"Ask {npc.get('name', 'NPC')} a question...",
+                key=prompt_key,
+            )
             submitted = st.form_submit_button("Send")
 
     if submitted and user_q:
+        st.session_state[f"npc_prompt_{npc_key}"] = ""
         # Check for NPC unlock triggers
         unlock_notification = check_npc_unlock_triggers(user_q)
 
@@ -8498,6 +8717,13 @@ def view_sitrep():
     Welcome to Day {st.session_state.current_day} of the outbreak investigation.
     """)
 
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    storyline_excerpt = load_storyline_excerpt(scenario_id)
+    if storyline_excerpt:
+        st.markdown("---")
+        st.markdown("### Story Beat")
+        st.markdown(storyline_excerpt)
+
     # Show day briefing
     st.markdown("---")
     st.markdown("### Today's Objectives")
@@ -8520,6 +8746,21 @@ def view_sitrep():
         lab_count = len(st.session_state.get("lab_queue", []))
         if lab_count > 0:
             st.markdown(f"- **Lab samples submitted:** {lab_count}")
+
+        st.markdown("---")
+        st.markdown("### Decision Impact Highlights")
+        outcome = evaluate_interventions(
+            st.session_state.decisions, st.session_state.interview_history
+        )
+        because = outcome.get("because", [])
+        counterfactuals = outcome.get("counterfactuals", [])
+        if because:
+            for line in because:
+                st.markdown(f"- {line}")
+        if counterfactuals:
+            st.markdown("**If things had gone differently:**")
+            for line in counterfactuals[:2]:
+                st.markdown(f"- {line}")
 
     # New admissions count
     st.markdown("---")
@@ -8568,6 +8809,48 @@ def init_evidence_board():
             }
         ]
 
+
+def sync_evidence_board_from_log():
+    decision_log = st.session_state.decisions.get("_decision_log", []) or []
+    st.session_state.setdefault("evidence_event_ids", set())
+
+    for event in decision_log:
+        event_id = event.get("event_id")
+        if not event_id or event_id in st.session_state.evidence_event_ids:
+            continue
+
+        clue = None
+        clue_type = "epidemiological"
+        source = "Investigation log"
+        if event.get("type") == "interview":
+            npc_name = event.get("details", {}).get("npc_name", "NPC interview")
+            clue = f"Interviewed {npc_name}"
+        elif event.get("type") == "case_finding":
+            tp = event.get("details", {}).get("true_positives", 0)
+            clue = f"Case finding identified {tp} likely cases"
+            clue_type = "clinical"
+        elif event.get("type") == "lab_test":
+            test = event.get("details", {}).get("test", "Lab test")
+            clue = f"Lab order placed: {test}"
+            clue_type = "clinical"
+        elif event.get("type") == "environment_inspection":
+            site = event.get("details", {}).get("site", "Environmental site")
+            clue = f"Inspected {site}"
+            clue_type = "environmental"
+        elif event.get("type") == "travel":
+            to_loc = event.get("details", {}).get("to")
+            if to_loc:
+                clue = f"Visited {to_loc}"
+
+        if clue:
+            st.session_state.evidence_board.append({
+                "clue": clue,
+                "type": clue_type,
+                "day_added": event.get("game_day", st.session_state.current_day),
+                "source": source,
+            })
+            st.session_state.evidence_event_ids.add(event_id)
+
 def view_evidence_board():
     """Display the evidence board."""
     st.markdown("### 🔍 Evidence Board")
@@ -8575,6 +8858,8 @@ def view_evidence_board():
 
     if not st.session_state.get("evidence_board"):
         init_evidence_board()
+
+    sync_evidence_board_from_log()
 
     for i, evidence in enumerate(st.session_state.evidence_board):
         with st.expander(f"**{evidence['clue']}** (Day {evidence['day_added']})", expanded=(i < 3)):

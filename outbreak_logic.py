@@ -2044,7 +2044,7 @@ def render_dataset_from_xlsform(master_df: pd.DataFrame, questionnaire: Dict[str
     - If a question is **unmapped**, uses the stored LLM generator spec (q['render']['unmapped_spec'])
       to synthesize plausible values **without per-row LLM calls**.
     - Output column names are the trainee's XLSForm *question names*.
-    - unlocked_domains is accepted for backwards compatibility but is not used (no interview→domain gating).
+    - unlocked_domains (if provided) gates domains until evidence is gathered via interviews/actions.
     """
     rng = np.random.RandomState(random_seed)
 
@@ -2053,6 +2053,7 @@ def render_dataset_from_xlsform(master_df: pd.DataFrame, questionnaire: Dict[str
     out = master_df[base_cols].copy()
 
     questions = questionnaire.get("questions", []) or []
+    locked_domains = set()
     for idx, q in enumerate(questions):
         base = q.get("base_type")
         if base not in SUPPORTED_XLSFORM_BASE_TYPES:
@@ -2073,6 +2074,13 @@ def render_dataset_from_xlsform(master_df: pd.DataFrame, questionnaire: Dict[str
             else:
                 out[qname] = np.nan
             continue
+
+        if unlocked_domains is not None:
+            domain = CANONICAL_SCHEMA.get(mapped, {}).get("domain")
+            if domain and domain not in unlocked_domains:
+                out[qname] = np.nan
+                locked_domains.add(domain)
+                continue
 
         truth_col = CANONICAL_SCHEMA[mapped]["column"]
         values = master_df[truth_col].copy()
@@ -2154,6 +2162,10 @@ def render_dataset_from_xlsform(master_df: pd.DataFrame, questionnaire: Dict[str
         else:
             out[qname] = np.nan
 
+    if isinstance(questionnaire, dict):
+        questionnaire.setdefault("meta", {})
+        if locked_domains:
+            questionnaire["meta"]["locked_domains"] = sorted(locked_domains)
     return out
 
 def _age_group(age: Any) -> str:
@@ -3427,9 +3439,10 @@ def evaluate_interventions(decisions, interview_history):
     # Helper: first day a named event occurred
     def first_day(event_type: str) -> Optional[int]:
         for ev in decision_log:
-            if ev.get("type") == event_type and ev.get("day") is not None:
+            day_val = ev.get("game_day", ev.get("day"))
+            if ev.get("type") == event_type and day_val is not None:
                 try:
-                    return int(ev["day"])
+                    return int(day_val)
                 except Exception:
                     return None
         return None
@@ -3510,6 +3523,11 @@ def evaluate_interventions(decisions, interview_history):
     if unmapped_n > 0:
         outcomes.append(f"ℹ️ {unmapped_n} unmapped question(s) were synthesized with the scenario generator")
         score += 2
+
+    if decisions.get("data_quality_flag"):
+        score -= 5
+        outcomes.append("⚠️ Data quality issues in Day 1 line list likely reduced case-finding accuracy")
+        because.append("Because your clinic log abstraction had gaps, early case counts were less reliable.")
 
     q_day = first_day("questionnaire_submitted")
     if q_day is not None and q_day <= 2:

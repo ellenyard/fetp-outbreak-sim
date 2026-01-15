@@ -60,6 +60,9 @@ PERSISTENT_KEYS = {
     'case_cards_reviewed', 'case_card_labels', 'medical_chart_reviews',
     'day1_worksheet', 'day1_lab_brief_viewed', 'day1_lab_brief_notes',
     'triangulation_checkpoint', 'triangulation_completed',
+
+    # Evidence board
+    'evidence_board', 'evidence_event_ids',
 }
 
 
