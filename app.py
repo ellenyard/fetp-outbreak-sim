@@ -8440,20 +8440,6 @@ def render_interview_modal():
         with chat_col:
             st.info(f"**Trust Level:** {trust_level} (range -3 to 5)")
 
-    if npc.get("conditional_clues"):
-        with chat_col:
-            st.markdown("**Suggested prompts:**")
-            prompt_key = f"npc_prompt_{npc_key}"
-            st.session_state.setdefault(prompt_key, "")
-            prompt_cols = st.columns(3)
-            topics = list(npc.get("conditional_clues", {}).keys())[:3]
-            for idx, topic in enumerate(topics):
-                label = f"Ask about {topic.replace('_', ' ')}"
-                with prompt_cols[idx % 3]:
-                    if st.button(label, key=f"suggest_{npc_key}_{idx}"):
-                        st.session_state[prompt_key] = f"Can you tell me about {topic.replace('_', ' ')}?"
-                        st.rerun()
-
     # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
     if npc_key == "nurse_joy":
         # Import outbreak_logic for rapport functions
