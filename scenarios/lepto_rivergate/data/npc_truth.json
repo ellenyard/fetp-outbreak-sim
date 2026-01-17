@@ -1,6 +1,7 @@
 {
   "dr_reyes": {
     "name": "Dr. Annalisa Reyes",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_reyes_annalisa.png",
     "role": "Internist, Rivergate District Hospital",
     "location": "District Hospital, Internal Medicine Ward",
     "cost": 50,
@@ -53,6 +54,7 @@
   },
   "dr_villareal": {
     "name": "Dr. Ernesto Villareal",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_villareal_ernesto.png",
     "role": "Private Veterinarian, Villareal Animal Clinic",
     "location": "Small veterinary clinic on main road between Northbend and Central Ward",
     "cost": 100,
@@ -102,6 +104,7 @@
   },
   "kapitana_gloria": {
     "name": "Captain Gloria Ramos",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_ramos_gloria.png",
     "role": "Ward Captain (community leader), Ward Northbend",
     "location": "Ward Hall, Northbend (small concrete building, storm-damaged roof being repaired)",
     "cost": 0,
@@ -156,6 +159,7 @@
   },
   "dr_mendoza": {
     "name": "Dr. Carlos Mendoza",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_mendoza_carlos.png",
     "role": "Rural Health Unit (RHU) Physician, Rivergate",
     "location": "Rivergate Rural Health Unit office (cluttered desk, outdated filing system)",
     "cost": 100,
@@ -206,6 +210,7 @@
   },
   "nurse_maricel": {
     "name": "Nurse Maricel Holt",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_holt_maricel.png",
     "role": "Emergency Room Head Nurse, Rivergate District Hospital",
     "location": "Hospital ER nursing station",
     "cost": 50,
@@ -256,6 +261,7 @@
   },
   "mang_tonyo": {
     "name": "Mr. Anton Vale",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_vale_anton.png",
     "role": "Subsistence farmer, father of deceased victim Adrian Vale",
     "location": "Small bamboo and concrete house in Riverside Hamlet, Ward Northbend (flood damage visible)",
     "cost": 75,
@@ -309,6 +315,7 @@
   },
   "luz_fernandez": {
     "name": "Luz Fernandez",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_fernandez_luz.png",
     "role": "Recovering leptospirosis patient, community organizer",
     "location": "Her home in Ward Northbend (recovering, but able to give interview)",
     "cost": 50,
@@ -356,6 +363,7 @@
   },
   "pastor_elijah": {
     "name": "Pastor Elijah Gonzales",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_gonzales_elijah.png",
     "role": "Faith Healer and Minister, Bethel Healing Ministry",
     "location": "Small chapel behind his residence, Ward Northbend (near basketball court)",
     "cost": 75,
@@ -408,6 +416,7 @@
   },
   "mayor_villanueva": {
     "name": "Mayor Roberto Villanueva",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_villanueva_roberto.png",
     "role": "Municipal Mayor, Rivergate",
     "location": "Mayor's office, Municipal Hall",
     "cost": 150,
@@ -459,6 +468,7 @@
   },
   "engr_ramon": {
     "name": "Engr. Ramon Holt",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_holt_ramon.png",
     "role": "Municipal Disaster Risk Reduction and Management (DRRM) Officer",
     "location": "DRRM Office, Municipal Hall",
     "cost": 100,
@@ -507,6 +517,7 @@
   },
   "mr_chen_wei": {
     "name": "Mr. Chen Wei",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_wei_chen.png",
     "role": "Site Manager, Golden Valley Mining Corporation",
     "location": "Mining company field office (4.7 km upstream from Northbend)",
     "cost": 200,
@@ -556,6 +567,7 @@
   },
   "dr_lacson": {
     "name": "Dr. Gemma Lacson",
+    "image_path": "scenarios/lepto_rivergate/assets/npc_lacson_gemma.png",
     "role": "Provincial Epidemiologist, Kantara Provincial Health Office",
     "location": "Provincial Health Office, Lunara City (arrived Rivergate October 28)",
     "cost": 0,
