@@ -8529,7 +8529,6 @@ def render_interview_modal():
             submitted = st.form_submit_button("Send")
 
     if submitted and user_q:
-        st.session_state[f"npc_prompt_{npc_key}"] = ""
         # Check for NPC unlock triggers
         unlock_notification = check_npc_unlock_triggers(user_q)
 
