@@ -232,25 +232,48 @@ def load_truth_data(data_dir: str = "scenarios/aes_sidero_valley"):
     return truth
 
 
-def get_hospital_triage_list():
+def get_hospital_triage_list(scenario_id: str = None):
     """
     Returns the Day 1 Hospital Ward Triage List.
-    Outline requirement: 9 entries (4 JES, 5 Other).
+    Scenario-aware: returns appropriate patient data based on current scenario.
     """
-    return [
-        # --- The 4 JES Cases (2 known, 2 new) ---
-        {"id": "HOSP-01", "age": "6y", "sex": "F", "village": "Nalu", "symptom": "High Fever, Seizures", "notes": "Admitted.", "is_case": True, "parent_type": "parent_ward", "status": "Admitted"},
-        {"id": "HOSP-02", "age": "8y", "sex": "M", "village": "Nalu", "symptom": "Fever, Coma", "notes": "Critical.", "is_case": True, "parent_type": "parent_general", "status": "Admitted"},
-        {"id": "HOSP-07", "age": "5y", "sex": "M", "village": "Kabwe", "symptom": "Seizures, Confusion", "notes": "New admission.", "is_case": True, "parent_type": "parent_general", "status": "Admitted"},
-        {"id": "HOSP-04", "age": "7y", "sex": "F", "village": "Tamu", "symptom": "Fever, Lethargy", "notes": "The outlier case.", "is_case": True, "parent_type": "parent_tamu", "status": "Discharged"},
+    # Get scenario from session state if not provided
+    if scenario_id is None and st is not None:
+        scenario_id = st.session_state.get("current_scenario", "aes_sidero")
 
-        # --- The 5 Non-JES Cases ---
-        {"id": "HOSP-03", "age": "34y", "sex": "M", "village": "Nalu", "symptom": "Broken Leg", "notes": "Trauma.", "is_case": False, "parent_type": "none", "status": "Admitted"},
-        {"id": "HOSP-05", "age": "4y", "sex": "M", "village": "Kabwe", "symptom": "Severe Dehydration", "notes": "No fever. Diarrhea.", "is_case": False, "parent_type": "none", "status": "Discharged"},
-        {"id": "HOSP-06", "age": "2m", "sex": "F", "village": "Kabwe", "symptom": "Cough", "notes": "Bronchiolitis.", "is_case": False, "parent_type": "none", "status": "Discharged"},
-        {"id": "HOSP-08", "age": "10y", "sex": "F", "village": "Nalu", "symptom": "Rash, Joint Pain", "notes": "Dengue suspected.", "is_case": False, "parent_type": "none", "status": "Discharged"},
-        {"id": "HOSP-09", "age": "60y", "sex": "M", "village": "Tamu", "symptom": "Chest Pain", "notes": "Cardiac.", "is_case": False, "parent_type": "none", "status": "Admitted"},
-    ]
+    if scenario_id == "lepto_rivergate":
+        # Lepto scenario: Adult males with leptospirosis from flood cleanup
+        # Village mapping: V1=Ward Northbend, V2=Ward East Terrace, V3=Ward Southshore, V4=Ward Highridge
+        return [
+            # --- Confirmed Leptospirosis Cases ---
+            {"id": "P0001", "name": "Adrian Vale", "age": "42y", "sex": "M", "village": "Ward Northbend", "symptom": "High Fever 39.5°C, Severe Myalgia, Jaundice, Conjunctival Suffusion", "notes": "Critical. Renal failure. Farmer, flood cleanup.", "is_case": True, "status": "Deceased", "onset": "2024-10-13"},
+            {"id": "P0003", "name": "Tomas Fernandez", "age": "38y", "sex": "M", "village": "Ward Northbend", "symptom": "Fever 39°C, Myalgia, Jaundice, Conjunctival Suffusion", "notes": "Severe. Farmer, flood cleanup exposure.", "is_case": True, "status": "Admitted", "onset": "2024-10-14"},
+            {"id": "P0006", "name": "Elder Merrin", "age": "51y", "sex": "M", "village": "Ward Northbend", "symptom": "Fever 38.8°C, Severe Myalgia, Jaundice", "notes": "Severe. Farmer with flood exposure.", "is_case": True, "status": "Recovering", "onset": "2024-10-12"},
+            {"id": "P0007", "name": "Grant Orr", "age": "45y", "sex": "M", "village": "Ward Northbend", "symptom": "Fever 38.5°C, Myalgia, Conjunctival Suffusion", "notes": "Moderate. Day laborer.", "is_case": True, "status": "Admitted", "onset": "2024-10-15"},
+            {"id": "P0015", "name": "Gregorio Mercado", "age": "48y", "sex": "M", "village": "Ward Northbend", "symptom": "High Fever 40°C, Severe Myalgia, Conjunctival Suffusion", "notes": "Critical. Farmer, deceased.", "is_case": True, "status": "Deceased", "onset": "2024-10-13"},
+            {"id": "P0002", "name": "Luz Fernandez", "age": "34y", "sex": "F", "village": "Ward Northbend", "symptom": "Fever 38.2°C, Myalgia, Headache", "notes": "Moderate. Vendor, flood cleanup.", "is_case": True, "status": "Recovered", "onset": "2024-10-14"},
+
+            # --- Non-Leptospirosis Cases (differential diagnosis practice) ---
+            {"id": "HOSP-L01", "name": "Rosa Santos", "age": "28y", "sex": "F", "village": "Ward Northbend", "symptom": "Fever, Cough, Runny Nose", "notes": "Upper respiratory infection. No flood exposure.", "is_case": False, "status": "Discharged", "onset": "2024-10-15"},
+            {"id": "HOSP-L02", "name": "Miguel Torres", "age": "55y", "sex": "M", "village": "Ward East Terrace", "symptom": "Chest Pain, Shortness of Breath", "notes": "Cardiac workup. No myalgia.", "is_case": False, "status": "Admitted", "onset": "2024-10-14"},
+            {"id": "HOSP-L03", "name": "Ana Reyes", "age": "19y", "sex": "F", "village": "Ward Southshore", "symptom": "Fever, Rash, Joint Pain", "notes": "Dengue suspected. No conjunctival suffusion.", "is_case": False, "status": "Admitted", "onset": "2024-10-16"},
+        ]
+    else:
+        # AES/JE scenario (default): Children with encephalitis
+        return [
+            # --- The 4 JES Cases (2 known, 2 new) ---
+            {"id": "HOSP-01", "age": "6y", "sex": "F", "village": "Nalu", "symptom": "High Fever, Seizures", "notes": "Admitted.", "is_case": True, "parent_type": "parent_ward", "status": "Admitted"},
+            {"id": "HOSP-02", "age": "8y", "sex": "M", "village": "Nalu", "symptom": "Fever, Coma", "notes": "Critical.", "is_case": True, "parent_type": "parent_general", "status": "Admitted"},
+            {"id": "HOSP-07", "age": "5y", "sex": "M", "village": "Kabwe", "symptom": "Seizures, Confusion", "notes": "New admission.", "is_case": True, "parent_type": "parent_general", "status": "Admitted"},
+            {"id": "HOSP-04", "age": "7y", "sex": "F", "village": "Tamu", "symptom": "Fever, Lethargy", "notes": "The outlier case.", "is_case": True, "parent_type": "parent_tamu", "status": "Discharged"},
+
+            # --- The 5 Non-JES Cases ---
+            {"id": "HOSP-03", "age": "34y", "sex": "M", "village": "Nalu", "symptom": "Broken Leg", "notes": "Trauma.", "is_case": False, "parent_type": "none", "status": "Admitted"},
+            {"id": "HOSP-05", "age": "4y", "sex": "M", "village": "Kabwe", "symptom": "Severe Dehydration", "notes": "No fever. Diarrhea.", "is_case": False, "parent_type": "none", "status": "Discharged"},
+            {"id": "HOSP-06", "age": "2m", "sex": "F", "village": "Kabwe", "symptom": "Cough", "notes": "Bronchiolitis.", "is_case": False, "parent_type": "none", "status": "Discharged"},
+            {"id": "HOSP-08", "age": "10y", "sex": "F", "village": "Nalu", "symptom": "Rash, Joint Pain", "notes": "Dengue suspected.", "is_case": False, "parent_type": "none", "status": "Discharged"},
+            {"id": "HOSP-09", "age": "60y", "sex": "M", "village": "Tamu", "symptom": "Chest Pain", "notes": "Cardiac.", "is_case": False, "parent_type": "none", "status": "Admitted"},
+        ]
 
 
 def get_medical_chart(patient_id):
@@ -330,15 +353,17 @@ def get_medical_chart(patient_id):
     # Get patient name if available
     name = patient.get('name', f"Patient {patient_id}")
 
-    # Map patient ID to onset dates (from individuals_seed.csv data)
-    onset_dates = {
-        'HOSP-01': 'June 3, 2025',  # Lan
-        'HOSP-02': 'June 4, 2025',  # Minh
-        'HOSP-04': 'June 9, 2025',  # Panya (outlier from Tamu)
-        'HOSP-05': 'June 7, 2025',  # Hoa
-    }
-
-    onset_date = onset_dates.get(patient_id, 'Early June 2025')
+    # Get onset date from patient data if available, otherwise use mapping
+    onset_date = patient.get('onset', None)
+    if not onset_date:
+        # Fallback onset dates for AES scenario
+        onset_dates = {
+            'HOSP-01': 'June 3, 2025',
+            'HOSP-02': 'June 4, 2025',
+            'HOSP-04': 'June 9, 2025',
+            'HOSP-05': 'June 7, 2025',
+        }
+        onset_date = onset_dates.get(patient_id, 'Unknown')
 
     # Construct medical chart (CLINICAL DATA ONLY)
     chart = {
@@ -357,13 +382,15 @@ def get_medical_chart(patient_id):
     return chart
 
 
-def get_clinic_log(village_id):
+def get_clinic_log(village_id, scenario_id: str = None):
     """
     Returns a realistic clinic logbook with raw, natural language entries.
     Simulates handwritten notes with natural complaint descriptions.
+    Scenario-aware: returns appropriate data based on current scenario.
 
     Args:
         village_id: Village ID (e.g., "V1", "V2", "V3") or village name
+        scenario_id: Optional scenario identifier
 
     Returns:
         List of 10-15 clinic log entries with natural language complaints.
@@ -377,61 +404,129 @@ def get_clinic_log(village_id):
         payload={'village_id': village_id}
     )
 
-    # Map village names to IDs
-    village_name_map = {
-        'nalu': 'V1',
-        'nalu village': 'V1',
-        'kabwe': 'V2',
-        'kabwe village': 'V2',
-        'tamu': 'V3',
-        'tamu village': 'V3'
-    }
+    # Get scenario from session state if not provided
+    if scenario_id is None and st is not None:
+        scenario_id = st.session_state.get("current_scenario", "aes_sidero")
 
-    # Normalize village_id
-    if isinstance(village_id, str) and village_id.lower() in village_name_map:
-        village_id = village_name_map[village_id.lower()]
+    if scenario_id == "lepto_rivergate":
+        # Lepto scenario village name mapping
+        village_name_map = {
+            'ward northbend': 'V1',
+            'northbend': 'V1',
+            'v1': 'V1',
+            'ward east terrace': 'V2',
+            'east terrace': 'V2',
+            'v2': 'V2',
+            'ward southshore': 'V3',
+            'southshore': 'V3',
+            'v3': 'V3',
+            'ward highridge': 'V4',
+            'highridge': 'V4',
+            'v4': 'V4'
+        }
 
-    # Village-specific clinic logs with natural language complaints
-    clinic_logs = {
-        'V1': [  # Nalu Village - HIGH CASE LOAD
-            {'name': 'Lan', 'age': 6, 'complaint': 'Hot to touch, shaking badly', 'date': 'June 3'},
-            {'name': 'Minh', 'age': 9, 'complaint': 'Head hurts, body burning hot', 'date': 'June 4'},
-            {'name': 'Mrs. Pham', 'age': 30, 'complaint': 'Cut finger while cooking', 'date': 'June 4'},
-            {'name': 'Baby Tuan', 'age': 4, 'complaint': 'Fever and shaking, very sleepy', 'date': 'June 6'},
-            {'name': 'Kiet', 'age': 8, 'complaint': 'Coughing and runny nose', 'date': 'June 5'},
-            {'name': 'Thanh', 'age': 12, 'complaint': 'Stomach ache, ate too many mangoes', 'date': 'June 6'},
-            {'name': 'Mr. Hoang', 'age': 45, 'complaint': 'Back pain from lifting', 'date': 'June 7'},
-            {'name': 'Little Duc', 'age': 5, 'complaint': 'Broken arm from tree fall', 'date': 'June 8'},
-            {'name': 'Anh', 'age': 7, 'complaint': 'Hot fever, then sleeping and won\'t wake up', 'date': 'June 7'},
-            {'name': 'Mai', 'age': 11, 'complaint': 'Toothache', 'date': 'June 9'},
-            {'name': 'Baby Linh', 'age': 2, 'complaint': 'Rash on legs, itchy', 'date': 'June 9'},
-            {'name': 'Quan', 'age': 14, 'complaint': 'Twisted ankle playing football', 'date': 'June 10'}
-        ],
-        'V2': [  # Kabwe Village - MODERATE CASE LOAD
-            {'name': 'Hoa', 'age': 7, 'complaint': 'Very hot, body shaking, confused', 'date': 'June 7'},
-            {'name': 'Mr. Tran', 'age': 35, 'complaint': 'Sore throat, cough', 'date': 'June 5'},
-            {'name': 'Little Mai', 'age': 2, 'complaint': 'Fever, but playing normally', 'date': 'June 9'},
-            {'name': 'Binh', 'age': 9, 'complaint': 'Diarrhea for 2 days', 'date': 'June 6'},
-            {'name': 'Mrs. Nguyen', 'age': 40, 'complaint': 'Headache and tired', 'date': 'June 7'},
-            {'name': 'Tien', 'age': 6, 'complaint': 'Earache', 'date': 'June 8'},
-            {'name': 'Khoa', 'age': 11, 'complaint': 'Cut on foot from glass', 'date': 'June 9'},
-            {'name': 'Baby Tam', 'age': 1, 'complaint': 'Coughing, wheezing', 'date': 'June 10'},
-            {'name': 'Phuong', 'age': 8, 'complaint': 'Hot skin, won\'t eat, stiff neck', 'date': 'June 8'},
-            {'name': 'Mr. Minh', 'age': 50, 'complaint': 'Chest pain, worried', 'date': 'June 9'}
-        ],
-        'V3': [  # Tamu Village - MINIMAL CASES (Outlier case)
-            {'name': 'Panya', 'age': 7, 'complaint': 'Burning hot, shaking, then very sleepy', 'date': 'June 9'},
-            {'name': 'Ratana', 'age': 12, 'complaint': 'Common cold, sneezing', 'date': 'June 5'},
-            {'name': 'Mr. Somchai', 'age': 38, 'complaint': 'Scraped knee from fall', 'date': 'June 6'},
-            {'name': 'Baby Niran', 'age': 3, 'complaint': 'Teething pain', 'date': 'June 7'},
-            {'name': 'Mrs. Kulap', 'age': 42, 'complaint': 'Joint pain, rainy season', 'date': 'June 8'},
-            {'name': 'Sakda', 'age': 10, 'complaint': 'Insect bite, swollen', 'date': 'June 9'},
-            {'name': 'Lawan', 'age': 6, 'complaint': 'Stomach upset', 'date': 'June 10'},
-            {'name': 'Mr. Boon', 'age': 55, 'complaint': 'Cough for 1 week', 'date': 'June 8'},
-            {'name': 'Mali', 'age': 9, 'complaint': 'Eye irritation from dust', 'date': 'June 9'},
-            {'name': 'Suda', 'age': 4, 'complaint': 'Mild fever, runny nose', 'date': 'June 10'}
-        ]
-    }
+        # Normalize village_id
+        if isinstance(village_id, str):
+            village_id = village_name_map.get(village_id.lower(), village_id.upper())
+
+        # Lepto-specific clinic logs - adult males with flood exposure
+        clinic_logs = {
+            'V1': [  # Ward Northbend - HIGHEST CASE LOAD (epicenter)
+                {'name': 'Adrian Vale', 'age': 42, 'complaint': 'Very high fever, severe leg pain, red eyes. Did flood cleanup.', 'date': 'Oct 13'},
+                {'name': 'Tomas Fernandez', 'age': 38, 'complaint': 'Fever, muscle aches especially calves, yellowish eyes', 'date': 'Oct 14'},
+                {'name': 'Luz Fernandez', 'age': 34, 'complaint': 'Fever 38C, body aches, headache. Helped with cleanup.', 'date': 'Oct 14'},
+                {'name': 'Derek Carver', 'age': 29, 'complaint': 'High fever, severe muscle pain in legs', 'date': 'Oct 13'},
+                {'name': 'Elder Merrin', 'age': 51, 'complaint': 'Fever, jaundice noticed, very weak', 'date': 'Oct 12'},
+                {'name': 'Mrs. Santos', 'age': 45, 'complaint': 'Cough, no fever, chest congestion', 'date': 'Oct 14'},
+                {'name': 'Grant Orr', 'age': 45, 'complaint': 'Fever, red eyes, muscle pain after wading in flood', 'date': 'Oct 15'},
+                {'name': 'Joel Halden', 'age': 28, 'complaint': 'Mild fever, leg cramps, worked barefoot in mud', 'date': 'Oct 16'},
+                {'name': 'Baby Cruz', 'age': 2, 'complaint': 'Diarrhea, no fever', 'date': 'Oct 15'},
+                {'name': 'Pedro Holt', 'age': 37, 'complaint': 'Fever, severe myalgia, flood cleanup work', 'date': 'Oct 15'},
+                {'name': 'Mrs. Reyes', 'age': 60, 'complaint': 'Joint pain, old arthritis acting up', 'date': 'Oct 16'},
+                {'name': 'Gregorio Mercado', 'age': 48, 'complaint': 'Very high fever, vomiting, cant urinate properly', 'date': 'Oct 13'}
+            ],
+            'V2': [  # Ward East Terrace - MODERATE CASE LOAD
+                {'name': 'Roberto Tan', 'age': 31, 'complaint': 'Fever, muscle pain, helped clear debris', 'date': 'Oct 16'},
+                {'name': 'Mr. Lim', 'age': 55, 'complaint': 'Back pain from lifting flood debris', 'date': 'Oct 14'},
+                {'name': 'Maria Torres', 'age': 28, 'complaint': 'Cough and cold symptoms', 'date': 'Oct 15'},
+                {'name': 'Diego Sanchez', 'age': 26, 'complaint': 'Fever, red eyes, worked in floodwater', 'date': 'Oct 19'},
+                {'name': 'Mrs. Garcia', 'age': 42, 'complaint': 'Headache, stress from flood damage', 'date': 'Oct 16'},
+                {'name': 'Boy Santos', 'age': 8, 'complaint': 'Scraped knee from playing', 'date': 'Oct 17'},
+                {'name': 'Mr. Cruz', 'age': 48, 'complaint': 'Chest tightness, worried about heart', 'date': 'Oct 18'},
+                {'name': 'Ana Reyes', 'age': 19, 'complaint': 'Fever, rash, joint pain', 'date': 'Oct 16'}
+            ],
+            'V3': [  # Ward Southshore - LOWER CASE LOAD
+                {'name': 'Emmanuel Ramos', 'age': 35, 'complaint': 'High fever, severe leg pain, jaundice. Fisher.', 'date': 'Oct 15'},
+                {'name': 'Mrs. Luna', 'age': 50, 'complaint': 'Cough for one week', 'date': 'Oct 14'},
+                {'name': 'Boy Perez', 'age': 10, 'complaint': 'Stomach ache', 'date': 'Oct 16'},
+                {'name': 'Mr. Valdez', 'age': 62, 'complaint': 'Knee pain, old injury', 'date': 'Oct 17'},
+                {'name': 'Rosa Santos', 'age': 28, 'complaint': 'Fever, runny nose, cough', 'date': 'Oct 15'},
+                {'name': 'Baby Torres', 'age': 1, 'complaint': 'Mild fever, teething', 'date': 'Oct 18'}
+            ],
+            'V4': [  # Ward Highridge - CONTROL AREA (minimal flooding)
+                {'name': 'Mr. Aquino', 'age': 55, 'complaint': 'Back pain from farm work', 'date': 'Oct 14'},
+                {'name': 'Mrs. Bautista', 'age': 38, 'complaint': 'Headache, fatigue', 'date': 'Oct 15'},
+                {'name': 'Girl Mendoza', 'age': 7, 'complaint': 'Ear infection', 'date': 'Oct 16'},
+                {'name': 'Mr. Reyes', 'age': 45, 'complaint': 'Cut hand while farming', 'date': 'Oct 17'},
+                {'name': 'Baby Lopez', 'age': 3, 'complaint': 'Common cold', 'date': 'Oct 18'}
+            ]
+        }
+    else:
+        # AES/JE scenario (default)
+        village_name_map = {
+            'nalu': 'V1',
+            'nalu village': 'V1',
+            'kabwe': 'V2',
+            'kabwe village': 'V2',
+            'tamu': 'V3',
+            'tamu village': 'V3'
+        }
+
+        # Normalize village_id
+        if isinstance(village_id, str) and village_id.lower() in village_name_map:
+            village_id = village_name_map[village_id.lower()]
+
+        # AES-specific clinic logs with natural language complaints
+        clinic_logs = {
+            'V1': [  # Nalu Village - HIGH CASE LOAD
+                {'name': 'Lan', 'age': 6, 'complaint': 'Hot to touch, shaking badly', 'date': 'June 3'},
+                {'name': 'Minh', 'age': 9, 'complaint': 'Head hurts, body burning hot', 'date': 'June 4'},
+                {'name': 'Mrs. Pham', 'age': 30, 'complaint': 'Cut finger while cooking', 'date': 'June 4'},
+                {'name': 'Baby Tuan', 'age': 4, 'complaint': 'Fever and shaking, very sleepy', 'date': 'June 6'},
+                {'name': 'Kiet', 'age': 8, 'complaint': 'Coughing and runny nose', 'date': 'June 5'},
+                {'name': 'Thanh', 'age': 12, 'complaint': 'Stomach ache, ate too many mangoes', 'date': 'June 6'},
+                {'name': 'Mr. Hoang', 'age': 45, 'complaint': 'Back pain from lifting', 'date': 'June 7'},
+                {'name': 'Little Duc', 'age': 5, 'complaint': 'Broken arm from tree fall', 'date': 'June 8'},
+                {'name': 'Anh', 'age': 7, 'complaint': 'Hot fever, then sleeping and won\'t wake up', 'date': 'June 7'},
+                {'name': 'Mai', 'age': 11, 'complaint': 'Toothache', 'date': 'June 9'},
+                {'name': 'Baby Linh', 'age': 2, 'complaint': 'Rash on legs, itchy', 'date': 'June 9'},
+                {'name': 'Quan', 'age': 14, 'complaint': 'Twisted ankle playing football', 'date': 'June 10'}
+            ],
+            'V2': [  # Kabwe Village - MODERATE CASE LOAD
+                {'name': 'Hoa', 'age': 7, 'complaint': 'Very hot, body shaking, confused', 'date': 'June 7'},
+                {'name': 'Mr. Tran', 'age': 35, 'complaint': 'Sore throat, cough', 'date': 'June 5'},
+                {'name': 'Little Mai', 'age': 2, 'complaint': 'Fever, but playing normally', 'date': 'June 9'},
+                {'name': 'Binh', 'age': 9, 'complaint': 'Diarrhea for 2 days', 'date': 'June 6'},
+                {'name': 'Mrs. Nguyen', 'age': 40, 'complaint': 'Headache and tired', 'date': 'June 7'},
+                {'name': 'Tien', 'age': 6, 'complaint': 'Earache', 'date': 'June 8'},
+                {'name': 'Khoa', 'age': 11, 'complaint': 'Cut on foot from glass', 'date': 'June 9'},
+                {'name': 'Baby Tam', 'age': 1, 'complaint': 'Coughing, wheezing', 'date': 'June 10'},
+                {'name': 'Phuong', 'age': 8, 'complaint': 'Hot skin, won\'t eat, stiff neck', 'date': 'June 8'},
+                {'name': 'Mr. Minh', 'age': 50, 'complaint': 'Chest pain, worried', 'date': 'June 9'}
+            ],
+            'V3': [  # Tamu Village - MINIMAL CASES (Outlier case)
+                {'name': 'Panya', 'age': 7, 'complaint': 'Burning hot, shaking, then very sleepy', 'date': 'June 9'},
+                {'name': 'Ratana', 'age': 12, 'complaint': 'Common cold, sneezing', 'date': 'June 5'},
+                {'name': 'Mr. Somchai', 'age': 38, 'complaint': 'Scraped knee from fall', 'date': 'June 6'},
+                {'name': 'Baby Niran', 'age': 3, 'complaint': 'Teething pain', 'date': 'June 7'},
+                {'name': 'Mrs. Kulap', 'age': 42, 'complaint': 'Joint pain, rainy season', 'date': 'June 8'},
+                {'name': 'Sakda', 'age': 10, 'complaint': 'Insect bite, swollen', 'date': 'June 9'},
+                {'name': 'Lawan', 'age': 6, 'complaint': 'Stomach upset', 'date': 'June 10'},
+                {'name': 'Mr. Boon', 'age': 55, 'complaint': 'Cough for 1 week', 'date': 'June 8'},
+                {'name': 'Mali', 'age': 9, 'complaint': 'Eye irritation from dust', 'date': 'June 9'},
+                {'name': 'Suda', 'age': 4, 'complaint': 'Mild fever, runny nose', 'date': 'June 10'}
+            ]
+        }
 
     # Return appropriate log or empty list if village not found
     return clinic_logs.get(village_id, [])

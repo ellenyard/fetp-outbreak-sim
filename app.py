@@ -409,12 +409,25 @@ BUDGET_COSTS = {
 def spend_time(hours: float, activity: str = "") -> bool:
     """
     Deduct time from daily allowance.
-    Always returns True - time can go negative in Sprint 2.
+    Returns True if time was available, False if going into overtime.
+    Time can go negative (overtime), but this is tracked and may affect scoring.
     """
+    was_positive = st.session_state.time_remaining > 0
     st.session_state.time_remaining -= hours
+
     if st.session_state.time_remaining < 0:
+        # Track overtime/time debt
         st.session_state.time_debt = abs(st.session_state.time_remaining)
-    return True
+        st.session_state.setdefault("overtime_used", 0)
+        if was_positive:
+            # Just went into overtime
+            st.session_state.overtime_used += abs(st.session_state.time_remaining)
+        else:
+            # Already in overtime, add more
+            st.session_state.overtime_used += hours
+
+    # Return True if had time, False if using overtime (still allows action)
+    return was_positive
 
 
 def spend_budget(amount: float, activity: str = "") -> bool:
@@ -1126,6 +1139,126 @@ in the foothills away from the main rice-growing areas.
             "fr": "**Village de Tamu** est une communauté plus petite et plus éloignée..."
         },
         "images": ["upland_farming", "village_remote", "forest_edge"]
+    },
+    # === LEPTO RIVERGATE WARDS ===
+    "ward_northbend": {
+        "name": "Ward Northbend",
+        "population": 480,
+        "households": 95,
+        "description": {
+            "en": """
+**Ward Northbend** is the most severely flood-affected area of Rivergate municipality,
+located at a bend in the Kantara River tributary where floodwaters accumulated deepest.
+
+**Key Facts:**
+- **Population:** ~480 residents in ~95 households
+- **Main livelihoods:** Rice farming (70%), fishing (15%), day labor (15%)
+- **Health facility:** Small barangay health station (1 midwife)
+- **Ward Captain:** Captain Gloria Ramos (8 years in office)
+- **Water source:** Community wells, river access
+- **Sanitation:** Pit latrines, some open defecation near river
+
+**Typhoon Halcyon Impact (Oct 8-10, 2024):**
+- Chest-to-head-deep flooding in low-lying areas
+- Riverside Hamlet most severely affected
+- Rice paddies completely submerged - harvest destroyed
+- Extensive flood cleanup work required Oct 10-15
+- High rat displacement from flooded burrows
+
+**Epidemiologic Significance:**
+- **OUTBREAK EPICENTER** - 28 of 34 confirmed cases
+- Highest cleanup work exposure
+- Most barefoot wading in contaminated floodwater
+- Dense pig farming near residential areas
+""",
+        },
+        "images": ["flood_cleanup", "rice_paddies", "ward_hall"]
+    },
+    "ward_east_terrace": {
+        "name": "Ward East Terrace",
+        "population": 620,
+        "households": 130,
+        "description": {
+            "en": """
+**Ward East Terrace** is a mixed residential and commercial area east of the town center,
+with moderate flooding during Typhoon Halcyon.
+
+**Key Facts:**
+- **Population:** ~620 residents in ~130 households
+- **Main livelihoods:** Market vendors, construction workers, small businesses
+- **Health facility:** None (uses District Hospital or RHU)
+- **Water source:** Municipal water system, some private wells
+- **Market:** Local market with drainage issues
+
+**Typhoon Halcyon Impact:**
+- Moderate flooding in low-lying market area
+- Drainage systems overwhelmed
+- Some flood cleanup work required
+
+**Epidemiologic Significance:**
+- Secondary case cluster (4 cases)
+- Less extensive flood exposure than Northbend
+- Some residents participated in Northbend cleanup
+""",
+        },
+        "images": ["market_area", "residential_street"]
+    },
+    "ward_southshore": {
+        "name": "Ward Southshore",
+        "population": 350,
+        "households": 75,
+        "description": {
+            "en": """
+**Ward Southshore** is a fishing community along the southern riverbank,
+with moderate flood exposure during Typhoon Halcyon.
+
+**Key Facts:**
+- **Population:** ~350 residents in ~75 households
+- **Main livelihoods:** Fishing (60%), small farming (25%), labor (15%)
+- **Health facility:** Community health volunteer
+- **Water source:** Communal well, river access
+- **Notable:** Fishing dock, boat storage area
+
+**Typhoon Halcyon Impact:**
+- Moderate flooding near river
+- Fishing equipment damaged
+- Some flood cleanup activities
+
+**Epidemiologic Significance:**
+- Few cases (2 confirmed)
+- Lower flood cleanup participation than Northbend
+""",
+        },
+        "images": ["fishing_dock", "river_access"]
+    },
+    "ward_highridge": {
+        "name": "Ward Highridge",
+        "population": 420,
+        "households": 85,
+        "description": {
+            "en": """
+**Ward Highridge** is an upland farming community on higher ground west of town center.
+Served as evacuation site during Typhoon Halcyon due to minimal flooding.
+
+**Key Facts:**
+- **Population:** ~420 residents in ~85 households
+- **Main livelihoods:** Upland farming (vegetables, fruits), small livestock
+- **Health facility:** None (uses RHU in town center)
+- **Water source:** Protected spring, municipal water connection
+- **Notable:** Evacuation center at ward hall
+
+**Typhoon Halcyon Impact:**
+- MINIMAL FLOODING due to elevation
+- Served as evacuation site for Northbend residents
+- Clean water source remained uncontaminated
+
+**Epidemiologic Significance:**
+- CONTROL AREA - No confirmed leptospirosis cases
+- Residents did not participate in flood cleanup
+- Can serve as comparison group for exposure analysis
+""",
+        },
+        "images": ["upland_farming", "evacuation_site", "protected_spring"]
     }
 }
 

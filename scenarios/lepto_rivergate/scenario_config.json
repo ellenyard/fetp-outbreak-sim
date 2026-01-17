@@ -4,6 +4,12 @@
   "display_name": "🌊 Rivergate After the Storm",
   "disease_name": "Leptospirosis",
   "simulation_start_date": "2024-10-14",
+  "resources": {
+    "starting_budget": 1000,
+    "hours_per_day": 8,
+    "lab_credits": 20,
+    "difficulty_note": "Standard difficulty - adequate resources for thorough investigation"
+  },
   "case_definition_defaults": {
     "onset_start": "2024-10-12",
     "onset_end": "2024-10-22",
@@ -101,7 +107,7 @@
       "Healthy worker effect in cleanup crews"
     ]
   },
-  "one_health_contacts": ["vet_amina", "mr_osei"],
+  "one_health_contacts": ["dr_villareal"],
   "one_health_samples": ["environmental_water", "rodent_kidney", "animal_serum"],
   "scoring": {
     "diagnosis_synonyms": ["leptospirosis", "lepto"],
