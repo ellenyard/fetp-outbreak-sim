@@ -735,13 +735,31 @@ def load_day1_assets(scenario_id: str) -> Dict[str, Any]:
     Returns:
         Complete Day 1 assets dictionary with all required keys
     """
-    scenario_root = Path(f"scenarios/{scenario_id}/data")
+    # Validate scenario_id to prevent path traversal attacks
+    if not scenario_id or ".." in scenario_id or "/" in scenario_id or "\\" in scenario_id:
+        # Return defaults for invalid scenario_id
+        return DEFAULT_DAY1_ASSETS.get("default", {}).copy()
+
+    scenarios_base = Path("scenarios").resolve()
+    scenario_root = scenarios_base / scenario_id / "data"
+
+    # Ensure the resolved path is still within the scenarios directory
+    try:
+        scenario_root.resolve().relative_to(scenarios_base)
+    except ValueError:
+        # Path escaped the scenarios directory - return defaults
+        return DEFAULT_DAY1_ASSETS.get("default", {}).copy()
+
     asset_path = scenario_root / "day1_assets.json"
 
     # Load JSON override if it exists
     data: Dict[str, Any] = {}
     if asset_path.exists():
-        data = json.loads(asset_path.read_text())
+        try:
+            data = json.loads(asset_path.read_text())
+        except json.JSONDecodeError:
+            # Malformed JSON - continue with empty data, will use defaults
+            data = {}
 
     # Get defaults for this scenario (or generic default)
     defaults = DEFAULT_DAY1_ASSETS.get(scenario_id, DEFAULT_DAY1_ASSETS["default"])

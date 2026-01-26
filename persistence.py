@@ -35,12 +35,6 @@ logger = logging.getLogger(__name__)
 # Increment this when making breaking changes to the save format
 SAVE_FILE_VERSION = "1.0.0"
 
-# Keys that should NEVER be saved (security-sensitive or regenerated at runtime)
-EXCLUDED_KEYS = {
-    'truth',           # Large dataset regenerated from CSV files on load
-    'facilitator_mode',  # Security flag - should never persist between sessions
-}
-
 # Keys that represent the core game state to preserve
 # Organized by category for maintainability
 PERSISTENT_KEYS = {
@@ -217,7 +211,12 @@ def deserialize_value(value: Any) -> Any:
     # Check for special type markers
     if isinstance(value, dict) and '__type__' in value:
         type_marker = value['__type__']
-        data = value['data']
+        data = value.get('data')
+
+        # If 'data' key is missing, return the dict as-is (corrupted marker)
+        if data is None:
+            logger.warning(f"Malformed serialized value: __type__={type_marker} but no 'data' key")
+            return {k: deserialize_value(v) for k, v in value.items() if k != '__type__'}
 
         # Reconstruct DataFrame from JSON string
         if type_marker == 'DataFrame':

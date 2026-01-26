@@ -2513,6 +2513,13 @@ def generate_study_dataset(individuals_df, households_df, decisions, random_seed
     """
     np.random.seed(random_seed)
 
+    # Determine the symptomatic column based on scenario type
+    scenario_id = decisions.get("scenario_id", "")
+    if "lepto" in scenario_id.lower() or "rivergate" in scenario_id.lower():
+        symptomatic_column = "symptomatic_lepto"
+    else:
+        symptomatic_column = "symptomatic_AES"
+
     # Ensure reported_to_hospital is available for clinic-control logic
     individuals_df = ensure_reported_to_hospital(individuals_df, random_seed=random_seed)
 

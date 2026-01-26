@@ -763,8 +763,8 @@ LEPTO_LOCATIONS = {
         "name": "East Terrace Ward Hall",
         "area": "East Terrace",
         "description": "The ward hall where local leaders share updates on recent illnesses and sanitation concerns.",
-        "image_path": "scenarios/lepto_rivergate/assets/east_terrace_hall.svg",
-        "image_thumb": "scenarios/lepto_rivergate/assets/east_terrace_hall.svg",
+        "image_path": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
+        "image_thumb": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "icon": "🏘️",
         "npcs": ["pastor_elijah"],
         "available_actions": [],
@@ -775,8 +775,8 @@ LEPTO_LOCATIONS = {
         "name": "Southshore Ward Hall",
         "area": "Southshore",
         "description": "A busy ward hall where residents report illness clusters after heavy rains.",
-        "image_path": "scenarios/lepto_rivergate/assets/southshore_hall.svg",
-        "image_thumb": "scenarios/lepto_rivergate/assets/southshore_hall.svg",
+        "image_path": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
+        "image_thumb": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "icon": "🏘️",
         "npcs": [],
         "available_actions": [],
@@ -787,8 +787,8 @@ LEPTO_LOCATIONS = {
         "name": "Highridge Ward Hall",
         "area": "Highridge",
         "description": "A modest ward office near low-lying farms where floodwaters tend to linger.",
-        "image_path": "scenarios/lepto_rivergate/assets/highridge_hall.svg",
-        "image_thumb": "scenarios/lepto_rivergate/assets/highridge_hall.svg",
+        "image_path": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
+        "image_thumb": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "icon": "🏘️",
         "npcs": [],
         "available_actions": [],
@@ -811,8 +811,8 @@ LEPTO_LOCATIONS = {
         "name": "Rural Health Unit (RHU) Office",
         "area": "RHU",
         "description": "The RHU office coordinating ward surveillance and case reporting.",
-        "image_path": "scenarios/lepto_rivergate/assets/rhu_hero.svg",
-        "image_thumb": "scenarios/lepto_rivergate/assets/rhu_hero.svg",
+        "image_path": "scenarios/lepto_rivergate/assets/loc_health_center_northbend.png",
+        "image_thumb": "scenarios/lepto_rivergate/assets/loc_health_center_northbend.png",
         "icon": "🏥",
         "npcs": ["dr_mendoza", "dr_villareal", "dr_lacson"],
         "available_actions": ["request_data"],
@@ -835,8 +835,8 @@ LEPTO_LOCATIONS = {
         "name": "Mining Area",
         "area": "Mining Area",
         "description": "Mining runoff and standing water are potential exposure sites for leptospirosis.",
-        "image_path": "scenarios/lepto_rivergate/assets/mining_hero.svg",
-        "image_thumb": "scenarios/lepto_rivergate/assets/mining_hero.svg",
+        "image_path": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
+        "image_thumb": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
         "icon": "⛏️",
         "npcs": ["mr_chen_wei"],
         "available_actions": ["collect_water_sample"],
@@ -921,42 +921,42 @@ AES_AREA_METADATA = {
 # Area metadata for Leptospirosis scenario
 LEPTO_AREA_METADATA = {
     "Ward Northbend": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/ward_northbend_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "description": "Flood-prone farming community reporting fevers and muscle pain after heavy rains.",
         "icon": "🏘️",
     },
     "East Terrace": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/east_terrace_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_municipal_hall_exterior.png",
         "description": "A riverside ward with recent standing water and livestock exposure.",
         "icon": "🏘️",
     },
     "Southshore": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/southshore_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "description": "Low-lying ward where residents report flooding in rice fields and drainage canals.",
         "icon": "🏘️",
     },
     "Highridge": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/highridge_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_ward_hall_northbend.png",
         "description": "Ward near the irrigation system with stagnant water and rodent activity.",
         "icon": "🏘️",
     },
     "District Hospital": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/district_hospital_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_district_hospital_ward.png",
         "description": "Referral hospital managing severe leptospirosis cases.",
         "icon": "🏥",
     },
     "RHU": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/rhu_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_health_center_northbend.png",
         "description": "Rural Health Unit coordinating ward surveillance and reporting.",
         "icon": "🏥",
     },
     "DRRM Office": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/drrm_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_disaster_office_interior.png",
         "description": "Disaster response office coordinating flood mitigation and cleanup.",
         "icon": "🏛️",
     },
     "Mining Area": {
-        "image_exterior": "scenarios/lepto_rivergate/assets/mining_hero.svg",
+        "image_exterior": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
         "description": "Mining area with runoff and pooled water that may amplify leptospira exposure.",
         "icon": "⛏️",
     },
@@ -1722,7 +1722,10 @@ def build_epidemiologic_context(truth: dict) -> str:
 
 def build_npc_data_context(npc_key: str, truth: dict) -> str:
     """NPC-specific data context based on their data_access scope."""
-    npc = truth["npc_truth"][npc_key]
+    npc_truth_dict = truth.get("npc_truth", {})
+    if npc_key not in npc_truth_dict:
+        return "No additional context available for this character."
+    npc = npc_truth_dict[npc_key]
     data_access = npc.get("data_access")
     scenario_type = truth.get("scenario_type")
     case_label = scenario_config_label(scenario_type).lower()
@@ -2212,7 +2215,10 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
         return "⚠️ Anthropic API key missing."
 
     truth = st.session_state.truth
-    npc_truth = truth["npc_truth"][npc_key]
+    npc_truth_dict = truth.get("npc_truth", {})
+    if npc_key not in npc_truth_dict:
+        return f"⚠️ NPC '{npc_key}' not found in scenario data."
+    npc_truth = npc_truth_dict[npc_key]
     stage = investigation_stage()
     npc_truth_safe = sanitize_npc_truth_for_prompt(npc_truth, stage)
 
@@ -2980,7 +2986,7 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
         try:
             num = int(str(pid).replace('P', '').replace('_CF', ''))
             existing_person_nums.append(num)
-        except:
+        except (ValueError, AttributeError):
             pass
     max_person_num = max(existing_person_nums) if existing_person_nums else 0
 
@@ -2989,7 +2995,7 @@ def create_found_case_records(clinic_records: list, selected_record_ids: list,
         try:
             num = int(str(hid).replace('HH', '').replace('_CF', ''))
             existing_hh_nums.append(num)
-        except:
+        except (ValueError, AttributeError):
             pass
     max_hh_num = max(existing_hh_nums) if existing_hh_nums else 0
 
