@@ -16,11 +16,11 @@
     "villages": ["V1", "V2", "V3", "V4"]
   },
   "symptoms": [
-    {"key": "fever", "label": "Fever"},
-    {"key": "myalgia", "label": "Calf myalgia"},
-    {"key": "conjunctival_suffusion", "label": "Conjunctival suffusion"},
-    {"key": "jaundice", "label": "Jaundice"},
-    {"key": "renal_failure", "label": "Renal failure"}
+    {"key": "fever", "label": "Fever", "description": "Body temperature ≥38°C (100.4°F)"},
+    {"key": "myalgia", "label": "Calf myalgia", "description": "Muscle pain, especially in the calves - a hallmark of leptospirosis that helps distinguish it from other febrile illnesses"},
+    {"key": "conjunctival_suffusion", "label": "Conjunctival suffusion", "description": "Redness of the eyes WITHOUT discharge or itching - differs from conjunctivitis which has discharge"},
+    {"key": "jaundice", "label": "Jaundice", "description": "Yellow discoloration of skin/eyes indicating liver involvement - seen in severe 'Weil's disease' form"},
+    {"key": "renal_failure", "label": "Renal failure", "description": "Kidney dysfunction shown by decreased urine output (oliguria) or elevated creatinine - indicates severe disease"}
   ],
   "symptom_field_map": {
     "fever": {"individuals": "symptoms_fever", "clinic": "fever_y_n"},
@@ -30,11 +30,11 @@
     "renal_failure": {"individuals": "symptoms_renal_failure", "clinic": "notes"}
   },
   "epi_link_fields": [
-    {"key": "exposure_cleanup_work", "label": "Flood cleanup work"},
-    {"key": "exposure_barefoot_water", "label": "Barefoot floodwater exposure"},
-    {"key": "exposure_skin_wounds", "label": "Skin wounds"},
-    {"key": "exposure_animal_contact", "label": "Animal contact"},
-    {"key": "exposure_rat_contact", "label": "Rat contact"}
+    {"key": "exposure_cleanup_work", "label": "Flood cleanup work", "description": "Participated in post-flood cleanup activities"},
+    {"key": "exposure_barefoot_water", "label": "Barefoot floodwater exposure", "description": "Walked barefoot in floodwater - primary transmission route for leptospirosis"},
+    {"key": "exposure_skin_wounds", "label": "Skin wounds", "description": "Had cuts or abrasions exposed to contaminated water"},
+    {"key": "exposure_animal_contact", "label": "Animal contact", "description": "Contact with animal urine or tissues (pigs, cattle, dogs)"},
+    {"key": "exposure_rat_contact", "label": "Rat contact", "description": "Contact with rats or rat urine - rats are primary reservoir for Leptospira"}
   ],
   "lab_tests": [
     {

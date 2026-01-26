@@ -151,35 +151,35 @@ _FALLBACK_UI = {
         "submit": "Submit",
         "download": "Download",
         "begin_investigation": "Begin investigation",
-
-"day1_briefing": "Day 1: Situation Assessment",
-"day2_briefing": "Day 2: Study Design",
-"day3_briefing": "Day 3: Data Collection",
-"day4_briefing": "Day 4: Analysis & Laboratory",
-"day5_briefing": "Day 5: Recommendations",
-"key_tasks": "Key tasks",
-"key_outputs": "Key outputs",
-"review_line_list": "Review initial line list and epi curve",
-"review_clinic_records": "Search clinic records for additional cases",
-"describe_cases": "Describe cases by person, place, and time",
-"conduct_interviews": "Conduct hypothesis-generating interviews",
-"find_additional_cases": "Expand case finding",
-"develop_case_def": "Refine the case definition",
-"develop_hypotheses": "Document hypotheses and plan next steps",
-"output_updated_line_list": "Updated line list",
-"output_working_case_def": "Working case definition",
-"output_initial_hypotheses": "Initial hypotheses",
-
-"prereq.day1.case_definition": "Save a working case definition (Overview).",
-"prereq.day1.hypothesis": "Document at least one hypothesis (Overview).",
-"prereq.day1.interviews": "Complete at least 2 hypothesis-generating interviews (Interviews).",
-"prereq.day2.study_design": "Select a study design (Data & Study Design).",
-"prereq.day2.questionnaire": "Upload and save your questionnaire (XLSForm) (Data & Study Design).",
-"prereq.day2.dataset": "Generate your simulated dataset for analysis (Data & Study Design).",
-"prereq.day3.analysis": "Confirm you completed analysis and summarize key results (Overview / Day 3).",
-"prereq.day4.lab_order": "Place at least one lab order (Lab & Environment).",
-"prereq.day4.environment": "Record at least one environmental action (Lab & Environment).",
-"prereq.day4.draft_interventions": "Record draft interventions (Outcome tab, draft section).",
+        # Day briefing labels
+        "day1_briefing": "Day 1: Situation Assessment",
+        "day2_briefing": "Day 2: Study Design",
+        "day3_briefing": "Day 3: Data Collection",
+        "day4_briefing": "Day 4: Analysis & Laboratory",
+        "day5_briefing": "Day 5: Recommendations",
+        "key_tasks": "Key tasks",
+        "key_outputs": "Key outputs",
+        "review_line_list": "Review initial line list and epi curve",
+        "review_clinic_records": "Search clinic records for additional cases",
+        "describe_cases": "Describe cases by person, place, and time",
+        "conduct_interviews": "Conduct hypothesis-generating interviews",
+        "find_additional_cases": "Expand case finding",
+        "develop_case_def": "Refine the case definition",
+        "develop_hypotheses": "Document hypotheses and plan next steps",
+        "output_updated_line_list": "Updated line list",
+        "output_working_case_def": "Working case definition",
+        "output_initial_hypotheses": "Initial hypotheses",
+        # Prerequisite messages (human-readable)
+        "prereq.day1.case_definition": "Save a working case definition (Overview).",
+        "prereq.day1.hypothesis": "Document at least one hypothesis (Overview).",
+        "prereq.day1.interviews": "Complete at least 2 hypothesis-generating interviews (Interviews).",
+        "prereq.day2.study_design": "Select a study design (Data & Study Design).",
+        "prereq.day2.questionnaire": "Upload and save your questionnaire (XLSForm) (Data & Study Design).",
+        "prereq.day2.dataset": "Generate your simulated dataset for analysis (Data & Study Design).",
+        "prereq.day3.analysis": "Confirm you completed analysis and summarize key results (Overview / Day 3).",
+        "prereq.day4.lab_order": "Place at least one lab order (Lab & Environment).",
+        "prereq.day4.environment": "Record at least one environmental action (Lab & Environment).",
+        "prereq.day4.draft_interventions": "Record draft interventions (Outcome tab, draft section).",
         # Lab labels (anti-spoiler)
         "lab_test": "Test",
         "lab_results": "Lab results",
@@ -1626,28 +1626,69 @@ def record_case_definition_version(case_def: dict, rationale: str = "") -> None:
 
 
 def case_definition_feedback(case_def: dict) -> str:
+    """Provide scenario-aware feedback on the case definition quality."""
     if not case_def:
         return "⚠️ Add clinical, time/place, and exclusion criteria to tighten the definition."
+
+    scenario_config = st.session_state.get("scenario_config", {}) or {}
+    scenario_type = scenario_config.get("scenario_type", "")
+    disease_name = scenario_config.get("disease_name", "the disease")
+
     time_window = case_def.get("time_window", {})
     villages = case_def.get("villages", [])
     exclusions = case_def.get("exclusions", [])
+    tiers = case_def.get("tiers", {})
+
+    feedback_parts = []
+
+    # Check for missing basic elements
     missing = []
     if not time_window.get("start") or not time_window.get("end"):
         missing.append("time window")
     if not villages:
         missing.append("geographic boundary")
     if not exclusions:
-        missing.append("exclusions")
+        missing.append("exclusions (rule-outs for differential diagnoses)")
     if missing:
-        return f"⚠️ Missing elements: {', '.join(missing)}."
+        feedback_parts.append(f"⚠️ **Missing elements:** {', '.join(missing)}.")
 
-    tiers = case_def.get("tiers", {})
+    # Check tier structure
+    suspected = tiers.get("suspected", {})
+    probable = tiers.get("probable", {})
+    confirmed = tiers.get("confirmed", {})
+
+    if not suspected.get("required_any"):
+        feedback_parts.append("⚠️ **Suspected tier** has no required symptoms - consider adding at least one clinical criterion (e.g., fever).")
+
+    # Scenario-specific feedback for leptospirosis
+    if scenario_type == "lepto":
+        # Check if exposure criteria are included for probable cases
+        if not probable.get("epi_link_required"):
+            feedback_parts.append("💡 **Tip for leptospirosis:** Probable cases typically require exposure history (floodwater contact, cleanup work). Consider enabling 'Require epidemiological link' for the Probable tier.")
+
+        # Check if myalgia is included (hallmark symptom)
+        all_symptoms = set()
+        for tier in tiers.values():
+            all_symptoms.update(tier.get("required_any", []))
+            all_symptoms.update(tier.get("optional_symptoms", []))
+        if "myalgia" not in all_symptoms:
+            feedback_parts.append("💡 **Tip:** Calf myalgia is a hallmark symptom of leptospirosis that helps distinguish it from other post-flood febrile illnesses.")
+
+        # Check if lab confirmation is set for confirmed tier
+        if not confirmed.get("lab_required"):
+            feedback_parts.append("💡 **Tip:** Confirmed cases typically require lab evidence (PCR, MAT, or IgM ELISA).")
+
+    # General sensitivity/specificity feedback
     filled = sum(len(tier.get("required_any", [])) + len(tier.get("optional_symptoms", [])) for tier in tiers.values())
-    if filled <= 2:
-        return "⚠️ The definition is broad and may capture many non-cases (specificity risk)."
-    if filled >= 8:
-        return "⚠️ The definition is very restrictive and may miss true cases (sensitivity risk)."
-    return "✅ Balance looks reasonable; monitor sensitivity/specificity as you collect more data."
+    if filled <= 2 and not feedback_parts:
+        feedback_parts.append(f"⚠️ The definition is broad and may capture many non-{disease_name} cases (low specificity).")
+    elif filled >= 8:
+        feedback_parts.append(f"⚠️ The definition is very restrictive and may miss true {disease_name} cases (low sensitivity).")
+
+    if not feedback_parts:
+        return f"✅ Your case definition includes key elements for {disease_name}. Monitor sensitivity/specificity as you collect data."
+
+    return "\n\n".join(feedback_parts)
 
 
 def build_epidemiologic_context(truth: dict) -> str:
@@ -4125,8 +4166,44 @@ def view_overview():
             scenario_config = st.session_state.get("scenario_config", {}) or {}
             symptom_map = {s.get("label"): s.get("key") for s in scenario_config.get("symptoms", [])}
             symptom_labels = list(symptom_map.keys())
+            symptom_descriptions = {s.get("label"): s.get("description", "") for s in scenario_config.get("symptoms", [])}
             exclusion_options = scenario_config.get("exclusion_conditions", [])
             village_options = truth["villages"]["village_id"].tolist()
+
+            # Show symptom glossary to help players understand medical terms
+            with st.expander("📖 Symptom Glossary (click to expand)", expanded=False):
+                st.markdown("**Understanding the clinical criteria:**")
+                for label, desc in symptom_descriptions.items():
+                    if desc:
+                        st.markdown(f"- **{label}**: {desc}")
+                epi_fields = scenario_config.get("epi_link_fields", [])
+                if epi_fields:
+                    st.markdown("\n**Epidemiological link (exposure criteria):**")
+                    for field in epi_fields:
+                        if field.get("description"):
+                            st.markdown(f"- **{field.get('label')}**: {field.get('description')}")
+
+            # Show case cards to help players think through borderline cases
+            assets = get_day1_assets()
+            case_cards = assets.get("case_cards", [])
+            if case_cards:
+                with st.expander("🃏 Case Cards - Practice Classification", expanded=False):
+                    st.markdown("""
+**What are case cards?** These are example patient scenarios to help you think through
+how your case definition would classify different presentations. Review them to test
+whether your definition captures the right cases.
+                    """)
+                    for card in case_cards:
+                        with st.container():
+                            st.markdown(f"**{card.get('case_id')}: {card.get('title')}**")
+                            col_a, col_b = st.columns(2)
+                            with col_a:
+                                st.markdown(f"- *Clinical:* {card.get('clinical', 'N/A')}")
+                                st.markdown(f"- *Exposure:* {card.get('exposure', 'N/A')}")
+                            with col_b:
+                                st.markdown(f"- *Lab:* {card.get('lab', 'N/A')}")
+                                st.markdown(f"- *Missing data:* {card.get('missing_data', 'N/A')}")
+                            st.markdown("---")
 
             st.markdown("#### Time/Place Boundaries")
             defaults = scenario_config.get("case_definition_defaults", {})
@@ -4177,9 +4254,10 @@ def view_overview():
                     key=f"{tier_key}_min_optional",
                 )
                 epi_required = st.checkbox(
-                    "Require epi link (exposure or contact)",
+                    "Require epidemiological link",
                     value=(tier_key == "probable"),
                     key=f"{tier_key}_epi_required",
+                    help="Epidemiological link = documented exposure (e.g., floodwater contact, cleanup work) within the incubation period. See Symptom Glossary above for exposure types.",
                 )
                 lab_required = st.checkbox(
                     "Require lab evidence",
@@ -5118,17 +5196,39 @@ def view_clinic_log_abstraction():
 
 def view_case_finding_debrief():
     st.title("Case-finding Debrief")
-    st.caption("Review how your case definition performed and decide whether to revise it.")
+
+    # Explain the purpose of this step
+    st.info("""
+**What is this?** This debrief helps you evaluate your case definition's performance by comparing
+it against actual cases in the clinic records.
+
+**Why does it matter?** Case definitions are iterative - you refine them based on how well they
+identify true cases while excluding non-cases. This is a key skill in outbreak investigation.
+    """)
+
+    with st.expander("📖 Understanding False Positives & Negatives", expanded=False):
+        st.markdown("""
+**False Positive:** Your definition matched this patient, but they don't actually have the disease.
+- *Too many false positives* → Your definition is too broad (low specificity)
+- *Action:* Add more specific criteria or require more symptoms
+
+**False Negative:** Your definition missed this patient, but they actually have the disease.
+- *Too many false negatives* → Your definition is too restrictive (low sensitivity)
+- *Action:* Relax criteria or accept fewer required symptoms
+
+**The tradeoff:** Early in an outbreak, you may want higher sensitivity (catch all cases).
+As you learn more, you can increase specificity (reduce false alarms).
+        """)
 
     assets = get_day1_assets()
     entries = assets.get("clinic_log_entries", [])
     if not st.session_state.clinic_line_list:
-        st.info("Complete the clinic log abstraction first.")
+        st.warning("Complete the clinic log abstraction first.")
         return
 
     case_def = st.session_state.decisions.get("case_definition_structured") or st.session_state.case_definition_builder
     if not case_def:
-        st.info("Save a working case definition first.")
+        st.warning("Save a working case definition first.")
         return
     scenario_config = st.session_state.get("scenario_config", {}) or {}
     if not case_def.get("tiers"):
@@ -5160,14 +5260,27 @@ def view_case_finding_debrief():
     false_positives = [m for m in matches if m["is_match"] and m["truth_case"] is False][:3]
     false_negatives = [m for m in matches if not m["is_match"] and m["truth_case"] is True][:3]
 
-    st.markdown("### Likely false positives (examples)")
+    st.markdown("### Likely false positives")
+    st.caption("These patients matched your definition but may not have the disease. Review them to see if your definition is too broad.")
     fp_options = [f"{m['patient_id']}: {m['raw_text']}" for m in false_positives]
-    fp_selected = st.multiselect("Select any likely false positives", options=fp_options)
+    if fp_options:
+        fp_selected = st.multiselect("Select cases you believe are false positives", options=fp_options)
+    else:
+        st.success("No obvious false positives found - your definition may have good specificity.")
+        fp_selected = []
 
-    st.markdown("### Likely false negatives (examples)")
+    st.markdown("### Likely false negatives")
+    st.caption("These patients didn't match your definition but may actually have the disease. Review them to see if your definition is too restrictive.")
     fn_options = [f"{m['patient_id']}: {m['raw_text']}" for m in false_negatives]
-    fn_selected = st.multiselect("Select any likely false negatives", options=fn_options)
+    if fn_options:
+        fn_selected = st.multiselect("Select cases you believe are false negatives", options=fn_options)
+    else:
+        st.success("No obvious false negatives found - your definition may have good sensitivity.")
+        fn_selected = []
 
+    st.markdown("---")
+    st.markdown("### Decision")
+    st.caption("Based on the above review, should you revise your case definition? If yes, return to the Overview page to make changes.")
     revise_decision = st.radio("Revise case definition?", options=["No", "Yes"], horizontal=True)
     rationale = st.text_area("Rationale", height=80)
 
