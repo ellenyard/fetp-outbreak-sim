@@ -798,7 +798,7 @@ LEPTO_LOCATIONS = {
     "lepto_district_hospital": {
         "name": "District Hospital Ward",
         "area": "District Hospital",
-        "description": "The district hospital ward where severe leptospirosis cases are being managed.",
+        "description": "The district hospital ward where severe cases are being managed.",
         "image_path": "scenarios/lepto_rivergate/assets/loc_district_hospital_ward.png",
         "image_thumb": "scenarios/lepto_rivergate/assets/loc_district_hospital_ward.png",
         "icon": "🏥",
@@ -834,7 +834,7 @@ LEPTO_LOCATIONS = {
     "lepto_mining_area": {
         "name": "Mining Area",
         "area": "Mining Area",
-        "description": "Mining runoff and standing water are potential exposure sites for leptospirosis.",
+        "description": "Mining runoff and standing water create potential exposure risks.",
         "image_path": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
         "image_thumb": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
         "icon": "⛏️",
@@ -942,7 +942,7 @@ LEPTO_AREA_METADATA = {
     },
     "District Hospital": {
         "image_exterior": "scenarios/lepto_rivergate/assets/loc_district_hospital_ward.png",
-        "description": "Referral hospital managing severe leptospirosis cases.",
+        "description": "Referral hospital managing severe cases from the district.",
         "icon": "🏥",
     },
     "RHU": {
@@ -957,7 +957,7 @@ LEPTO_AREA_METADATA = {
     },
     "Mining Area": {
         "image_exterior": "scenarios/lepto_rivergate/assets/loc_riverside_village_street.png",
-        "description": "Mining area with runoff and pooled water that may amplify leptospira exposure.",
+        "description": "Mining area with runoff and pooled water creating potential exposure risks.",
         "icon": "⛏️",
     },
 }
@@ -7552,7 +7552,7 @@ LEPTO_MAP_LOCATIONS = {
     "East Terrace": {"x": 70, "y": 45, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
     "Southshore": {"x": 35, "y": 20, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
     "Highridge": {"x": 15, "y": 55, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
-    "District Hospital": {"x": 80, "y": 75, "icon": "🏥", "desc": "Severe leptospirosis cases treated here."},
+    "District Hospital": {"x": 80, "y": 75, "icon": "🏥", "desc": "Severe cases are being referred here."},
     "RHU": {"x": 55, "y": 60, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
     "DRRM Office": {"x": 55, "y": 35, "icon": "🏛️", "desc": "Disaster response coordination office."},
     "Mining Area": {"x": 85, "y": 15, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
