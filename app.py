@@ -9100,9 +9100,21 @@ def render_npc_chat(npc_key: str, npc: dict):
         else:
             st.warning("🔒 **Records Access Denied** - Improve your rapport to access clinic records.")
 
+    # Show trust indicator for non-nurse NPCs
+    if npc_key != "nurse_joy":
+        trust = get_npc_trust(npc_key)
+        npc_state_info = st.session_state.npc_state.get(npc_key, {"emotion": "neutral"})
+        emotion = npc_state_info.get("emotion", "neutral")
+        emotion_emoji = {"cooperative": "😊", "neutral": "😐", "wary": "🤨", "annoyed": "😤", "offended": "😠"}.get(emotion, "😐")
+        st.caption(f"**Rapport:** {emotion_emoji} {emotion.title()} | **Trust:** {trust}/5")
+
     # Chat input
     user_q = st.chat_input(f"Ask {npc['name']} a question...")
     if user_q:
+        # Capture trust before interaction for comparison
+        trust_before = get_npc_trust(npc_key)
+        emotion_before = st.session_state.npc_state.get(npc_key, {}).get("emotion", "neutral")
+
         # Check for NPC unlock triggers
         unlock_notification = check_npc_unlock_triggers(user_q)
 
@@ -9126,6 +9138,19 @@ def render_npc_chat(npc_key: str, npc: dict):
 
         history.append({"role": "assistant", "content": reply})
         st.session_state.interview_history[npc_key] = history
+
+        # Show trust change feedback
+        trust_after = get_npc_trust(npc_key)
+        emotion_after = st.session_state.npc_state.get(npc_key, {}).get("emotion", "neutral")
+
+        if trust_after > trust_before:
+            st.toast(f"📈 Your rapport with {npc['name']} improved! (Trust: {trust_after})", icon="💚")
+        elif trust_after < trust_before:
+            st.toast(f"📉 Your rapport with {npc['name']} decreased. (Trust: {trust_after})", icon="⚠️")
+
+        if emotion_after != emotion_before:
+            emotion_emoji = {"cooperative": "😊", "neutral": "😐", "wary": "🤨", "annoyed": "😤", "offended": "😠"}.get(emotion_after, "😐")
+            st.info(f"{npc['name']} now seems **{emotion_after}** {emotion_emoji}")
 
         # Show unlock notification
         if unlock_notification:

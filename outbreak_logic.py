@@ -1594,6 +1594,52 @@ def assign_lepto_infections(individuals_df, households_df):
 
     individuals_df['outcome'] = individuals_df.apply(assign_lepto_outcome, axis=1)
 
+    # Assign individual symptoms based on symptomatic/severe status
+    # This ensures case definition matching works for generated cases
+    def assign_lepto_symptoms(row):
+        # Skip seed cases - they already have symptoms from CSV
+        if row['person_id'].startswith('P0') or row['person_id'].startswith('P1') or row['person_id'].startswith('P2'):
+            if len(row['person_id']) <= 5:
+                return row  # Keep existing values
+
+        # Non-symptomatic cases have no symptoms
+        if not row.get('symptomatic_lepto', False):
+            return row
+
+        # Symptomatic cases get symptoms based on severity
+        is_severe = row.get('severe_lepto', False)
+
+        # Fever - almost universal in symptomatic leptospirosis (>95%)
+        row['symptoms_fever'] = np.random.random() < 0.98
+
+        # Headache - very common (~80%)
+        row['symptoms_headache'] = np.random.random() < 0.80
+
+        # Myalgia (especially calf) - hallmark symptom (~85%)
+        row['symptoms_myalgia'] = np.random.random() < 0.85
+
+        # Conjunctival suffusion - common but more diagnostic (~50% mild, ~70% severe)
+        if is_severe:
+            row['symptoms_conjunctival_suffusion'] = np.random.random() < 0.70
+        else:
+            row['symptoms_conjunctival_suffusion'] = np.random.random() < 0.45
+
+        # Jaundice - mainly severe cases (Weil's disease)
+        if is_severe:
+            row['symptoms_jaundice'] = np.random.random() < 0.85
+        else:
+            row['symptoms_jaundice'] = np.random.random() < 0.05
+
+        # Renal failure - severe cases only
+        if is_severe:
+            row['symptoms_renal_failure'] = np.random.random() < 0.60
+        else:
+            row['symptoms_renal_failure'] = False
+
+        return row
+
+    individuals_df = individuals_df.apply(assign_lepto_symptoms, axis=1)
+
     return individuals_df
 
 
