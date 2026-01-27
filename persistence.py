@@ -374,6 +374,12 @@ def load_save_file(uploaded_file, session_state) -> Tuple[bool, str]:
     Returns:
         Tuple of (success: bool, message: str for display to user)
     """
+    # File size validation - prevent loading excessively large files
+    MAX_SAVE_SIZE = 10 * 1024 * 1024  # 10MB
+    if hasattr(uploaded_file, 'size') and uploaded_file.size > MAX_SAVE_SIZE:
+        size_mb = uploaded_file.size / (1024 * 1024)
+        return False, f"Save file too large ({size_mb:.1f}MB). Maximum size is 10MB."
+
     try:
         # Read raw bytes from uploaded file
         content = uploaded_file.read()

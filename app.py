@@ -9,10 +9,15 @@ import io
 import re
 import time
 import base64
+import logging
+from functools import wraps
 from datetime import date
 from pathlib import Path
 from typing import Optional
 from PIL import Image, UnidentifiedImageError
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 import day1_utils
 
@@ -1346,6 +1351,46 @@ def load_truth_and_population(data_dir: str = ".", scenario_type: str = None):
     return truth
 
 
+# =========================
+# ERROR HANDLING DECORATOR
+# =========================
+
+def handle_errors(user_message: str = "An error occurred"):
+    """Decorator for consistent error handling with user-friendly messages.
+
+    Args:
+        user_message: The message to display to users when an unexpected error occurs.
+
+    Usage:
+        @handle_errors("Could not generate dataset. Please check your case definition.")
+        def generate_study_dataset(...):
+            ...
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except FileNotFoundError as e:
+                st.error(f"Required file not found. Please check scenario data is complete.")
+                logger.error(f"File not found in {func.__name__}: {e}")
+                return None
+            except ValueError as e:
+                st.error(f"Invalid value: {e}")
+                logger.warning(f"Validation error in {func.__name__}: {e}")
+                return None
+            except KeyError as e:
+                st.error(f"Missing data field: {e}")
+                logger.warning(f"Key error in {func.__name__}: {e}")
+                return None
+            except Exception as e:
+                st.error(user_message)
+                logger.exception(f"Unexpected error in {func.__name__}")
+                return None
+        return wrapper
+    return decorator
+
+
 def init_session_state():
     # Scenario tracking
     if 'current_scenario' not in st.session_state:
@@ -2404,7 +2449,7 @@ INFORMATION RULES:
 
     try:
         resp = client.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-3-5-haiku-20241022",
             max_tokens=400,
             system=system_prompt,
             messages=msgs,
@@ -3685,252 +3730,9 @@ def make_epi_curve(truth: dict) -> go.Figure:
 # UI COMPONENTS
 # =========================
 
-def sidebar_navigation():
-    # Language selector at very top
-    st.sidebar.markdown(f"### {t('language_header')}")
-    lang_options = {"en": "English", "es": "Español", "fr": "Français", "pt": "Português"}
-    selected_lang = st.sidebar.selectbox(
-        t("language_select"),
-        options=list(lang_options.keys()),
-        format_func=lambda x: lang_options.get(x, x),
-        index=list(lang_options.keys()).index(st.session_state.get("language", "en") if st.session_state.get("language", "en") in lang_options else "en"),
-        key="lang_selector"
-    )
-    if selected_lang != st.session_state.language:
-        st.session_state.language = selected_lang
-        st.rerun()
-
-    # Facilitator mode (hides spoiler-prone UI like variable mappings)
-    # To enable on Streamlit Cloud, set FACILITATOR_CODE in secrets.
-    fac_code = st.secrets.get("FACILITATOR_CODE", "")
-    st.session_state.setdefault("facilitator_mode", False)
-    if fac_code:
-        st.sidebar.markdown(f"### 🧭 {t('facilitator_header')}")
-        with st.sidebar.expander(t("facilitator_mode"), expanded=False):
-            entered = st.text_input(t("facilitator_code"), type="password", key="facilitator_code_input")
-            if entered:
-                if entered == fac_code:
-                    st.session_state.facilitator_mode = True
-                    st.success("OK")
-                else:
-                    st.session_state.facilitator_mode = False
-                    st.error(t("facilitator_bad_code"))
-
-    st.sidebar.markdown("---")
-    st.sidebar.title(t("title"))
-
-    if not st.session_state.alert_acknowledged:
-        # Before the alert is acknowledged, keep sidebar simple
-        st.sidebar.markdown("**Status:** Awaiting outbreak alert acknowledgment.")
-        st.sidebar.info("Review the alert on the main screen to begin the investigation.")
-        return
-
-    # Resources display with time
-    time_display = f":red[{st.session_state.time_remaining}]" if st.session_state.time_remaining < 0 else str(st.session_state.time_remaining)
-    st.sidebar.markdown(
-        f"**{t('day')}:** {st.session_state.current_day} / 5\n\n"
-        f"**{t('budget')}:** ${st.session_state.budget}\n\n"
-        f"**{t('time_remaining')}:** {time_display} {t('hours')}\n\n"
-        f"**{t('lab_credits')}:** {st.session_state.lab_credits}"
-    )
-
-    if callable(get_day_spec):
-        day_spec = get_day_spec(st.session_state.current_day)
-        if day_spec:
-            st.sidebar.markdown("---")
-            st.sidebar.markdown("### 🎯 Day Goals")
-            for item in day_spec.get("required_outputs", []):
-                st.sidebar.markdown(f"- **Required:** {item}")
-            for item in day_spec.get("optional_actions", []):
-                st.sidebar.markdown(f"- Optional: {item}")
-
-            st.sidebar.markdown("**Quick links**")
-            quick_links = {
-                "Case definition": "overview",
-                "Clinic log": "clinic_log_abstraction",
-                "Interviews": "interviews",
-                "Lab": "lab",
-                "Study design": "study",
-                "Outcome": "outcome",
-            }
-            for label, view_key in quick_links.items():
-                if st.sidebar.button(label, key=f"goal_link_{view_key}", use_container_width=True):
-                    st.session_state.current_view = view_key
-                    st.rerun()
-
-    # Investigation Hub (Day 1 specific)
-    if st.session_state.current_day == 1:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### Investigation Hub")
-
-        # My Line List
-        with st.sidebar.expander("My Line List", expanded=False):
-            if st.session_state.line_list_cols:
-                st.caption(f"Selected columns: {', '.join(st.session_state.line_list_cols)}")
-
-                if st.session_state.manual_cases:
-                    st.caption(f"Cases added: {len(st.session_state.manual_cases)}")
-
-                    # Show a preview of the line list
-                    if st.session_state.get('clinic_records'):
-                        records = st.session_state.clinic_records
-                        selected_records = [r for r in records if r['record_id'] in st.session_state.manual_cases]
-
-                        if selected_records:
-                            st.markdown("**Preview:**")
-                            for rec in selected_records[:3]:  # Show first 3
-                                st.caption(f"- {rec['record_id']}: {rec['patient']}")
-                            if len(selected_records) > 3:
-                                st.caption(f"... and {len(selected_records) - 3} more")
-                else:
-                    st.caption("No cases added yet")
-            else:
-                st.caption("No line list structure defined yet")
-                st.caption("Visit Medical Records to define your structure")
-
-        # My Case Definition
-        with st.sidebar.expander("My Case Definition", expanded=False):
-            if st.session_state.my_case_def:
-                for key, value in st.session_state.my_case_def.items():
-                    st.caption(f"**{key}:** {value}")
-            else:
-                st.caption("No case definition saved yet")
-                if st.session_state.get('decisions', {}).get('case_definition_text'):
-                    st.caption("See Overview tab for case definition")
-
-    # Session Management - Save/Load functionality
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Session Management")
-
-    col1, col2 = st.sidebar.columns(2)
-
-    # Save session
-    with col1:
-        if st.button("Save", use_container_width=True, key="save_session_btn", help="Download your current progress"):
-            try:
-                save_data = persistence.create_save_file(st.session_state)
-                filename = persistence.get_save_filename(st.session_state)
-                st.sidebar.download_button(
-                    label="Download",
-                    data=save_data,
-                    file_name=filename,
-                    mime="application/json",
-                    use_container_width=True,
-                    key="download_save_btn"
-                )
-            except Exception as e:
-                st.sidebar.error(f"Error creating save file: {e}")
-
-    # Load session
-    with col2:
-        uploaded = st.file_uploader(
-            "Load",
-            type=["json"],
-            key="session_load_uploader",
-            help="Upload a previously saved session file",
-            label_visibility="collapsed"
-        )
-        if uploaded is not None:
-            success, message = persistence.load_save_file(uploaded, st.session_state)
-            if success:
-                st.sidebar.success(message)
-                st.rerun()
-            else:
-                st.sidebar.error(message)
-
-    # Progress indicator
-    st.sidebar.markdown(f"### {t('progress')}")
-    for day in range(1, 6):
-        if day < st.session_state.current_day:
-            status = "[✓]"
-        elif day == st.session_state.current_day:
-            status = "[●]"
-        else:
-            status = "[ ]"
-        st.sidebar.markdown(f"{status} {t('day')} {day}")
-
-    st.sidebar.markdown("---")
-
-    # Navigation - day-appropriate options
-    labels = [t("map"), t("overview"), t("casefinding"), t("descriptive"), t("villages"), t("interviews"), t("spotmap"), t("study"), t("lab"), t("outcome")]
-    internal = ["map", "overview", "casefinding", "descriptive", "villages", "interviews", "spotmap", "study", "lab", "outcome"]
-
-    if st.session_state.current_day == 1:
-        labels.extend([
-            t("clinic_log_abstraction"),
-            t("medical_records"),
-            t("case_finding_debrief"),
-            t("day1_lab_brief"),
-            t("triangulation_checkpoint"),
-        ])
-        internal.extend([
-            "clinic_log_abstraction",
-            "medical_records",
-            "case_finding_debrief",
-            "day1_lab_brief",
-            "triangulation_checkpoint",
-        ])
-    
-    if st.session_state.current_view in internal:
-        current_idx = internal.index(st.session_state.current_view)
-    else:
-        current_idx = 0
-
-    choice = st.sidebar.radio(t("go_to"), labels, index=current_idx)
-    new_view = internal[labels.index(choice)]
-    if new_view != st.session_state.current_view:
-        st.session_state.current_view = new_view
-        st.rerun()
-
-    st.sidebar.markdown("---")
-    
-    # Investigation Notebook
-    with st.sidebar.expander(f"📓 {t('notebook')}"):
-        st.caption("Record your observations, questions, and insights here.")
-        
-        new_note = st.text_area("Add a note:", height=80, key="new_note_input")
-        if st.button(t("save"), key="save_note_btn"):
-            if new_note.strip():
-                from datetime import datetime
-                entry = {
-                    "timestamp": datetime.now().strftime("%H:%M"),
-                    "day": st.session_state.current_day,
-                    "note": new_note.strip()
-                }
-                st.session_state.notebook_entries.append(entry)
-                st.success("Note saved!")
-                st.rerun()
-        
-        if st.session_state.notebook_entries:
-            st.markdown("**Your Notes:**")
-            for entry in reversed(st.session_state.notebook_entries[-10:]):  # Show last 10
-                st.markdown(f"*{t('day')} {entry['day']} @ {entry['timestamp']}*")
-                st.markdown(f"> {entry['note']}")
-                st.markdown("---")
-
-    st.sidebar.markdown("---")
-    
-    # Advance day button (at bottom)
-    if st.session_state.current_day < 5:
-        if st.sidebar.button(f"{t('advance_day')} {st.session_state.current_day + 1}", use_container_width=True):
-            can_advance, missing = check_day_prerequisites(st.session_state.current_day, st.session_state)
-            if can_advance:
-                st.session_state.current_day += 1
-                base_hours = 8
-                overtime_penalty = min(2, int(st.session_state.get("time_debt", 0)))
-                st.session_state.time_remaining = base_hours - overtime_penalty
-                st.session_state.time_debt = 0
-                refresh_lab_queue_for_day(int(st.session_state.current_day))
-                st.session_state.advance_missing_tasks = []
-                # Show SITREP view for new day
-                st.session_state.current_view = "sitrep"
-                st.session_state.sitrep_viewed = False
-                st.rerun()
-            else:
-                st.session_state.advance_missing_tasks = missing
-                st.sidebar.warning(t("cannot_advance"))
-    else:
-        st.sidebar.success("Final Day - Complete your briefing!")
+# Note: The main sidebar is adventure_sidebar() defined later in this file.
+# It provides language selection, resources display, progress tracking,
+# session save/load, notebook, and day advancement functionality.
 
 
 def day_briefing_text(day: int) -> str:
@@ -9468,6 +9270,95 @@ def view_evidence_board():
 
 
 # =========================
+# VIEW REGISTRY
+# =========================
+
+# Views that need a "Return to Map" button
+VIEWS_WITH_RETURN_BUTTON = {
+    "overview": view_overview,
+    "casefinding": view_case_finding,
+    "descriptive": view_descriptive_epi,
+    "villages": view_village_profiles,
+    "interviews": view_interviews,
+    "spotmap": view_spot_map,
+    "study": view_study_design,
+    "lab": view_lab_and_environment,
+    "outcome": view_interventions_and_outcome,
+}
+
+# Views rendered directly without return button
+VIEWS_DIRECT = {
+    "medical_records": view_medical_records,
+    "clinic_log_abstraction": view_clinic_log_abstraction,
+    "case_finding_debrief": view_case_finding_debrief,
+    "day1_lab_brief": view_day1_lab_brief,
+    "triangulation_checkpoint": view_triangulation_checkpoint,
+    "clinic_register": view_clinic_register_scan,
+    "nalu_child_register": view_nalu_child_register,
+}
+
+
+def render_view_with_return_button(view_func, view_name: str):
+    """Render a view with a Return to Map button at the top."""
+    if st.button("Return to Map", key=f"return_from_{view_name}"):
+        st.session_state.current_view = "map"
+        st.rerun()
+    view_func()
+
+
+def route_to_view(view: str):
+    """Route to the appropriate view based on view name.
+
+    Args:
+        view: The view name from session state
+
+    Returns:
+        True if the caller should return early (e.g., sitrep blocking view)
+    """
+    # SITREP is blocking - requires acknowledgment before continuing
+    if view == "sitrep":
+        view_sitrep()
+        return True
+
+    # Map view (default)
+    if view == "map" or view is None:
+        view_travel_map()
+        return False
+
+    # Area view - needs session state check for current_area
+    if view == "area":
+        area = st.session_state.get("current_area")
+        if area:
+            view_area_visual(area)
+        else:
+            view_travel_map()
+        return False
+
+    # Location view - needs session state check for current_location
+    if view == "location":
+        loc_key = st.session_state.get("current_location")
+        if loc_key:
+            view_location(loc_key)
+        else:
+            view_travel_map()
+        return False
+
+    # Check views that need return button
+    if view in VIEWS_WITH_RETURN_BUTTON:
+        render_view_with_return_button(VIEWS_WITH_RETURN_BUTTON[view], view)
+        return False
+
+    # Check direct views (no return button needed)
+    if view in VIEWS_DIRECT:
+        VIEWS_DIRECT[view]()
+        return False
+
+    # Default fallback to map
+    view_travel_map()
+    return False
+
+
+# =========================
 # MAIN
 # =========================
 
@@ -9583,95 +9474,10 @@ def main():
         view_alert()
         return
 
+    # Route to appropriate view using registry pattern
     view = st.session_state.current_view
-
-    # SITREP view - blocking daily briefing
-    if view == "sitrep":
-        view_sitrep()
-        return
-
-    # Adventure mode: location-based navigation
-    if view == "map" or view is None:
-        view_travel_map()
-    elif view == "area":
-        # Show area map for selected area - use visual layout for ALL areas
-        area = st.session_state.get("current_area")
-        if area:
-            # Use immersive visual layout with hero image and card grid for all areas
-            view_area_visual(area)
-        else:
-            view_travel_map()
-    elif view == "location":
-        # Show specific location view
-        loc_key = st.session_state.get("current_location")
-        if loc_key:
-            view_location(loc_key)
-        else:
-            view_travel_map()
-
-    # Legacy views (still accessible via quick links)
-    elif view == "overview":
-        # Add return to map button
-        if st.button("Return to Map", key="return_from_overview"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_overview()
-    elif view == "casefinding":
-        if st.button("Return to Map", key="return_from_casefinding"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_case_finding()
-    elif view == "descriptive":
-        if st.button("Return to Map", key="return_from_descriptive"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_descriptive_epi()
-    elif view == "villages":
-        if st.button("Return to Map", key="return_from_villages"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_village_profiles()
-    elif view == "interviews":
-        if st.button("Return to Map", key="return_from_interviews"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_interviews()
-    elif view == "spotmap":
-        if st.button("Return to Map", key="return_from_spotmap"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_spot_map()
-    elif view == "study":
-        if st.button("Return to Map", key="return_from_study"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_study_design()
-    elif view == "lab":
-        if st.button("Return to Map", key="return_from_lab"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_lab_and_environment()
-    elif view == "outcome":
-        if st.button("Return to Map", key="return_from_outcome"):
-            st.session_state.current_view = "map"
-            st.rerun()
-        view_interventions_and_outcome()
-    elif view == "medical_records":
-        view_medical_records()
-    elif view == "clinic_log_abstraction":
-        view_clinic_log_abstraction()
-    elif view == "case_finding_debrief":
-        view_case_finding_debrief()
-    elif view == "day1_lab_brief":
-        view_day1_lab_brief()
-    elif view == "triangulation_checkpoint":
-        view_triangulation_checkpoint()
-    elif view == "clinic_register":
-        view_clinic_register_scan()
-    elif view == "nalu_child_register":
-        view_nalu_child_register()
-    else:
-        view_travel_map()
+    if route_to_view(view):
+        return  # Early return for blocking views (e.g., sitrep)
 
 
 if __name__ == "__main__":
