@@ -9481,7 +9481,6 @@ def main():
         st.title("📋 Scenario Selection")
 
         scenario_options = [
-            ("aes_sidero_valley", "🦟 Shadows Over Sidero Valley"),
             ("lepto_rivergate", "🌊 Rivergate After the Storm")
         ]
 
