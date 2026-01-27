@@ -2520,6 +2520,109 @@ INFORMATION RULES:
     return text
 
 
+def stream_npc_response(npc_key: str, user_input: str):
+    """
+    Stream NPC response for faster perceived response time.
+    Yields text chunks as they arrive from the API.
+    Returns the full text after streaming completes.
+    """
+    api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        yield "⚠️ Anthropic API key missing."
+        return
+
+    truth = st.session_state.truth
+    npc_truth_dict = truth.get("npc_truth", {})
+    if npc_key not in npc_truth_dict:
+        yield f"⚠️ NPC '{npc_key}' not found in scenario data."
+        return
+
+    npc_truth = npc_truth_dict[npc_key]
+    stage = investigation_stage()
+    npc_truth_safe = sanitize_npc_truth_for_prompt(npc_truth, stage)
+
+    history = st.session_state.interview_history.get(npc_key, [])
+    meaningful_questions = sum(1 for m in history if m["role"] == "user")
+
+    question_scope = classify_question_scope(user_input)
+    user_tone = analyze_user_tone(user_input)
+    npc_state = update_npc_emotion(npc_key, user_tone)
+    emotional_description = describe_emotional_state(npc_state)
+    trust_level = get_npc_trust(npc_key)
+
+    epi_context = build_npc_data_context(npc_key, truth)
+    epi_context = redact_spoilers(epi_context, stage)
+
+    if npc_key not in st.session_state.revealed_clues:
+        st.session_state.revealed_clues[npc_key] = []
+
+    # Shortened system prompt for faster responses
+    system_prompt = f"""You are {npc_truth_safe['name']}, {npc_truth_safe['role']} in this district.
+
+RULES: You are a character, not an AI. Be BRIEF (2-4 sentences). Don't name pathogens unless lab-confirmed. Don't volunteer diagnoses.
+
+Personality: {npc_truth_safe['personality']}
+Emotional state: {emotional_description} (Trust: {trust_level}/5)
+
+Context (don't recite unless asked): {epi_context}
+
+ALWAYS REVEAL (gradually): {npc_truth_safe['always_reveal']}
+
+CONDITIONAL (only if asked about topic): {npc_truth_safe['conditional_clues']}
+
+RED HERRINGS (may mention): {npc_truth_safe['red_herrings']}
+
+UNKNOWN (say you don't know): {npc_truth_safe['unknowns']}
+"""
+
+    # Conditional clues logic
+    lower_q = user_input.lower()
+    topic_synonyms = {
+        "water": ["well", "river", "stream", "paddies", "irrigation", "pond"],
+        "pigs": ["pig", "pork", "swine", "hog", "sow", "litter"],
+        "animals": ["livestock", "cattle", "goat", "chicken", "duck"],
+        "mosquito": ["vector", "bite", "mosquitoes", "dusk", "nets"],
+    }
+
+    def topic_matches(keyword: str, text: str) -> bool:
+        if keyword in text:
+            return True
+        for synonym in topic_synonyms.get(keyword, []):
+            if synonym in text:
+                return True
+        return False
+
+    conditional_to_use = []
+    for keyword, clue in npc_truth.get("conditional_clues", {}).items():
+        if topic_matches(keyword.lower(), lower_q) and clue not in st.session_state.revealed_clues[npc_key]:
+            conditional_to_use.append(redact_spoilers(clue, stage))
+            st.session_state.revealed_clues[npc_key].append(clue)
+
+    if question_scope != "broad" and len(conditional_to_use) > 1:
+        conditional_to_use = conditional_to_use[:1]
+
+    if conditional_to_use:
+        system_prompt += "\n\nREVEAL naturally: " + "; ".join(conditional_to_use)
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    recent_history = history[-20:] if len(history) > 20 else history
+    msgs = [{"role": m["role"], "content": m["content"]} for m in recent_history]
+    msgs.append({"role": "user", "content": user_input})
+
+    try:
+        with client.messages.stream(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=250,
+            system=system_prompt,
+            messages=msgs,
+        ) as stream:
+            for text_chunk in stream.text_stream:
+                yield text_chunk
+    except Exception as e:
+        yield f"⚠️ Error: {str(e)}"
+
+
 # =========================
 # CLINIC RECORDS FOR CASE FINDING
 # =========================
@@ -8591,9 +8694,8 @@ def render_interview_modal():
                 st.write(user_q)
 
             with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-                with st.spinner("..."):
-                    reply = get_npc_response(npc_key, user_q)
-                st.write(reply)
+                # Use streaming for faster perceived response
+                reply = st.write_stream(stream_npc_response(npc_key, user_q))
 
         history.append({"role": "assistant", "content": reply})
         st.session_state.interview_history[npc_key] = history
@@ -8938,9 +9040,8 @@ def render_npc_chat(npc_key: str, npc: dict):
             st.write(user_q)
 
         with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-            with st.spinner("..."):
-                reply = get_npc_response(npc_key, user_q)
-            st.write(reply)
+            # Use streaming for faster perceived response
+            reply = st.write_stream(stream_npc_response(npc_key, user_q))
 
         history.append({"role": "assistant", "content": reply})
         st.session_state.interview_history[npc_key] = history
