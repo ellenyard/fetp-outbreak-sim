@@ -2444,13 +2444,15 @@ INFORMATION RULES:
 
     client = anthropic.Anthropic(api_key=api_key)
 
-    msgs = [{"role": m["role"], "content": m["content"]} for m in history]
+    # Limit conversation history to last 10 exchanges to reduce latency
+    recent_history = history[-20:] if len(history) > 20 else history
+    msgs = [{"role": m["role"], "content": m["content"]} for m in recent_history]
     msgs.append({"role": "user", "content": user_input})
 
     try:
         resp = client.messages.create(
             model="claude-3-5-haiku-20241022",
-            max_tokens=400,
+            max_tokens=300,  # Slightly reduced for faster responses
             system=system_prompt,
             messages=msgs,
         )
@@ -7350,14 +7352,15 @@ AES_MAP_LOCATIONS = {
 }
 
 LEPTO_MAP_LOCATIONS = {
-    "Ward Northbend": {"x": 30, "y": 70, "icon": "🏘️", "desc": "Flood-prone ward reporting rising cases."},
-    "East Terrace": {"x": 70, "y": 45, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
-    "Southshore": {"x": 35, "y": 20, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
-    "Highridge": {"x": 15, "y": 55, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
-    "District Hospital": {"x": 80, "y": 75, "icon": "🏥", "desc": "Severe cases are being referred here."},
-    "RHU": {"x": 55, "y": 60, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
-    "DRRM Office": {"x": 55, "y": 35, "icon": "🏛️", "desc": "Disaster response coordination office."},
-    "Mining Area": {"x": 85, "y": 15, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
+    # Y-coordinates scaled to 0-55 range for wide map format
+    "Ward Northbend": {"x": 30, "y": 38, "icon": "🏘️", "desc": "Flood-prone ward reporting rising cases."},
+    "East Terrace": {"x": 70, "y": 25, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
+    "Southshore": {"x": 35, "y": 11, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
+    "Highridge": {"x": 15, "y": 30, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
+    "District Hospital": {"x": 80, "y": 41, "icon": "🏥", "desc": "Severe cases are being referred here."},
+    "RHU": {"x": 55, "y": 33, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
+    "DRRM Office": {"x": 55, "y": 19, "icon": "🏛️", "desc": "Disaster response coordination office."},
+    "Mining Area": {"x": 85, "y": 8, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
 }
 
 
@@ -7405,16 +7408,16 @@ def render_interactive_map():
     # Create figure with the background image
     fig = go.Figure()
 
-    # Add the background image
+    # Add the background image (sized to match wide aspect ratio)
     fig.add_layout_image(
         dict(
             source=map_image_uri,
             xref="x",
             yref="y",
             x=0,
-            y=100,
+            y=55,  # Match the y-axis range
             sizex=100,
-            sizey=100,
+            sizey=55,  # Match the y-axis range for correct aspect ratio
             sizing="stretch",
             opacity=1,
             layer="below"
@@ -7502,15 +7505,16 @@ def render_interactive_map():
 
     # Add text labels with shadow effect for readability
     # First add shadow/outline (slightly offset dark text)
+    label_offset = 3  # Adjusted for wide map format
     for loc_name, loc_data in map_locations.items():
         # Shadow offset positions
         for dx, dy in [(1, -1), (-1, -1), (1, 1), (-1, 1)]:
             fig.add_annotation(
                 x=loc_data["x"] + dx * 0.5,
-                y=loc_data["y"] + 6 + dy * 0.5,
+                y=loc_data["y"] + label_offset + dy * 0.3,
                 text=f"<b>{loc_name}</b>",
                 showarrow=False,
-                font=dict(size=12, color='rgba(0,0,0,0.8)'),
+                font=dict(size=11, color='rgba(0,0,0,0.8)'),
                 xanchor='center',
                 yanchor='bottom'
             )
@@ -7519,15 +7523,16 @@ def render_interactive_map():
     for loc_name, loc_data in map_locations.items():
         fig.add_annotation(
             x=loc_data["x"],
-            y=loc_data["y"] + 6,
+            y=loc_data["y"] + label_offset,
             text=f"<b>{loc_name}</b>",
             showarrow=False,
-            font=dict(size=12, color='white'),
+            font=dict(size=11, color='white'),
             xanchor='center',
             yanchor='bottom'
         )
 
     # Configure the layout to look like a clean map
+    # Use wide aspect ratio to match the map image (roughly 1.8:1)
     fig.update_layout(
         xaxis=dict(
             range=[0, 100],
@@ -7538,19 +7543,18 @@ def render_interactive_map():
             fixedrange=True
         ),
         yaxis=dict(
-            range=[0, 100],
+            range=[0, 55],  # Adjusted for ~1.8:1 aspect ratio (100/1.8 ≈ 55)
             showgrid=False,
             zeroline=False,
             showticklabels=False,
             showline=False,
-            scaleanchor="x",
-            scaleratio=1,
             fixedrange=True
+            # Removed scaleanchor to allow wide format
         ),
         margin=dict(l=0, r=0, t=0, b=0),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        height=500,
+        height=450,  # Slightly shorter since it's now wider
         dragmode=False,
         clickmode='event+select'
     )
