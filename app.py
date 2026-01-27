@@ -7352,15 +7352,15 @@ AES_MAP_LOCATIONS = {
 }
 
 LEPTO_MAP_LOCATIONS = {
-    # Y-coordinates scaled to 0-55 range for wide map format
-    "Ward Northbend": {"x": 30, "y": 38, "icon": "🏘️", "desc": "Flood-prone ward reporting rising cases."},
-    "East Terrace": {"x": 70, "y": 25, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
-    "Southshore": {"x": 35, "y": 11, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
-    "Highridge": {"x": 15, "y": 30, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
-    "District Hospital": {"x": 80, "y": 41, "icon": "🏥", "desc": "Severe cases are being referred here."},
-    "RHU": {"x": 55, "y": 33, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
-    "DRRM Office": {"x": 55, "y": 19, "icon": "🏛️", "desc": "Disaster response coordination office."},
-    "Mining Area": {"x": 85, "y": 8, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
+    # Y-coordinates scaled to 0-70 range for moderately wide map format
+    "Ward Northbend": {"x": 30, "y": 49, "icon": "🏘️", "desc": "Flood-prone ward reporting rising cases."},
+    "East Terrace": {"x": 70, "y": 32, "icon": "🏘️", "desc": "Riverside ward with livestock exposure."},
+    "Southshore": {"x": 35, "y": 14, "icon": "🏘️", "desc": "Low-lying ward with drainage canals."},
+    "Highridge": {"x": 15, "y": 39, "icon": "🏘️", "desc": "Upland ward near irrigation channels."},
+    "District Hospital": {"x": 80, "y": 53, "icon": "🏥", "desc": "Severe cases are being referred here."},
+    "RHU": {"x": 55, "y": 42, "icon": "🏥", "desc": "Rural Health Unit coordinating surveillance."},
+    "DRRM Office": {"x": 55, "y": 25, "icon": "🏛️", "desc": "Disaster response coordination office."},
+    "Mining Area": {"x": 85, "y": 11, "icon": "⛏️", "desc": "Runoff and pooled water risks."},
 }
 
 
@@ -7408,16 +7408,16 @@ def render_interactive_map():
     # Create figure with the background image
     fig = go.Figure()
 
-    # Add the background image (sized to match wide aspect ratio)
+    # Add the background image (sized to match moderately wide aspect ratio)
     fig.add_layout_image(
         dict(
             source=map_image_uri,
             xref="x",
             yref="y",
             x=0,
-            y=55,  # Match the y-axis range
+            y=70,  # Match the y-axis range
             sizex=100,
-            sizey=55,  # Match the y-axis range for correct aspect ratio
+            sizey=70,  # Match the y-axis range for correct aspect ratio
             sizing="stretch",
             opacity=1,
             layer="below"
@@ -7505,7 +7505,7 @@ def render_interactive_map():
 
     # Add text labels with shadow effect for readability
     # First add shadow/outline (slightly offset dark text)
-    label_offset = 3  # Adjusted for wide map format
+    label_offset = 4  # Adjusted for moderately wide map format
     for loc_name, loc_data in map_locations.items():
         # Shadow offset positions
         for dx, dy in [(1, -1), (-1, -1), (1, 1), (-1, 1)]:
@@ -7532,7 +7532,7 @@ def render_interactive_map():
         )
 
     # Configure the layout to look like a clean map
-    # Use wide aspect ratio to match the map image (roughly 1.8:1)
+    # Use moderately wide aspect ratio (1.4:1)
     fig.update_layout(
         xaxis=dict(
             range=[0, 100],
@@ -7543,7 +7543,7 @@ def render_interactive_map():
             fixedrange=True
         ),
         yaxis=dict(
-            range=[0, 55],  # Adjusted for ~1.8:1 aspect ratio (100/1.8 ≈ 55)
+            range=[0, 70],  # Adjusted for ~1.4:1 aspect ratio
             showgrid=False,
             zeroline=False,
             showticklabels=False,
@@ -7554,7 +7554,7 @@ def render_interactive_map():
         margin=dict(l=0, r=0, t=0, b=0),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        height=450,  # Slightly shorter since it's now wider
+        height=500,  # Restored height
         dragmode=False,
         clickmode='event+select'
     )
