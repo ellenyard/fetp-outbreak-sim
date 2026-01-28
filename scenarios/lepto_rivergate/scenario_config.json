@@ -5,7 +5,7 @@
   "disease_name": "Leptospirosis",
   "simulation_start_date": "2024-10-14",
   "resources": {
-    "starting_budget": 1000,
+    "starting_budget": 800,
     "hours_per_day": 8,
     "lab_credits": 20,
     "difficulty_note": "Standard difficulty - adequate resources for thorough investigation"

@@ -1430,7 +1430,7 @@ def init_session_state():
             st.session_state.current_view = "map"
 
     # Resources - budget AND time
-    st.session_state.setdefault("budget", 1000)
+    st.session_state.setdefault("budget", 800)
     st.session_state.setdefault("time_remaining", 8)  # hours per day
     st.session_state.setdefault("time_debt", 0)
     st.session_state.setdefault("lab_credits", 20)
