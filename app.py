@@ -24,6 +24,9 @@ import day1_utils
 # Session persistence
 import persistence
 
+# Achievement system
+import achievements
+
 # Robust import: avoid hard failures from `from outbreak_logic import ...` if the deployed module is stale/mismatched.
 try:
     import outbreak_logic as jl
@@ -1505,6 +1508,11 @@ def init_session_state():
     st.session_state.setdefault("one_health_triggered", False)
     st.session_state.setdefault("vet_unlocked", False)
     st.session_state.setdefault("env_officer_unlocked", False)
+
+    # Achievements and hints
+    st.session_state.setdefault("achievements", [])
+    st.session_state.setdefault("hints_shown", set())
+    st.session_state.setdefault("hints_enabled", True)
 
     # SITREP and Evidence Board
     st.session_state.setdefault("sitrep_viewed", True)  # Don't show SITREP on Day 1 start
@@ -7386,17 +7394,108 @@ def view_interventions_and_outcome():
         )
 
     st.markdown("---")
-    if st.button("Evaluate Outcome"):
+    if st.button("Evaluate Outcome", type="primary", use_container_width=True):
+        # Inject scenario context for scoring
+        st.session_state.decisions["scenario_id"] = st.session_state.get("current_scenario")
+        st.session_state.decisions["scenario_config"] = st.session_state.get("scenario_config")
+        st.session_state.decisions["_decision_log"] = st.session_state.get("_decision_log", [])
+        st.session_state.decisions["_lab_orders"] = st.session_state.get("lab_orders", [])
+        st.session_state.decisions["_environment_findings"] = st.session_state.get("environment_findings", [])
+
         outcome = evaluate_interventions(
             st.session_state.decisions, st.session_state.interview_history
         )
-        st.subheader(f"Outcome: {outcome['status']}")
-        st.markdown(outcome["narrative"])
-        st.markdown("### Factors considered")
-        for line in outcome["outcomes"]:
-            st.write(line)
-        st.write(f"Score: {outcome['score']}")
-        st.write(f"Estimated additional cases: {outcome['new_cases']}")
+        st.session_state["_last_outcome"] = outcome
+
+    # Show outcome if evaluated
+    outcome = st.session_state.get("_last_outcome")
+    if outcome:
+        render_final_scorecard(outcome)
+
+
+def render_final_scorecard(outcome: dict):
+    """Render the gamified final scoring display with tier, badges, and narrative."""
+    tier_colors = {
+        "excellent": "#10b981",
+        "good": "#3b82f6",
+        "adequate": "#f59e0b",
+        "needs_improvement": "#ef4444",
+    }
+    tier = outcome.get("tier", "adequate")
+    color = tier_colors.get(tier, "#6b7280")
+    score = outcome.get("score", 0)
+    max_score = outcome.get("max_score", 100)
+    lives_saved = outcome.get("lives_saved", 0)
+
+    # Hero banner
+    html = f"""
+    <div class="score-banner" style="background: linear-gradient(135deg, {color}22, {color}11); border: 2px solid {color};">
+        <div class="score-tier-title" style="color: {color};">{outcome.get('tier_title', 'INVESTIGATION COMPLETE')}</div>
+        <div class="score-number" style="color: {color};">{score}/{max_score}</div>
+        <div class="lives-saved">\u2764\ufe0f Estimated Lives Saved: <b>{lives_saved}</b></div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+    # Narrative
+    st.markdown(f"> *{outcome.get('tier_narrative', '')}*")
+
+    # Outcome status
+    st.markdown(f"### Outcome: {outcome.get('status', 'Unknown')}")
+    st.markdown(f"Projected new cases (next 2 weeks): **{outcome.get('new_cases', '?')}**")
+
+    # Evidence-to-action links ("Because" statements)
+    because = outcome.get("because", [])
+    if because:
+        st.markdown("### Evidence-to-Action Links")
+        for b in because:
+            st.markdown(f"""
+            <div class="hint-card" style="border-left-color: {color};">
+                <div class="hint-text">{b}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Factors considered
+    st.markdown("### Investigation Factors")
+    for line in outcome.get("outcomes", []):
+        st.write(line)
+
+    # Counterfactuals
+    counterfactuals = outcome.get("counterfactuals", [])
+    if counterfactuals:
+        st.markdown("### What If...?")
+        for c in counterfactuals:
+            st.markdown(f"""
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px; margin: 8px 0; color: #991b1b;">
+                <div style="font-style: italic;">{c}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Achievement badges earned
+    earned = st.session_state.get("achievements", [])
+    if earned:
+        st.markdown("### Badges Earned")
+        achievements.render_badge_grid(st.session_state)
+    else:
+        st.markdown("### Badges")
+        st.caption("No badges earned yet. Keep investigating!")
+        achievements.render_badge_grid(st.session_state)
+
+    # Shareable scorecard text
+    with st.expander("Copy Scorecard"):
+        badge_text = ", ".join(f"{a['emoji']} {a['name']}" for a in earned) if earned else "None"
+        scorecard = (
+            f"FETP Outbreak Simulation - Final Score\n"
+            f"{'=' * 40}\n"
+            f"Tier: {outcome.get('tier_title', 'N/A')}\n"
+            f"Score: {score}/{max_score}\n"
+            f"Lives Saved: {lives_saved}\n"
+            f"Projected New Cases: {outcome.get('new_cases', '?')}\n"
+            f"Status: {outcome.get('status', 'N/A')}\n"
+            f"Badges: {badge_text}\n"
+            f"{'=' * 40}\n"
+        )
+        st.code(scorecard, language="text")
 
 
 # =========================
@@ -7720,6 +7819,113 @@ def render_interactive_map():
             st.caption(loc_data['desc'])
 
 
+# =========================
+# CONTEXTUAL HINTS SYSTEM
+# =========================
+
+HINT_RULES = [
+    {
+        "id": "hint_first_interview",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) == 1
+            and len(ss.get("interview_history", {})) == 0
+            and len(ss.get("visited_locations", set())) >= 1
+        ),
+        "hint": "You've traveled to a location but haven't interviewed anyone yet. Try talking to the hospital staff -- they often have the earliest observations about case patterns.",
+    },
+    {
+        "id": "hint_one_health",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 2
+            and not ss.get("vet_unlocked", False)
+            and not ss.get("env_officer_unlocked", False)
+            and len(ss.get("interview_history", {})) >= 2
+        ),
+        "hint": "Some outbreaks have animal or environmental connections. Try asking NPCs about livestock, rats, or flooding. A One Health approach could reveal hidden transmission pathways.",
+    },
+    {
+        "id": "hint_case_definition",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 2
+            and not ss.get("case_definition_written", False)
+        ),
+        "hint": "You should establish a working case definition before advancing further. Visit the Overview tab to build one using the WHO template.",
+    },
+    {
+        "id": "hint_lab_orders",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 2
+            and len(ss.get("lab_orders", [])) == 0
+        ),
+        "hint": "Laboratory confirmation strengthens your investigation. Consider ordering diagnostic tests at the hospital -- early orders mean results arrive sooner.",
+    },
+    {
+        "id": "hint_environment",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 3
+            and len(ss.get("environment_findings", [])) == 0
+        ),
+        "hint": "Environmental sampling can reveal contamination sources. Visit locations to look for water, soil, or animal reservoir testing opportunities.",
+    },
+    {
+        "id": "hint_more_locations",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 2
+            and len(ss.get("visited_locations", set())) <= 2
+        ),
+        "hint": "There are more locations to explore on the map. Each location has unique NPCs and data sources. Consider visiting wards with high case counts.",
+    },
+    {
+        "id": "hint_evidence_board",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 2
+            and len(ss.get("evidence_board", [])) <= 3
+        ),
+        "hint": "Don't forget to update your Evidence Board with clues you discover. Tracking evidence helps you connect the dots between interviews, lab results, and field observations.",
+    },
+    {
+        "id": "hint_study_design",
+        "condition": lambda ss: (
+            ss.get("current_day", 1) >= 3
+            and not ss.get("questionnaire_submitted", False)
+        ),
+        "hint": "Designing a study and questionnaire will let you systematically collect data from the affected population. Visit the Study Design tool to get started.",
+    },
+]
+
+
+def render_hint(hint_text: str):
+    """Render a styled 'Radio Message from HQ' hint card."""
+    html = f"""
+    <div class="hint-card">
+        <div class="hint-label">\U0001f4fb Radio Message from Regional HQ</div>
+        <div class="hint-text">"{hint_text}"</div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def check_and_show_hints():
+    """Check hint conditions and display at most one relevant hint."""
+    if not st.session_state.get("hints_enabled", True):
+        return
+
+    hints_shown = st.session_state.get("hints_shown", set())
+
+    for rule in HINT_RULES:
+        hint_id = rule["id"]
+        if hint_id in hints_shown:
+            continue
+        try:
+            if rule["condition"](st.session_state):
+                render_hint(rule["hint"])
+                hints_shown.add(hint_id)
+                st.session_state["hints_shown"] = hints_shown
+                return  # Show at most one hint per page load
+        except Exception:
+            pass
+
+
 def view_travel_map():
     """Main travel map showing all areas and allowing navigation."""
     scenario_name = st.session_state.get("current_scenario_name", "Investigation")
@@ -7814,6 +8020,9 @@ def view_travel_map():
 
     # Render the interactive satellite map for destination selection
     render_interactive_map()
+
+    # Contextual hints from HQ
+    check_and_show_hints()
 
     # Quick access to data views
     st.markdown("### Investigation Tools")
@@ -8929,15 +9138,60 @@ def execute_location_action(action: str, config: dict, loc_key: str):
         st.rerun()
 
 
+MOOD_CONFIG = {
+    "cooperative": {"color": "#10b981", "border": "#059669", "label": "Friendly", "emoji": "\U0001f60a", "glow": "0 0 15px rgba(16,185,129,0.4)"},
+    "neutral":     {"color": "#6b7280", "border": "#4b5563", "label": "Neutral",  "emoji": "\U0001f610", "glow": "none"},
+    "wary":        {"color": "#f59e0b", "border": "#d97706", "label": "Cautious", "emoji": "\U0001f928", "glow": "0 0 15px rgba(245,158,11,0.3)"},
+    "annoyed":     {"color": "#ef4444", "border": "#dc2626", "label": "Irritated","emoji": "\U0001f624", "glow": "0 0 15px rgba(239,68,68,0.3)"},
+    "offended":    {"color": "#991b1b", "border": "#7f1d1d", "label": "Offended", "emoji": "\U0001f620", "glow": "0 0 20px rgba(153,27,27,0.4)"},
+}
+
+
+def render_npc_portrait_card(npc_key: str, npc: dict):
+    """Render a styled NPC portrait card with mood indicator and trust bar."""
+    npc_image_path = npc.get("image_path")
+    emotion = st.session_state.npc_state.get(npc_key, {}).get("emotion", "neutral")
+    trust = get_npc_trust(npc_key)
+    mood = MOOD_CONFIG.get(emotion, MOOD_CONFIG["neutral"])
+
+    # Normalize trust from [-3, 5] to [0, 100]
+    trust_pct = max(0, min(100, ((trust + 3) / 8) * 100))
+
+    # Show portrait image if available
+    if npc_image_path and Path(npc_image_path).exists():
+        st.image(npc_image_path, use_container_width=True)
+
+    # Mood card HTML
+    html = f"""
+    <div class="npc-portrait-card" style="border: 3px solid {mood['border']}; box-shadow: {mood['glow']};">
+        <div style="font-weight: 700; font-size: 1.1em;">{npc['name']}</div>
+        <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 6px;">{npc.get('role', '')}</div>
+        <span class="mood-badge" style="background: {mood['color']};">{mood['emoji']} {mood['label']}</span>
+        <div class="trust-bar-track">
+            <div class="trust-bar-fill" style="width: {trust_pct}%; background: {mood['color']};"></div>
+        </div>
+        <div style="font-size: 0.75em; color: #9ca3af; margin-top: 4px;">Trust: {trust}/5</div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
 def render_npc_chat(npc_key: str, npc: dict):
     """Render chat interface for an NPC at current location."""
-    st.markdown(f"### Talking to {npc.get('avatar', '🧑')} {npc['name']}")
-    st.caption(f"*{npc['role']}*")
 
-    # End conversation button
-    if st.button("End Conversation", key="end_chat"):
-        st.session_state.current_npc = None
-        st.rerun()
+    # Layout: portrait card on left, chat on right
+    portrait_col, chat_col = st.columns([1, 3])
+
+    with portrait_col:
+        render_npc_portrait_card(npc_key, npc)
+        # End conversation button under portrait
+        if st.button("End Conversation", key="end_chat", use_container_width=True):
+            st.session_state.current_npc = None
+            st.rerun()
+
+    with chat_col:
+        st.markdown(f"### {npc.get('avatar', '\U0001f9d1')} {npc['name']}")
+        st.caption(f"*{npc['role']}*")
 
     # Show conversation history
     history = st.session_state.interview_history.get(npc_key, [])
@@ -9008,13 +9262,12 @@ def render_npc_chat(npc_key: str, npc: dict):
         else:
             st.warning("🔒 **Records Access Denied** - Improve your rapport to access clinic records.")
 
-    # Show trust indicator for non-nurse NPCs
+    # Trust indicator for non-nurse NPCs (portrait card already shows mood;
+    # this is a compact inline reminder visible near the chat input)
     if npc_key != "nurse_joy":
-        trust = get_npc_trust(npc_key)
-        npc_state_info = st.session_state.npc_state.get(npc_key, {"emotion": "neutral"})
-        emotion = npc_state_info.get("emotion", "neutral")
-        emotion_emoji = {"cooperative": "😊", "neutral": "😐", "wary": "🤨", "annoyed": "😤", "offended": "😠"}.get(emotion, "😐")
-        st.caption(f"**Rapport:** {emotion_emoji} {emotion.title()} | **Trust:** {trust}/5")
+        emotion = st.session_state.npc_state.get(npc_key, {}).get("emotion", "neutral")
+        mood = MOOD_CONFIG.get(emotion, MOOD_CONFIG["neutral"])
+        st.caption(f"**Rapport:** {mood['emoji']} {mood['label']} | **Trust:** {get_npc_trust(npc_key)}/5")
 
     # Chat input
     user_q = st.chat_input(f"Ask {npc['name']} a question...")
@@ -9063,6 +9316,10 @@ def render_npc_chat(npc_key: str, npc: dict):
         if unlock_notification:
             st.success(unlock_notification)
 
+        # Check achievements after every NPC interaction
+        newly_earned = achievements.check_achievements(st.session_state)
+        achievements.show_achievement_toasts(newly_earned)
+
         st.rerun()
 
 
@@ -9109,6 +9366,20 @@ def adventure_sidebar():
         else:
             status = "[ ]"
         st.sidebar.markdown(f"{status} Day {day}")
+
+    # Achievements & Journal
+    st.sidebar.markdown("---")
+    badge_text = achievements.render_sidebar_badge_count(st.session_state)
+    st.sidebar.markdown(f"**{badge_text}**")
+    if st.sidebar.button("\U0001f4d4 Investigation Journal", key="sidebar_journal", use_container_width=True):
+        st.session_state.current_view = "journal"
+        st.rerun()
+    hints_on = st.sidebar.checkbox(
+        "\U0001f4fb Show hints from HQ",
+        value=st.session_state.get("hints_enabled", True),
+        key="hints_toggle",
+    )
+    st.session_state["hints_enabled"] = hints_on
 
     # Session Management
     st.sidebar.markdown("---")
@@ -9177,6 +9448,10 @@ def adventure_sidebar():
         if st.sidebar.button(f"{t('advance_day')} {st.session_state.current_day + 1}", use_container_width=True):
             can_advance, missing = check_day_prerequisites(st.session_state.current_day, st.session_state)
             if can_advance:
+                # Check achievements before advancing
+                newly_earned = achievements.check_achievements(st.session_state)
+                achievements.show_achievement_toasts(newly_earned)
+
                 st.session_state.current_day += 1
                 st.session_state.time_remaining = 8
                 refresh_lab_queue_for_day(int(st.session_state.current_day))
@@ -9196,16 +9471,122 @@ def adventure_sidebar():
 # SITREP VIEW
 # =========================
 
+DAY_THEMES = {
+    1: {
+        "title": "Situation Assessment",
+        "subtitle": "Arrive on scene. Interview key contacts. Establish your case definition.",
+        "color": "#1e3a5f",
+        "scene": "scene_investigation_team_working.png",
+    },
+    2: {
+        "title": "Study Design",
+        "subtitle": "Design your epidemiological study and prepare your questionnaire.",
+        "color": "#2d4a22",
+        "scene": "scene_epi_curve_whiteboard.png",
+    },
+    3: {
+        "title": "Data Collection",
+        "subtitle": "Collect and analyze data. Follow leads from the field.",
+        "color": "#4a3522",
+        "scene": "scene_cleanup_crews_barefoot.png",
+    },
+    4: {
+        "title": "Lab & Environment",
+        "subtitle": "Order diagnostic tests. Investigate environmental sources.",
+        "color": "#3d2252",
+        "scene": "scene_lab_sample_collection.png",
+    },
+    5: {
+        "title": "Recommendations",
+        "subtitle": "Present your findings and recommend interventions.",
+        "color": "#52221e",
+        "scene": "scene_community_meeting_concern.png",
+    },
+}
+
+
+def render_day_transition(day: int):
+    """Render animated day transition banner with scene image background."""
+    theme = DAY_THEMES.get(day, DAY_THEMES[1])
+    progress_pct = day * 20
+
+    # Try to load scene image as background
+    scenario_id = st.session_state.get("current_scenario", "lepto_rivergate")
+    scene_path = Path(f"scenarios/{scenario_id}/assets/{theme['scene']}")
+    bg_style = f"background: linear-gradient(135deg, {theme['color']}ee, {theme['color']}bb);"
+    if scene_path.exists():
+        try:
+            with scene_path.open("rb") as f:
+                scene_b64 = base64.b64encode(f.read()).decode("utf-8")
+            bg_style = (
+                f"background: linear-gradient(135deg, {theme['color']}dd, {theme['color']}aa),"
+                f" url('data:image/png;base64,{scene_b64}');"
+                f" background-size: cover; background-position: center;"
+            )
+        except Exception:
+            pass
+
+    html = f"""
+    <div class="day-banner" style="{bg_style}">
+        <div class="day-number">DAY {day}</div>
+        <div class="day-title">{theme['title']}</div>
+        <div class="day-subtitle">{theme['subtitle']}</div>
+        <div class="progress-track">
+            <div class="progress-fill" style="--progress-width: {progress_pct}%; width: {progress_pct}%;"></div>
+        </div>
+        <div style="font-size: 0.8em; opacity: 0.7; margin-top: 6px;">Investigation Progress: {progress_pct}%</div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_yesterday_recap(day: int):
+    """Show accomplishments from the previous day using the decision log."""
+    if day <= 1:
+        return
+
+    prev_day = day - 1
+    decision_log = st.session_state.get("_decision_log", [])
+    prev_events = [e for e in decision_log if e.get("game_day") == prev_day]
+
+    if not prev_events:
+        return
+
+    interviews = [e for e in prev_events if e.get("type") == "interview"]
+    travels = [e for e in prev_events if e.get("type") == "travel"]
+    labs = [e for e in prev_events if e.get("type") == "lab_test"]
+    other = [e for e in prev_events if e.get("type") not in ("interview", "travel", "lab_test")]
+
+    time_spent = sum(e.get("cost_time", 0) for e in prev_events)
+    budget_spent = sum(e.get("cost_budget", 0) for e in prev_events)
+
+    st.markdown("### Yesterday's Accomplishments")
+
+    cols = st.columns(4)
+    with cols[0]:
+        st.metric("\U0001f4ac Interviews", len(interviews))
+    with cols[1]:
+        st.metric("\U0001f6b6 Locations", len(travels))
+    with cols[2]:
+        st.metric("\U0001f9ea Lab Orders", len(labs))
+    with cols[3]:
+        st.metric("\u23f1\ufe0f Time Used", f"{time_spent}h")
+
+    if budget_spent > 0:
+        st.caption(f"Budget spent yesterday: ${budget_spent}")
+
+
 def view_sitrep():
     """Daily situation report - blocking view before advancing to next day."""
-    st.title(f"Day {st.session_state.current_day} SITREP")
+    day = st.session_state.current_day
 
-    st.markdown(f"""
-    ### Situation Report - Day {st.session_state.current_day}
+    # Animated day transition banner
+    render_day_transition(day)
 
-    Welcome to Day {st.session_state.current_day} of the outbreak investigation.
-    """)
+    # Yesterday's recap (for days 2+)
+    render_yesterday_recap(day)
 
+    # Story beat
     scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
     storyline_excerpt = load_storyline_excerpt(scenario_id)
     if storyline_excerpt:
@@ -9213,43 +9594,10 @@ def view_sitrep():
         st.markdown("### Story Beat")
         st.markdown(storyline_excerpt)
 
-    # Show day briefing
+    # Today's objectives
     st.markdown("---")
     st.markdown("### Today's Objectives")
-    day_task_list(st.session_state.current_day)
-
-    # Activity summary from previous day (if not Day 1)
-    if st.session_state.current_day > 1:
-        st.markdown("---")
-        st.markdown("### Activity Summary from Previous Day")
-
-        # Show interview count
-        interview_count = len(st.session_state.interview_history)
-        st.markdown(f"- **Interviews completed:** {interview_count}")
-
-        # Show locations visited
-        visited_count = len(st.session_state.get("visited_locations", set()))
-        st.markdown(f"- **Locations visited:** {visited_count}")
-
-        # Show lab samples if any
-        lab_count = len(st.session_state.get("lab_queue", []))
-        if lab_count > 0:
-            st.markdown(f"- **Lab samples submitted:** {lab_count}")
-
-        st.markdown("---")
-        st.markdown("### Decision Impact Highlights")
-        outcome = evaluate_interventions(
-            st.session_state.decisions, st.session_state.interview_history
-        )
-        because = outcome.get("because", [])
-        counterfactuals = outcome.get("counterfactuals", [])
-        if because:
-            for line in because:
-                st.markdown(f"- {line}")
-        if counterfactuals:
-            st.markdown("**If things had gone differently:**")
-            for line in counterfactuals[:2]:
-                st.markdown(f"- {line}")
+    day_task_list(day)
 
     # New admissions count
     st.markdown("---")
@@ -9257,17 +9605,125 @@ def view_sitrep():
     truth = st.session_state.truth
     pop_df = truth.get("full_population", pd.DataFrame())
     if not pop_df.empty:
-        new_cases = pop_df[pop_df["hospital_day"] == st.session_state.current_day]
-        st.markdown(f"**{len(new_cases)} new patients** were admitted overnight.")
+        new_cases = pop_df[pop_df["hospital_day"] == day]
+        if len(new_cases) > 0:
+            st.markdown(f"**{len(new_cases)} new patients** were admitted overnight.")
+        else:
+            st.markdown("*No new admissions recorded.*")
     else:
         st.markdown("*No new admissions recorded.*")
 
+    # Check and display achievements earned so far
+    newly_earned = achievements.check_achievements(st.session_state)
+    achievements.show_achievement_toasts(newly_earned)
+
     # Continue button
     st.markdown("---")
-    if st.button("✅ Continue to Day " + str(st.session_state.current_day), type="primary", use_container_width=True):
+    if st.button(
+        f"\u2705 Continue to Day {day}",
+        type="primary",
+        use_container_width=True,
+    ):
         st.session_state.sitrep_viewed = True
         st.session_state.current_view = "map"
         st.rerun()
+
+
+# =========================
+# INVESTIGATION JOURNAL
+# =========================
+
+EVENT_TYPE_CONFIG = {
+    "interview":              {"color": "#f59e0b", "icon": "\U0001f4ac", "label": "Interview"},
+    "travel":                 {"color": "#3b82f6", "icon": "\U0001f6b6", "label": "Travel"},
+    "lab_test":               {"color": "#8b5cf6", "icon": "\U0001f9ea", "label": "Lab Order"},
+    "case_finding":           {"color": "#10b981", "icon": "\U0001f50d", "label": "Case Finding"},
+    "environment_inspection": {"color": "#06b6d4", "icon": "\U0001f33f", "label": "Environmental"},
+    "site_inspection":        {"color": "#06b6d4", "icon": "\U0001f3d8\ufe0f", "label": "Site Visit"},
+    "questionnaire_submitted":{"color": "#ec4899", "icon": "\U0001f4dd", "label": "Questionnaire"},
+    "analysis_confirmed":     {"color": "#14b8a6", "icon": "\U0001f4ca", "label": "Analysis"},
+    "case_definition_saved":  {"color": "#f97316", "icon": "\U0001f4cb", "label": "Case Definition"},
+    "recommendations_submitted":{"color": "#ef4444", "icon": "\U0001f4e2", "label": "Recommendations"},
+}
+
+
+def view_investigation_journal():
+    """Visual timeline of all investigation actions from the decision log."""
+    st.title("\U0001f4d4 Investigation Journal")
+    st.caption("A chronological record of your investigation activities.")
+
+    decision_log = st.session_state.get("_decision_log", [])
+    if not decision_log:
+        st.info("No actions recorded yet. Start investigating to see your timeline here!")
+        return
+
+    # Resource summary
+    total_time = sum(e.get("cost_time", 0) for e in decision_log)
+    total_budget = sum(e.get("cost_budget", 0) for e in decision_log)
+    summary_cols = st.columns(4)
+    with summary_cols[0]:
+        st.metric("Total Actions", len(decision_log))
+    with summary_cols[1]:
+        st.metric("Time Spent", f"{total_time}h")
+    with summary_cols[2]:
+        st.metric("Budget Spent", f"${total_budget}")
+    with summary_cols[3]:
+        st.metric("Budget Remaining", f"${st.session_state.get('budget', 0)}")
+
+    st.markdown("---")
+
+    # Group events by day
+    max_day = st.session_state.get("current_day", 1)
+    for day in range(1, max_day + 1):
+        day_events = [e for e in decision_log if e.get("game_day") == day]
+        if not day_events:
+            continue
+
+        theme = DAY_THEMES.get(day, {})
+        day_title = theme.get("title", f"Day {day}")
+        st.markdown(f"### Day {day}: {day_title}")
+
+        for event in day_events:
+            event_type = event.get("type", "unknown")
+            config = EVENT_TYPE_CONFIG.get(
+                event_type,
+                {"color": "#6b7280", "icon": "\U0001f4dd", "label": event_type.replace("_", " ").title()},
+            )
+
+            # Extract detail text from payload
+            payload = event.get("payload", event.get("details", {})) or {}
+            detail_text = (
+                payload.get("npc_name", "")
+                or payload.get("to", "")
+                or payload.get("test", "")
+                or payload.get("location", "")
+                or payload.get("sample_type", "")
+                or ""
+            )
+
+            cost_parts = []
+            if event.get("cost_time"):
+                cost_parts.append(f"\u23f1\ufe0f {event['cost_time']}h")
+            if event.get("cost_budget"):
+                cost_parts.append(f"\U0001f4b0 ${event['cost_budget']}")
+            cost_display = " \u00b7 ".join(cost_parts)
+
+            html = f"""
+            <div class="timeline-event">
+                <div class="timeline-bar" style="background: {config['color']};"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">{config['icon']} {config['label']}{': ' + detail_text if detail_text else ''}</div>
+                    <div class="timeline-detail">{cost_display}</div>
+                </div>
+            </div>
+            """
+            st.markdown(html, unsafe_allow_html=True)
+
+        # Day subtotals
+        day_time = sum(e.get("cost_time", 0) for e in day_events)
+        day_budget = sum(e.get("cost_budget", 0) for e in day_events)
+        st.caption(f"Day {day}: {len(day_events)} actions \u00b7 {day_time}h \u00b7 ${day_budget}")
+        st.markdown("---")
 
 
 # =========================
@@ -9389,6 +9845,7 @@ VIEWS_WITH_RETURN_BUTTON = {
     "study": view_study_design,
     "lab": view_lab_and_environment,
     "outcome": view_interventions_and_outcome,
+    "journal": view_investigation_journal,
 }
 
 # Views rendered directly without return button
@@ -9464,6 +9921,302 @@ def route_to_view(view: str):
 
 
 # =========================
+# INVESTIGATION THEME
+# =========================
+
+def inject_investigation_theme():
+    """Inject global CSS theme for an immersive investigation feel."""
+    st.markdown("""
+    <style>
+    /* ── Dark Investigation Sidebar ── */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+    [data-testid="stSidebar"] * {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stSidebar"] hr {
+        border-color: #334155;
+    }
+
+    /* ── Card & Container Styling ── */
+    [data-testid="stExpander"] {
+        border: 1px solid #334155;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    @keyframes slideDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes progressFill {
+        from { width: 0%; }
+        to { width: var(--progress-width, 20%); }
+    }
+    @keyframes countUp {
+        from { opacity: 0; transform: scale(0.5); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── NPC Chat Typing Indicator ── */
+    .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 16px;
+        background: #f1f5f9;
+        border-radius: 16px;
+        margin: 4px 0;
+    }
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #94a3b8;
+        animation: typingBlink 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBlink {
+        0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+        40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Achievement Toast Enhancement ── */
+    .achievement-unlocked {
+        animation: fadeInUp 0.6s ease-out;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+        text-align: center;
+    }
+
+    /* ── Day Transition Banner ── */
+    .day-banner {
+        border-radius: 16px;
+        padding: 48px 40px;
+        color: white;
+        text-align: center;
+        animation: fadeInUp 0.8s ease-out;
+        margin-bottom: 24px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .day-banner::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: inherit;
+        z-index: 0;
+    }
+    .day-banner > * { position: relative; z-index: 1; }
+    .day-number {
+        font-size: 4em;
+        font-weight: 900;
+        opacity: 0.3;
+        line-height: 1;
+    }
+    .day-title {
+        font-size: 1.8em;
+        font-weight: 600;
+        margin-top: -4px;
+    }
+    .day-subtitle {
+        font-size: 1em;
+        opacity: 0.8;
+        margin-top: 4px;
+    }
+    .progress-track {
+        background: rgba(255,255,255,0.2);
+        border-radius: 8px;
+        height: 8px;
+        margin-top: 20px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        background: #10b981;
+        height: 8px;
+        border-radius: 8px;
+        animation: progressFill 1.5s ease-out forwards;
+    }
+
+    /* ── NPC Mood Portrait Card ── */
+    .npc-portrait-card {
+        border-radius: 16px;
+        padding: 16px;
+        text-align: center;
+        transition: border-color 0.5s ease, box-shadow 0.5s ease;
+        margin-bottom: 12px;
+    }
+    .npc-portrait-card img {
+        border-radius: 12px;
+        width: 100%;
+        max-width: 200px;
+    }
+    .mood-badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        color: white;
+        margin-top: 8px;
+    }
+    .trust-bar-track {
+        background: #e5e7eb;
+        border-radius: 4px;
+        height: 6px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+    .trust-bar-fill {
+        height: 6px;
+        border-radius: 4px;
+        transition: width 0.5s ease, background 0.5s ease;
+    }
+
+    /* ── Evidence / Hint Cards ── */
+    .hint-card {
+        background: linear-gradient(135deg, #1e293b, #334155);
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 12px 0;
+        color: #e2e8f0;
+        animation: slideInLeft 0.5s ease-out;
+    }
+    .hint-label {
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #f59e0b;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    .hint-text {
+        font-style: italic;
+    }
+
+    /* ── Scoring Hero Banner ── */
+    .score-banner {
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        margin: 20px 0;
+        animation: fadeInUp 0.8s ease-out;
+    }
+    .score-tier-title {
+        font-size: 1.5em;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    .score-number {
+        font-size: 4em;
+        font-weight: 900;
+        margin: 8px 0;
+        animation: countUp 0.6s ease-out 0.3s both;
+    }
+    .lives-saved {
+        font-size: 1.3em;
+        margin-top: 8px;
+    }
+
+    /* ── Timeline / Journal ── */
+    .timeline-event {
+        display: flex;
+        margin-bottom: 12px;
+        align-items: flex-start;
+        animation: fadeIn 0.3s ease-out;
+    }
+    .timeline-bar {
+        width: 4px;
+        min-height: 44px;
+        border-radius: 2px;
+        margin-right: 16px;
+        flex-shrink: 0;
+    }
+    .timeline-content {
+        flex: 1;
+    }
+    .timeline-title {
+        font-weight: 600;
+        font-size: 0.95em;
+    }
+    .timeline-detail {
+        font-size: 0.85em;
+        color: #6b7280;
+    }
+
+    /* ── Achievement Badge Grid ── */
+    .badge-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 16px 0;
+    }
+    .badge-item {
+        background: linear-gradient(135deg, #fef3c7, #fff7ed);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 12px 16px;
+        text-align: center;
+        min-width: 120px;
+        flex: 0 0 auto;
+        animation: fadeInUp 0.5s ease-out;
+    }
+    .badge-item.locked {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        opacity: 0.5;
+    }
+    .badge-emoji {
+        font-size: 2em;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .badge-name {
+        font-weight: 700;
+        font-size: 0.85em;
+    }
+    .badge-desc {
+        font-size: 0.75em;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    /* ── Alert Banner Animation ── */
+    .alert-banner {
+        animation: slideDown 0.5s ease-out;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+# =========================
 # MAIN
 # =========================
 
@@ -9475,6 +10228,7 @@ def main():
         initial_sidebar_state="collapsed",  # Minimal sidebar in adventure mode
     )
     init_session_state()
+    inject_investigation_theme()
 
     # Scenario selector in sidebar
     with st.sidebar:

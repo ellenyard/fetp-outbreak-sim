@@ -121,6 +121,11 @@ PERSISTENT_KEYS = {
     # === Evidence Board ===
     'evidence_board',             # Visual evidence board state
     'evidence_event_ids',         # IDs of evidence items
+
+    # === Achievements & Hints ===
+    'achievements',               # Earned achievement records
+    'hints_shown',                # IDs of hints already displayed
+    'hints_enabled',              # Whether hint system is active
 }
 
 
