@@ -3920,6 +3920,48 @@ def evaluate_interventions(decisions, interview_history):
 
     narrative = "\n".join(narrative_lines)
 
+    # -------------------------
+    # Tier classification for gamified scoring display
+    # -------------------------
+    lives_saved = max(0, base_new_cases - new_cases)
+
+    if score >= 70:
+        tier = "excellent"
+        tier_title = "EXPERT EPIDEMIOLOGIST"
+        tier_narrative = (
+            f"Your investigation was exemplary. By systematically gathering evidence, "
+            f"engaging One Health partners, and acting decisively, you helped contain "
+            f"the outbreak and saved an estimated {lives_saved} lives. "
+            f"The community and health system are stronger for your work."
+        )
+    elif score >= 45:
+        tier = "good"
+        tier_title = "SKILLED INVESTIGATOR"
+        tier_narrative = (
+            f"Your investigation was solid and identified the key transmission pathways. "
+            f"Some opportunities for earlier action were missed, but your recommendations "
+            f"will meaningfully reduce the outbreak's impact. An estimated {lives_saved} "
+            f"additional cases were prevented."
+        )
+    elif score >= 25:
+        tier = "adequate"
+        tier_title = "DEVELOPING INVESTIGATOR"
+        tier_narrative = (
+            f"Your investigation addressed the basics but missed important dimensions. "
+            f"Key areas like One Health engagement or timely lab work could have strengthened "
+            f"your evidence base. The outbreak continues to smolder with {new_cases} projected "
+            f"new cases in the coming weeks."
+        )
+    else:
+        tier = "needs_improvement"
+        tier_title = "LEARNING OPPORTUNITY"
+        tier_narrative = (
+            f"The investigation struggled to gain traction. Critical steps were missed "
+            f"and the outbreak response was delayed. With {new_cases} projected new cases, "
+            f"the community remains at significant risk. This is a valuable learning "
+            f"experience -- review the counterfactuals below to see what could be different."
+        )
+
     return {
         "status": status,
         "narrative": narrative,
@@ -3929,6 +3971,11 @@ def evaluate_interventions(decisions, interview_history):
         "outcomes": outcomes,
         "because": because,
         "counterfactuals": counterfactuals,
+        "tier": tier,
+        "tier_title": tier_title,
+        "tier_narrative": tier_narrative,
+        "lives_saved": lives_saved,
+        "rec_scores": rec_scores,
     }
 # ============================================================================
 # DAY PREREQUISITES
