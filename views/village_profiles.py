@@ -35,7 +35,8 @@ def get_village_photos(village_name):
 
 def view_village_profiles():
     """Display village briefing documents with stats and images."""
-    st.header("Village Profiles - Sidero Valley")
+    setting = st.session_state.get('scenario_config', {}).get('setting_name', 'Investigation Area')
+    st.header(f"Village Profiles - {setting}")
 
     st.markdown("""
     These background documents provide official information about each village in the investigation area.

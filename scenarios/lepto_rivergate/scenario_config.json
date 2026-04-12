@@ -2,6 +2,7 @@
   "scenario_id": "lepto_rivergate",
   "scenario_type": "lepto",
   "display_name": "🌊 Rivergate After the Storm",
+  "setting_name": "Rivergate Municipality",
   "disease_name": "Leptospirosis",
   "simulation_start_date": "2024-10-14",
   "resources": {

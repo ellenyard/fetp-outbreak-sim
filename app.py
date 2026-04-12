@@ -34,8 +34,8 @@ load_scenario_config = jl.load_scenario_config
 
 def main():
     st.set_page_config(
-        page_title="FETP Sim: Sidero Valley",
-        page_icon="🦟",
+        page_title="FETP Outbreak Simulation",
+        page_icon="🔬",
         layout="wide",
         initial_sidebar_state="collapsed",
     )

@@ -2,6 +2,7 @@
   "scenario_id": "aes_sidero_valley",
   "scenario_type": "je",
   "display_name": "🦟 Shadows Over Sidero Valley",
+  "setting_name": "Sidero Valley",
   "disease_name": "Japanese Encephalitis",
   "simulation_start_date": "2025-06-03",
   "case_definition_defaults": {

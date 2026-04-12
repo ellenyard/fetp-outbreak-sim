@@ -31,7 +31,7 @@ SUPPORTED_LANGS = ["en", "es", "fr", "pt"]
 # Minimal fallback strings (UI)
 _FALLBACK_UI = {
     "en": {
-        "title": "AES Outbreak Investigation – Sidero Valley",
+        "title": "FETP Outbreak Investigation",
         "language_header": "Language",
         "language_select": "Select language:",
         "facilitator_header": "Facilitator",

@@ -106,7 +106,7 @@ def make_village_map(truth: dict) -> go.Figure:
         fig.update_layout(
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
-            title="Schematic Map of Sidero Valley",
+            title=f"Schematic Map of {st.session_state.get('scenario_config', {}).get('setting_name', 'Investigation Area')}",
             showlegend=False,
             height=300,
             margin=dict(l=10, r=10, t=40, b=10),

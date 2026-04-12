@@ -98,7 +98,11 @@ def view_descriptive_epi():
 
     with col1:
         # Prepare download data
-        download_df = cases[['person_id', 'age', 'sex', 'village_name', 'onset_date', 'severe_neuro', 'outcome']].copy()
+        # Build column list dynamically — not all scenarios have the same columns
+        download_cols = [c for c in ['person_id', 'age', 'sex', 'village_name', 'onset_date',
+                                      'severe_neuro', 'clinical_severity', 'outcome']
+                         if c in cases.columns]
+        download_df = cases[download_cols].copy()
 
         # Add outcome display column with sequelae info
         if 'has_sequelae' in cases.columns:
@@ -349,7 +353,13 @@ def view_descriptive_epi():
     if run_crosstab:
         st.markdown("## Custom Cross-tabulation")
 
-        available_vars = ['age_group', 'sex', 'village_name', 'severe_neuro', 'outcome']
+        # Build variable list dynamically based on what columns exist in the data
+        available_vars = ['age_group', 'sex', 'village_name']
+        if 'severe_neuro' in cases.columns:
+            available_vars.append('severe_neuro')
+        if 'clinical_severity' in cases.columns:
+            available_vars.append('clinical_severity')
+        available_vars.append('outcome')
 
         col1, col2 = st.columns(2)
         with col1:
@@ -483,11 +493,12 @@ def view_spot_map():
     kabwe_dots = generate_case_dots(kabwe_cases, 340, 200, 25)
     tamu_dots = generate_case_dots(tamu_cases, 120, 120, 20)
 
-    # Custom SVG map of Sidero Valley
+    # Custom SVG map (JE/Sidero Valley fallback when lat/lon not available)
+    svg_setting = st.session_state.get('scenario_config', {}).get('setting_name', 'Investigation Area')
     map_svg = f'''
     <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" style="background: #f0f8ff;">
         <!-- Title -->
-        <text x="250" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">Sidero Valley - Case Distribution Map</text>
+        <text x="250" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">{svg_setting} - Case Distribution Map</text>
 
         <!-- River -->
         <path d="M 50,350 Q 150,300 200,280 Q 250,260 300,250 Q 350,240 400,200 Q 450,160 480,100"

@@ -23,7 +23,10 @@ def generate_field_briefing(session_state) -> str:
 
     # Header
     md.append("# FIELD BRIEFING NOTE")
-    md.append("## AES Outbreak Investigation - Sidero Valley")
+    scenario_config = session_state.get("scenario_config", {}) or {}
+    disease = scenario_config.get("disease_name", "Outbreak")
+    setting = scenario_config.get("setting_name", "Investigation Area")
+    md.append(f"## {disease} Investigation - {setting}")
     md.append(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}")
     md.append(f"**Investigation Day:** {current_day} of 5")
     md.append("")

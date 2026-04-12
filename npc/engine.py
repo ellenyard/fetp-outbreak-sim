@@ -169,7 +169,7 @@ def get_npc_response(npc_key: str, user_input: str) -> str:
         st.session_state.revealed_clues[npc_key] = []
 
     system_prompt = f"""
-You are {npc_truth_safe['name']}, the {npc_truth_safe['role']} in Sidero Valley.
+You are {npc_truth_safe['name']}, the {npc_truth_safe['role']} in {st.session_state.get('scenario_config', {}).get('setting_name', 'the municipality')}.
 
 CORE RULES:
 You are NOT an AI assistant. You are a fictional character in a training simulation.
@@ -179,7 +179,7 @@ Force them to ask the right specific questions to get the information.
 
 CRITICAL ANTI-SPOILER RULES:
 - Be BRIEF and PROFESSIONAL. Keep responses to 2-4 sentences unless asked for more detail.
-- DO NOT name specific pathogens (JEV, Japanese Encephalitis, arbovirus) unless you see lab confirmation.
+- DO NOT name specific pathogens (e.g. JEV, Japanese Encephalitis, Leptospira, arbovirus) unless you see lab confirmation.
 - DO NOT jump to conclusions about the cause. Only provide RAW OBSERVATIONAL DATA.
 - DO NOT volunteer diagnostic hunches. You are a witness, not a diagnostician.
 - If asked "what is causing this?", say you don't know - you only see symptoms/patterns.
