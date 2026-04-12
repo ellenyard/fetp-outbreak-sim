@@ -116,9 +116,10 @@ def main():
             if 'game_state' in st.session_state:
                 st.session_state.game_state = 'INTRO'
 
-            # Reset and set scenario-specific NPCs
-            initial_npcs = SCENARIO_INITIAL_NPCS.get(scenario_id, [])
-            st.session_state.npcs_unlocked = initial_npcs.copy()
+            # Reset and set scenario-specific NPCs (prefer JSON config, fall back to hardcoded)
+            scenario_cfg = st.session_state.get("scenario_config", {})
+            initial_npcs = scenario_cfg.get("initial_npcs") or SCENARIO_INITIAL_NPCS.get(scenario_id, [])
+            st.session_state.npcs_unlocked = list(initial_npcs)
             st.session_state.one_health_triggered = False
             st.session_state.vet_unlocked = False
             st.session_state.env_officer_unlocked = False

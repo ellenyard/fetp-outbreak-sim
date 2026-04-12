@@ -106,6 +106,37 @@ def get_npc_avatar(npc: dict) -> str:
     return npc.get("avatar", "\U0001f9d1")
 
 
+def _npc_fallback_message(npc_key: str, error_type: str) -> str:
+    """Return an in-character fallback when the AI API is unavailable.
+
+    Instead of showing raw error JSON, give the player a message that
+    feels like part of the simulation while hinting they should retry.
+    """
+    npc_name = npc_key.replace("_", " ").title()
+
+    if error_type == "busy":
+        return (
+            f"*{npc_name} is speaking with another patient right now.* "
+            "Please try again in a moment."
+        )
+    if error_type == "network":
+        return (
+            f"*The phone line to {npc_name} cuts out.* "
+            "There seems to be a connection issue — please try again."
+        )
+    if error_type == "config":
+        return (
+            "\u26a0\ufe0f The simulation's AI service is not configured correctly. "
+            "Please ask your facilitator to check the API key."
+        )
+    # Generic fallback for api / unknown / empty / malformed
+    return (
+        f"*{npc_name} pauses and seems distracted.* "
+        "\"Sorry, can you repeat that?\" "
+        "(There was a temporary issue — please try your question again.)"
+    )
+
+
 def get_npc_response(npc_key: str, user_input: str) -> str:
     """Call Anthropic using npc_truth + epidemiologic context, with memory & emotional state."""
     api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
@@ -159,7 +190,7 @@ Personality:
 Your current emotional state toward the investigation team:
 {emotional_description}
 
-Your level of trust toward the investigation team (range -3 to 5): {trust_level}
+Your level of trust toward the investigation team: {trust_level}/5
 
 The investigator has asked about {meaningful_questions} meaningful questions so far in this conversation.
 
@@ -263,7 +294,7 @@ INFORMATION RULES:
 
     try:
         resp = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=300,  # Slightly reduced for faster responses
             system=system_prompt,
             messages=msgs,
@@ -271,22 +302,25 @@ INFORMATION RULES:
 
         # Validate response structure before accessing content
         if not resp.content or len(resp.content) == 0:
-            return "\u26a0\ufe0f Received empty response from API. Please try again."
+            return _npc_fallback_message(npc_key, "empty response")
 
         if not hasattr(resp.content[0], 'text'):
-            return "\u26a0\ufe0f Received malformed response from API. Please try again."
+            return _npc_fallback_message(npc_key, "malformed response")
 
         text = resp.content[0].text
-    except anthropic.APIConnectionError as e:
-        return f"\u26a0\ufe0f Network error connecting to API: {str(e)}"
-    except anthropic.RateLimitError as e:
-        return "\u26a0\ufe0f API rate limit exceeded. Please wait a moment and try again."
-    except anthropic.AuthenticationError as e:
-        return "\u26a0\ufe0f API authentication failed. Please check your API key configuration."
+    except anthropic.APIConnectionError:
+        return _npc_fallback_message(npc_key, "network")
+    except anthropic.RateLimitError:
+        return _npc_fallback_message(npc_key, "busy")
+    except anthropic.AuthenticationError:
+        logger.error("Anthropic API authentication failed — check ANTHROPIC_API_KEY")
+        return _npc_fallback_message(npc_key, "config")
     except anthropic.APIError as e:
-        return f"\u26a0\ufe0f API error occurred: {str(e)}"
+        logger.error("Anthropic API error: %s", e)
+        return _npc_fallback_message(npc_key, "api")
     except Exception as e:
-        return f"\u26a0\ufe0f Unexpected error during NPC conversation: {str(e)}"
+        logger.error("Unexpected NPC conversation error: %s", e)
+        return _npc_fallback_message(npc_key, "unknown")
 
     text = redact_spoilers(text, stage)
 
@@ -424,12 +458,20 @@ UNKNOWN (say you don't know): {npc_truth_safe['unknowns']}
 
     try:
         with client.messages.stream(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=250,
             system=system_prompt,
             messages=msgs,
         ) as stream:
             for text_chunk in stream.text_stream:
                 yield text_chunk
+    except anthropic.RateLimitError:
+        yield _npc_fallback_message(npc_key, "busy")
+    except anthropic.APIConnectionError:
+        yield _npc_fallback_message(npc_key, "network")
+    except anthropic.AuthenticationError:
+        logger.error("Anthropic API authentication failed — check ANTHROPIC_API_KEY")
+        yield _npc_fallback_message(npc_key, "config")
     except Exception as e:
-        yield f"\u26a0\ufe0f Error: {str(e)}"
+        logger.error("Streaming NPC error: %s", e)
+        yield _npc_fallback_message(npc_key, "unknown")

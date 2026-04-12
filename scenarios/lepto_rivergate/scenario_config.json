@@ -107,6 +107,7 @@
       "Healthy worker effect in cleanup crews"
     ]
   },
+  "initial_npcs": ["dr_reyes", "nurse_maricel", "kapitana_gloria", "dr_mendoza"],
   "one_health_contacts": ["dr_villareal"],
   "one_health_samples": ["environmental_water", "rodent_kidney", "animal_serum"],
   "scoring": {

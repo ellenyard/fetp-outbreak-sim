@@ -96,6 +96,7 @@
       "Overmatching on village"
     ]
   },
+  "initial_npcs": ["dr_chen", "nurse_joy", "mama_kofi", "foreman_rex", "teacher_grace"],
   "one_health_contacts": ["vet_amina", "mr_osei"],
   "one_health_samples": ["pig_serum", "mosquito_pool"],
   "scoring": {
