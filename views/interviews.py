@@ -43,29 +43,46 @@ def _show_suggested_prompts(npc_key: str, npc: dict):
 
 
 def _extract_revealed_clues(npc_key: str, npc: dict, response: str):
-    """Track which clues have been revealed in conversation."""
+    """Track which clues have been revealed in conversation.
+
+    A clue is only marked as revealed when the NPC's response contains
+    enough distinctive words from the clue text, confirming the NPC
+    actually communicated that information to the player.
+    """
     if "revealed_clues" not in st.session_state:
         st.session_state["revealed_clues"] = {}
     if npc_key not in st.session_state["revealed_clues"]:
         st.session_state["revealed_clues"][npc_key] = []
 
     revealed = st.session_state["revealed_clues"][npc_key]
+    response_lower = response.lower()
+
+    def _clue_matches_response(clue_text: str) -> bool:
+        """Check if enough distinctive words from the clue appear in the response.
+
+        Uses words with 5+ characters to avoid matching on common short words.
+        Requires at least 40% of distinctive words to match, with a minimum of 3.
+        """
+        words = [w.lower().strip(".,!?;:\"'()") for w in clue_text.split() if len(w) > 4]
+        if len(words) < 2:
+            # Very short clue — require exact substring match instead
+            # Strip punctuation for comparison
+            clean_clue = clue_text.lower().strip(".,!?;:\"'()")
+            return clean_clue in response_lower
+        threshold = max(3, int(len(words) * 0.4))
+        matched = sum(1 for w in words if w in response_lower)
+        return matched >= threshold
 
     # Check always_reveal items
     for clue in npc.get("always_reveal", []):
-        if clue not in revealed:
-            # Check if key phrases from clue appear in response
-            words = [w.lower() for w in clue.split() if len(w) > 4]
-            if words and sum(1 for w in words if w in response.lower()) >= min(2, len(words)):
-                revealed.append(clue)
+        if clue not in revealed and _clue_matches_response(clue):
+            revealed.append(clue)
 
     # Check conditional clues
     for trigger, clue_info in npc.get("conditional_clues", {}).items():
         clue_text = clue_info if isinstance(clue_info, str) else clue_info.get("clue", "")
-        if clue_text and clue_text not in revealed:
-            words = [w.lower() for w in clue_text.split() if len(w) > 4]
-            if words and sum(1 for w in words if w in response.lower()) >= min(2, len(words)):
-                revealed.append(clue_text)
+        if clue_text and clue_text not in revealed and _clue_matches_response(clue_text):
+            revealed.append(clue_text)
 
 
 def render_interview_modal():
@@ -547,7 +564,8 @@ def render_npc_chat(npc_key: str, npc: dict):
             st.rerun()
 
     with chat_col:
-        st.markdown(f"### {npc.get('avatar', '\U0001f9d1')} {npc['name']}")
+        default_avatar = "\U0001f9d1"
+        st.markdown(f"### {npc.get('avatar', default_avatar)} {npc['name']}")
         st.caption(f"*{npc['role']}*")
 
     # Show conversation history

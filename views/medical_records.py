@@ -128,8 +128,8 @@ def view_hospital_triage():
         st.write(f"**{npc_data['name']}:** \"{npc_data['always_reveal'][0]}\"")
         st.write(f"**{npc_data['name']}:** \"{npc_data['always_reveal'][2]}\"")
 
-        # Special logic for Tamu
-        if npc_key == 'parent_tamu':
+        # Special logic for Tamu (JE/AES scenario only)
+        if npc_key == 'parent_tamu' and st.session_state.get("current_scenario_type", "je") == "je":
             st.error("❗ **KEY FINDING:** Family traveled to Nalu 2 weeks ago!")
 
         if st.button("End Interview"):
@@ -425,7 +425,7 @@ def view_clinic_log_abstraction():
     schema = day1_utils.get_clinic_log_schema(scenario_type)
 
     with st.expander("📋 Working Case Definition Reference", expanded=False):
-        scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+        scenario_id = get_current_scenario_id()
         template_content = load_scenario_content(scenario_id, "case_definition_template")
         st.markdown(template_content)
 

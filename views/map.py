@@ -912,10 +912,32 @@ def view_area_map(area: str):
         **Tamu Village** is a smaller, more remote community in the foothills. Upland farming
         with less standing water.
         """)
+    elif area == "Ward Northbend":
+        st.markdown("""
+        **Ward Northbend** is the most severely flood-affected area. Located at a river bend
+        where floodwaters accumulated deepest. Most leptospirosis cases originate here.
+        """)
+    elif area == "Ward East Terrace":
+        st.markdown("""
+        **Ward East Terrace** is a mixed residential and commercial area with moderate flooding.
+        Some residents participated in Northbend cleanup activities.
+        """)
+    elif area == "Ward Southshore":
+        st.markdown("""
+        **Ward Southshore** is a fishing community along the southern riverbank with moderate
+        flood exposure during the typhoon.
+        """)
+    elif area == "Ward Highridge":
+        st.markdown("""
+        **Ward Highridge** is an upland area that served as an evacuation site. Minimal flooding
+        makes it a useful control area for comparison.
+        """)
     elif area == "District Hospital":
         contact_name = get_hospital_records_contact_name()
+        scenario_type = st.session_state.get("current_scenario_type", "je")
+        disease_label = "leptospirosis" if scenario_type == "lepto" else "AES"
         st.markdown(f"""
-        **District Hospital** is where the AES cases have been admitted. {contact_name} oversees
+        **District Hospital** is where the {disease_label} cases have been admitted. {contact_name} oversees
         patient care and the laboratory can process some samples.
         """)
     elif area == "District Office":

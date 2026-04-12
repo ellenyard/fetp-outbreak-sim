@@ -6,7 +6,7 @@ from data_utils.clinic import (
     generate_clinic_records, create_found_case_records,
     add_found_cases_to_truth, render_clinic_record
 )
-from data_utils.case_definition import get_day1_assets, get_symptomatic_column
+from data_utils.case_definition import get_day1_assets, get_symptomatic_column, scenario_config_label
 from state.resources import spend_time, TIME_COSTS
 import outbreak_logic as jl
 import day1_utils
@@ -23,8 +23,13 @@ def view_case_finding():
     col1, col2 = st.columns([1, 5])
     with col1:
         if st.button("🔙 Return to Clinic", key="return_to_clinic_from_cf"):
-            st.session_state.current_location = "nalu_health_center"
-            st.session_state.current_area = "Nalu Village"
+            scenario_type = st.session_state.get("current_scenario_type", "je")
+            if scenario_type == "lepto":
+                st.session_state.current_location = "rhu_clinic"
+                st.session_state.current_area = "Ward Northbend"
+            else:
+                st.session_state.current_location = "nalu_health_center"
+                st.session_state.current_area = "Nalu Village"
             st.session_state.current_view = "location"
             st.rerun()
 
@@ -36,7 +41,8 @@ def view_case_finding():
     tab1, tab2, tab3 = st.tabs(["Clinic Records", "Hospital Records", "Multi-source Sweep"])
 
     with tab1:
-        st.subheader("Nalu Health Center - Patient Register Review")
+        clinic_name = "Northbend Rural Health Unit" if scenario_type == "lepto" else "Nalu Health Center"
+        st.subheader(f"{clinic_name} - Patient Register Review")
 
         if not st.session_state.clinic_abstraction_submitted:
             st.info("Start with the Clinic Log Abstraction step to build your clean line list.")
@@ -65,8 +71,8 @@ def view_case_finding():
                 st.error(f"⚠️ Not enough time to review clinic records. Need {time_cost}h, have {st.session_state.time_remaining}h.")
                 st.info("Advance to the next day to get more time, or prioritize other activities.")
             else:
-                st.markdown("""
-                You've obtained permission to review records from the **Nalu Health Center**.
+                st.markdown(f"""
+                You've obtained permission to review records from the **{clinic_name}**.
                 Look through these handwritten clinic notes to identify potential cases
                 that may not have been reported to the district hospital.
 
@@ -618,13 +624,14 @@ def view_clinic_register_scan():
                 total_aes = sum(1 for r in records if r.get('is_aes'))
                 false_negatives = total_aes - true_positives
 
+                case_label = scenario_config_label(st.session_state.get("current_scenario_type", "je"))
                 st.success(f"✅ Added {len(st.session_state.manual_cases)} records to your line list!")
-                st.info(f"📊 You identified {true_positives} of {total_aes} true AES cases.")
+                st.info(f"📊 You identified {true_positives} of {total_aes} true {case_label} cases.")
 
                 if false_positives > 0:
-                    st.warning(f"⚠️ {false_positives} selected record(s) may not be AES.")
+                    st.warning(f"⚠️ {false_positives} selected record(s) may not be {case_label}.")
                 if false_negatives > 0:
-                    st.caption(f"💡 {false_negatives} potential AES case(s) were not selected.")
+                    st.caption(f"💡 {false_negatives} potential {case_label} case(s) were not selected.")
 
                 # Mark as reviewed
                 st.session_state.clinic_records_reviewed = True
@@ -633,7 +640,20 @@ def view_clinic_register_scan():
 
 
 def view_nalu_child_register():
-    """View Nalu Health Center Child Register - 38 entries with new cases."""
+    """View Nalu Health Center Child Register - 38 entries with new cases.
+
+    NOTE: This view is specific to the JE/AES (Sidero Valley) scenario.
+    For the Leptospirosis scenario, this view is not applicable and will
+    show a redirect message.
+    """
+    scenario_type = st.session_state.get("current_scenario_type", "je")
+    if scenario_type != "je":
+        st.warning("This register is not available for the current scenario.")
+        if st.button("Return to Map"):
+            st.session_state.current_view = "map"
+            st.rerun()
+        return
+
     from outbreak_logic import get_nalu_child_register, get_nalu_medical_record
 
     st.title("Nalu Health Center - Child Register")

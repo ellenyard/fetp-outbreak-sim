@@ -44,8 +44,18 @@ def view_village_profiles():
     """)
 
     lang = st.session_state.get("language", "en")
+    scenario_type = st.session_state.get("current_scenario_type", "je")
 
-    tabs = st.tabs(["Nalu Village", "Kabwe Village", "Tamu Village"])
+    # Select village profiles based on scenario
+    if scenario_type == "lepto":
+        village_keys = ["ward_northbend", "ward_east_terrace", "ward_southshore", "ward_highridge"]
+    else:
+        village_keys = ["nalu", "kabwe", "tamu"]
+
+    # Filter VILLAGE_PROFILES to only the relevant villages
+    scenario_villages = {k: VILLAGE_PROFILES[k] for k in village_keys if k in VILLAGE_PROFILES}
+    tab_labels = [v["name"] for v in scenario_villages.values()]
+    tabs = st.tabs(tab_labels)
 
     # SVG illustrations for each village
     nalu_rice_svg = '''
@@ -283,7 +293,7 @@ def view_village_profiles():
     </svg>
     '''
 
-    for i, (village_key, village) in enumerate(VILLAGE_PROFILES.items()):
+    for i, (village_key, village) in enumerate(scenario_villages.items()):
         with tabs[i]:
             col1, col2 = st.columns([2, 1])
 
@@ -298,7 +308,7 @@ def view_village_profiles():
 
                 if village_photos:
                     st.markdown("### 📸 Village Photos")
-                else:
+                elif village_key in ("nalu", "kabwe", "tamu"):
                     st.markdown("### 📸 Scene Illustrations")
 
                 if village_key == "nalu":
@@ -351,16 +361,12 @@ def view_village_profiles():
                 elif village_key == "kabwe":
                     # Use real photos if available, otherwise use SVG illustrations
                     if village_photos:
-                        # Display photos for Kabwe when added
-                        # For now, just display any photos found
                         for photo_key, photo_path in village_photos.items():
-                            # Create a nice title from the filename
                             title = photo_key.replace("kabwe_", "").replace("_", " ").title()
                             st.markdown(f"**{title}**")
                             st.image(str(photo_path), use_container_width=True)
                             st.markdown("---")
                     else:
-                        # Fallback to SVG illustrations
                         st.markdown("**Mixed Farming Area**")
                         st.markdown(kabwe_mixed_svg, unsafe_allow_html=True)
                         st.caption("Combination of rice paddies and upland maize")
@@ -373,16 +379,12 @@ def view_village_profiles():
                 elif village_key == "tamu":
                     # Use real photos if available, otherwise use SVG illustrations
                     if village_photos:
-                        # Display photos for Tamu when added
-                        # For now, just display any photos found
                         for photo_key, photo_path in village_photos.items():
-                            # Create a nice title from the filename
                             title = photo_key.replace("tamu_", "").replace("_", " ").title()
                             st.markdown(f"**{title}**")
                             st.image(str(photo_path), use_container_width=True)
                             st.markdown("---")
                     else:
-                        # Fallback to SVG illustrations
                         st.markdown("**Upland Terrain**")
                         st.markdown(tamu_upland_svg, unsafe_allow_html=True)
                         st.caption("Higher elevation with cassava and yam farming")
@@ -392,26 +394,19 @@ def view_village_profiles():
                         st.markdown(tamu_forest_svg, unsafe_allow_html=True)
                         st.caption("Spring-fed wells, less standing water")
 
+                else:
+                    # Generic photo display for lepto wards or other scenarios
+                    if village_photos:
+                        for photo_key, photo_path in village_photos.items():
+                            title = photo_key.replace("_", " ").title()
+                            st.markdown(f"**{title}**")
+                            st.image(str(photo_path), use_container_width=True)
+                            st.markdown("---")
+
             # Quick stats summary
             st.markdown("---")
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2 = st.columns(2)
             with col1:
                 st.metric("Population", f"{village['population']:,}")
             with col2:
                 st.metric("Households", f"{village['households']:,}")
-            with col3:
-                # Main livelihood
-                if village_key == "nalu":
-                    st.metric("Main Livelihood", "Rice farming")
-                elif village_key == "kabwe":
-                    st.metric("Main Livelihood", "Mixed farming")
-                else:
-                    st.metric("Main Livelihood", "Upland crops")
-            with col4:
-                # Health facility
-                if village_key == "nalu":
-                    st.metric("Health Facility", "Health Center")
-                elif village_key == "kabwe":
-                    st.metric("Health Facility", "None")
-                else:
-                    st.metric("Health Facility", "CHV only")

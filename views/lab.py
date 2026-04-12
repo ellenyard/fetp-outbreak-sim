@@ -132,7 +132,8 @@ def view_lab_and_environment():
             format_func=lab_test_label,
         )
 
-    source_description = st.text_input("Source description (e.g., 'Case from Nalu')", "")
+    example_village = "Ward Northbend" if st.session_state.get("current_scenario_type") == "lepto" else "Nalu"
+    source_description = st.text_input(f"Source description (e.g., 'Case from {example_village}')", "")
 
     # Patient linkage for human samples
     cases_pool = apply_case_definition(

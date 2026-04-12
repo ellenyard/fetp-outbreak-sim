@@ -272,7 +272,9 @@ INFORMATION RULES:
     for keyword, clue in npc_truth.get("conditional_clues", {}).items():
         if topic_matches(keyword.lower(), lower_q) and clue not in st.session_state.revealed_clues[npc_key]:
             conditional_to_use.append(redact_spoilers(clue, stage))
-            st.session_state.revealed_clues[npc_key].append(clue)
+            # NOTE: Don't add to revealed_clues here — wait until we confirm
+            # the NPC actually mentioned the clue in its response.
+            # The _extract_revealed_clues function in interviews.py handles this.
 
     # For narrow questions, keep at most 1 new conditional clue
     if question_scope != "broad" and len(conditional_to_use) > 1:
@@ -442,7 +444,8 @@ UNKNOWN (say you don't know): {npc_truth_safe['unknowns']}
     for keyword, clue in npc_truth.get("conditional_clues", {}).items():
         if topic_matches(keyword.lower(), lower_q) and clue not in st.session_state.revealed_clues[npc_key]:
             conditional_to_use.append(redact_spoilers(clue, stage))
-            st.session_state.revealed_clues[npc_key].append(clue)
+            # NOTE: Don't add to revealed_clues here — wait until we confirm
+            # the NPC actually mentioned the clue in its response.
 
     if question_scope != "broad" and len(conditional_to_use) > 1:
         conditional_to_use = conditional_to_use[:1]
