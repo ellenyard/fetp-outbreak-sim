@@ -435,6 +435,21 @@ def render_location_actions(loc_key: str, actions: list):
         col1, col2 = st.columns([3, 1])
         with col1:
             if st.button(label, key=f"action_{action}_{loc_key}", use_container_width=True):
+                # Pre-check permissions for gated actions BEFORE spending resources
+                handler = config.get("handler", "")
+                if handler in ("hospital_charts", "hospital_records", "ward_registry", "deep_dive_charts"):
+                    from npc.unlock import has_hospital_records_access
+                    if not has_hospital_records_access():
+                        # Don't spend resources — just show the denied modal
+                        execute_location_action(action, config, loc_key)
+                        continue
+                if handler == "nalu_child_register":
+                    from outbreak_logic import check_nurse_rapport
+                    if not check_nurse_rapport(st.session_state):
+                        # Don't spend resources — just show the denied message
+                        execute_location_action(action, config, loc_key)
+                        continue
+
                 # Check resources
                 can_proceed, msg = check_resources(cost_time, cost_budget)
                 if can_proceed:

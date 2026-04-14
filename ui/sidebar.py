@@ -48,7 +48,11 @@ def adventure_sidebar():
         st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.title(f"{_scenario_config_label(st.session_state.truth.get('scenario_type'))} Investigation")
+    # Use the setting name (e.g. "Rivergate Municipality") instead of the
+    # disease name so the sidebar does not spoil the diagnosis for trainees.
+    scenario_cfg = st.session_state.get("scenario_config", {}) or {}
+    setting = scenario_cfg.get("setting_name", "Outbreak")
+    st.sidebar.title(f"{setting} Investigation")
 
     if not st.session_state.alert_acknowledged:
         st.sidebar.info("Review the alert to begin.")
