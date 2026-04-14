@@ -177,13 +177,14 @@ def render_interview_modal():
     with conversation_container:
         if not history:
             st.caption("No messages yet. Start the interview below.")
-        for msg in history:
-            if msg["role"] == "user":
-                with st.chat_message("user"):
-                    st.write(msg["content"])
-            else:
-                with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
-                    st.write(msg["content"])
+        else:
+            for msg in history:
+                if msg["role"] == "user":
+                    with st.chat_message("user"):
+                        st.write(msg["content"])
+                else:
+                    with st.chat_message("assistant", avatar=get_npc_avatar(npc)):
+                        st.write(msg["content"])
 
     # Special handling for Nurse Mai (nurse_joy) - Rapport mechanic
     if npc_key == "nurse_joy":

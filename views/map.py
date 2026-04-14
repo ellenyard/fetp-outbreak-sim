@@ -470,10 +470,17 @@ def view_travel_map():
     if st.session_state.current_day == 1:
         with st.expander("Day 1 Briefing - Situation Assessment", expanded=True):
             contact_name = get_hospital_records_contact_name()
+            # Use scenario-aware community name so the briefing matches
+            # the actual location buttons on the map.
+            _scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+            community_name = (
+                "Ward Northbend" if _scenario_id == "lepto_rivergate"
+                else "Nalu Village"
+            )
             st.markdown(f"""
             **Your tasks today:**
             - Visit the **District Hospital** to meet {contact_name} and review cases
-            - Travel to **Nalu Village** to interview residents and review clinic records
+            - Travel to **{community_name}** to interview residents and review clinic records
             - Document your initial hypotheses about the outbreak source
 
             *Click on a location below to travel there.*
@@ -722,32 +729,28 @@ def render_location_card(loc_key: str, loc: dict, npcs_here: list, npc_truth: di
 
     # Travel time removed (caption)
 
-    # Go to button
+    # Go to button — entering a sublocation within an area the user
+    # already traveled to should not cost additional time (the map-level
+    # travel already charged for the trip).
     if st.button(f"Go to {loc_name}", key=f"go_{col_key}_{loc_key}", use_container_width=True):
-        # Check if enough time
-        if st.session_state.time_remaining >= travel_time:
-            # Show travel animation
-            travel_with_animation(loc_name, travel_time)
+        # Show brief transition animation (no resource cost)
+        travel_with_animation(loc_name, 0.3)
 
-            spend_time(travel_time, f"Travel to {loc_name}")
+        # Mark location as visited
+        if "visited_locations" not in st.session_state:
+            st.session_state.visited_locations = set()
+        st.session_state.visited_locations.add(loc_key)
 
-            # Mark location as visited
-            if "visited_locations" not in st.session_state:
-                st.session_state.visited_locations = set()
-            st.session_state.visited_locations.add(loc_key)
+        # Close any open interview modal but preserve the conversation
+        # history so the trainee can continue chatting later and progress
+        # tracking counts the interview correctly.
+        if st.session_state.get("current_npc"):
+            st.session_state.current_npc = None
+        st.session_state.action_modal = None
 
-            # Close any open interview modal but preserve the conversation
-            # history so the trainee can continue chatting later and progress
-            # tracking counts the interview correctly.
-            if st.session_state.get("current_npc"):
-                st.session_state.current_npc = None
-            st.session_state.action_modal = None
-
-            st.session_state.current_location = loc_key
-            st.session_state.current_view = "location"
-            st.rerun()
-        else:
-            st.error(f"Not enough time! Need {travel_time}h")
+        st.session_state.current_location = loc_key
+        st.session_state.current_view = "location"
+        st.rerun()
 
     st.markdown("---")
 

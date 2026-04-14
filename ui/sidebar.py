@@ -105,6 +105,13 @@ def adventure_sidebar():
     for task in tasks:
         icon = "✅" if task["done"] else "⬜"
         label = task["label"]
+        # Show partial progress for interview tasks (e.g. "1/2")
+        if not task["done"] and task["id"] in ("interviews", "additional_interviews"):
+            history = st.session_state.get("interview_history", {})
+            done_count = sum(1 for msgs in history.values() if msgs)
+            target = 2 if task["id"] == "interviews" else 4
+            if done_count > 0:
+                label = f"{label} ({done_count}/{target})"
         suffix = "" if task["required"] else " *(optional)*"
         if not task["done"] and task.get("view_link"):
             if st.sidebar.button(
