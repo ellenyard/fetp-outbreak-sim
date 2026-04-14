@@ -454,16 +454,22 @@ def view_spot_map():
             [{"village": k, "cases": v} for k, v in village_counts.items()]
         ).sort_values("cases", ascending=False)
         st.dataframe(summary, use_container_width=True, hide_index=True)
-        fig = px.scatter(
-            villages,
-            x="longitude",
-            y="latitude",
-            size=villages["village_id"].map(village_counts).fillna(0),
-            color=villages["village_id"].map(village_counts).fillna(0),
-            hover_name="village_name",
-            title="Spot map (cases by village)",
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Only render geographic scatter if coordinates are available
+        if "latitude" in villages.columns and "longitude" in villages.columns:
+            case_sizes = villages["village_id"].map(village_counts).fillna(0)
+            fig = px.scatter(
+                villages,
+                x="longitude",
+                y="latitude",
+                size=case_sizes.clip(lower=1),
+                color=case_sizes,
+                hover_name="village_name",
+                title="Spot map (cases by village)",
+                labels={"color": "Cases"},
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Geographic coordinates are not available for this scenario's villages.")
         return
 
     nalu_cases = village_counts.get('Nalu Village', 0)

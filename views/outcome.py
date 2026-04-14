@@ -136,6 +136,15 @@ def generate_field_briefing(session_state) -> str:
 def view_interventions_and_outcome():
     st.header("Interventions & Outcome")
 
+    # Gate: outcome view should not be accessible until Day 4+
+    if st.session_state.get("current_day", 1) < 4:
+        st.info(
+            "The **Interventions & Outcome** section opens on **Day 4** "
+            "once you have collected enough evidence. Continue your "
+            "investigation and return later."
+        )
+        return
+
     st.markdown("### Final Diagnosis")
     dx = st.text_input(
         "What is your final diagnosis?",
