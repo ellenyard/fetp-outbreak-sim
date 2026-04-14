@@ -163,7 +163,7 @@ def case_definition_feedback(case_def: dict) -> str:
     if scenario_type == "lepto":
         # Check if exposure criteria are included for probable cases
         if not probable.get("epi_link_required"):
-            feedback_parts.append("\U0001f4a1 **Tip for leptospirosis:** Probable cases typically require exposure history (floodwater contact, cleanup work). Consider enabling 'Require epidemiological link' for the Probable tier.")
+            feedback_parts.append("\U0001f4a1 **Tip:** For post-flood febrile illness, probable cases typically require exposure history (floodwater contact, cleanup work). Consider enabling 'Require epidemiological link' for the Probable tier.")
 
         # Check if myalgia is included (hallmark symptom)
         all_symptoms = set()
@@ -171,7 +171,7 @@ def case_definition_feedback(case_def: dict) -> str:
             all_symptoms.update(tier.get("required_any", []))
             all_symptoms.update(tier.get("optional_symptoms", []))
         if "myalgia" not in all_symptoms:
-            feedback_parts.append("\U0001f4a1 **Tip:** Calf myalgia is a hallmark symptom of leptospirosis that helps distinguish it from other post-flood febrile illnesses.")
+            feedback_parts.append("\U0001f4a1 **Tip:** Calf myalgia is a hallmark symptom that helps distinguish this illness from other post-flood febrile syndromes.")
 
         # Check if lab confirmation is set for confirmed tier
         if not confirmed.get("lab_required"):

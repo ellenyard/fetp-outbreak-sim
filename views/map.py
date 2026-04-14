@@ -918,7 +918,7 @@ def view_area_map(area: str):
     elif area == "Ward Northbend":
         st.markdown("""
         **Ward Northbend** is the most severely flood-affected area. Located at a river bend
-        where floodwaters accumulated deepest. Most leptospirosis cases originate here.
+        where floodwaters accumulated deepest. Most cases originate here.
         """)
     elif area == "Ward East Terrace":
         st.markdown("""
@@ -938,9 +938,8 @@ def view_area_map(area: str):
     elif area == "District Hospital":
         contact_name = get_hospital_records_contact_name()
         scenario_type = st.session_state.get("current_scenario_type", "je")
-        disease_label = "leptospirosis" if scenario_type == "lepto" else "AES"
         st.markdown(f"""
-        **District Hospital** is where the {disease_label} cases have been admitted. {contact_name} oversees
+        **District Hospital** is where the severe cases have been admitted. {contact_name} oversees
         patient care and the laboratory can process some samples.
         """)
     elif area == "District Office":

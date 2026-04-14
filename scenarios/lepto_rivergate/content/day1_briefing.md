@@ -3,7 +3,7 @@
 **Focus:** Clean raw clinic data, define a working case definition, and triangulate early evidence.
 
 ## Situation Update
-You've arrived at Rivergate District Hospital. Dr. Amina briefs you on the current situation:
+You've arrived at Rivergate District Hospital. Dr. Annalisa Reyes briefs you on the current situation:
 - Multiple febrile patients with myalgia and jaundice following recent flooding
 - Cases clustered around Northbend and riverside settlements
 - Several severe cases admitted to ICU
@@ -19,7 +19,7 @@ You've arrived at Rivergate District Hospital. Dr. Amina briefs you on the curre
 7. **Triangulate epi + clinical + lab evidence** and record working hypotheses for Day 2.
 
 ## Key Questions to Answer
-- Which clinical features best distinguish leptospirosis from other post-flood illnesses?
+- Which clinical features best distinguish this illness from other post-flood febrile syndromes?
 - Where are cases clustering geographically?
 - How does the timing relate to flood exposure?
 - What evidence supports or weakens your working hypotheses?
@@ -29,4 +29,4 @@ You've arrived at Rivergate District Hospital. Dr. Amina briefs you on the curre
 - **Setting:** Flood-affected urban and peri-urban Rivergate
 - **Population:** Cleanup workers, farmers, and riverside communities
 - **Season:** Post-typhoon (August)
-- **Previous outbreaks:** Sporadic leptospirosis after flooding events
+- **Previous outbreaks:** Sporadic post-flood febrile illness events

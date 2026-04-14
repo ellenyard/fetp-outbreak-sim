@@ -199,7 +199,7 @@ def view_case_finding():
         scenario_type = st.session_state.get("current_scenario_type", "je")
         if scenario_type == "lepto":
             st.markdown("""
-            The District Hospital has provided detailed medical records for 2 of the admitted leptospirosis cases.
+            The District Hospital has provided detailed medical records for 2 of the admitted cases.
             These records contain more clinical information that may help characterize the outbreak.
             """)
         else:
@@ -546,7 +546,7 @@ def view_clinic_register_scan():
     else:
         st.markdown("### Raw Logbook from Nalu Health Center")
     if scenario_type == "lepto":
-        st.caption("Review these handwritten records and check any that you suspect might be leptospirosis cases.")
+        st.caption("Review these handwritten records and check any that you suspect might be outbreak-related cases.")
     else:
         st.caption("Review these handwritten records and check any that you suspect might be AES cases.")
 

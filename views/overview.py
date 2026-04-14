@@ -65,8 +65,7 @@ def view_overview():
     col1, col2 = st.columns(2)
 
     with col1:
-        case_label = scenario_config_label(truth.get("scenario_type"))
-        st.markdown(f"#### Line list (initial {case_label} cases)")
+        st.markdown("#### Line list (initial reported cases)")
         line_list = get_initial_cases(truth)
         st.dataframe(line_list)
         st.session_state.line_list_viewed = True

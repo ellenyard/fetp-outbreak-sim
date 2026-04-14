@@ -1,4 +1,4 @@
-# Leptospirosis Outbreak Investigation: The Waters of Ward Northbend
+# Outbreak Investigation: The Waters of Ward Northbend
 ## A Tabletop Exercise Narrative
 
 ---
