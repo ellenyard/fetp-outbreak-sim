@@ -58,13 +58,17 @@ def main():
                     current_idx = i
                     break
 
+        # Disable the selector once the investigation has started so
+        # the trainee can't accidentally wipe their progress.
+        game_started = st.session_state.get("alert_acknowledged", False)
         scenario_choice = st.selectbox(
             "Select outbreak scenario:",
             options=scenario_options,
             format_func=lambda x: x[1],
             key="scenario_selector",
             index=current_idx,
-            help="Choose which outbreak scenario to investigate"
+            help="Choose which outbreak scenario to investigate",
+            disabled=game_started,
         )
 
         scenario_id = scenario_choice[0]

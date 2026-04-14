@@ -228,8 +228,9 @@ def adventure_sidebar():
                 st.session_state.sitrep_viewed = False
                 st.rerun()
             else:
-                st.session_state.advance_missing_tasks = missing
-                # Show styled day gate checklist
+                # Show styled day gate checklist in the sidebar
+                # (Don't set advance_missing_tasks — the overview view
+                # also renders from it, causing a duplicate warning.)
                 st.sidebar.markdown("---")
                 day_summary = get_completion_summary(st.session_state.current_day)
                 required_done = day_summary["required_completed"]
