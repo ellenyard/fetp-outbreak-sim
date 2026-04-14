@@ -736,12 +736,12 @@ def render_location_card(loc_key: str, loc: dict, npcs_here: list, npc_truth: di
                 st.session_state.visited_locations = set()
             st.session_state.visited_locations.add(loc_key)
 
-            # Clear chat history when changing locations
+            # Close any open interview modal but preserve the conversation
+            # history so the trainee can continue chatting later and progress
+            # tracking counts the interview correctly.
             if st.session_state.get("current_npc"):
-                npc_to_clear = st.session_state.current_npc
-                if npc_to_clear in st.session_state.interview_history:
-                    st.session_state.interview_history[npc_to_clear] = []
                 st.session_state.current_npc = None
+            st.session_state.action_modal = None
 
             st.session_state.current_location = loc_key
             st.session_state.current_view = "location"
@@ -980,12 +980,11 @@ def view_area_map(area: str):
                     if st.session_state.time_remaining >= travel_time:
                         spend_time(travel_time, f"Travel to {loc.get('name', loc_key)}")
 
-                        # Clear chat history when changing locations
+                        # Close any open interview modal but preserve conversation
+                        # history for progress tracking and "Continue Chat".
                         if st.session_state.get("current_npc"):
-                            npc_to_clear = st.session_state.current_npc
-                            if npc_to_clear in st.session_state.interview_history:
-                                st.session_state.interview_history[npc_to_clear] = []
                             st.session_state.current_npc = None
+                        st.session_state.action_modal = None
 
                         st.session_state.current_location = loc_key
                         st.session_state.current_view = "location"
@@ -1089,7 +1088,9 @@ def view_location(loc_key: str):
                         btn_label = "Continue Chat" if interviewed else "Talk"
                         if st.button(btn_label, key=f"talk_{npc_key}"):
                             st.session_state.current_npc = npc_key
-                            st.session_state.interview_history.setdefault(npc_key, [])
+                            # Don't add to interview_history yet — wait until
+                            # the user actually sends a message so the NPC
+                            # isn't marked "Interviewed" prematurely.
                             st.session_state.action_modal = "interview"
                             st.rerun()
         else:

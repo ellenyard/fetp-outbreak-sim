@@ -106,6 +106,14 @@ def render_interview_modal():
     npc_image_path = npc.get("image_path")
     has_photo = npc_image_path and Path(npc_image_path).exists()
 
+    # Auto-scroll the interview panel into view when it opens
+    st.markdown(
+        '<div id="interview-anchor"></div>'
+        '<script>document.getElementById("interview-anchor")'
+        ".scrollIntoView({behavior:'smooth',block:'start'});</script>",
+        unsafe_allow_html=True,
+    )
+
     # Modal header
     header_col, close_col = st.columns([6, 1])
     with header_col:

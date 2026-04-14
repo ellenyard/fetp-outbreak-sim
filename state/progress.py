@@ -17,6 +17,16 @@ def _get_val(ss, key, default=None):
     return getattr(ss, key, default)
 
 
+def _count_real_interviews(ss) -> int:
+    """Count NPCs with at least one actual message exchange.
+
+    Empty entries (created when opening the interview panel but not yet
+    chatting) should not count toward progress.
+    """
+    history = _get_val(ss, "interview_history", {}) or {}
+    return sum(1 for msgs in history.values() if msgs)
+
+
 def get_day_tasks(day: int, session_state=None) -> list:
     """Return task dicts for the given day with completion status.
 
@@ -50,7 +60,7 @@ def get_day_tasks(day: int, session_state=None) -> list:
             {
                 "id": "interviews",
                 "label": "Interview at least 2 NPCs",
-                "done": len(_get_val(ss, "interview_history", {}) or {}) >= 2,
+                "done": _count_real_interviews(ss) >= 2,
                 "view_link": "interviews",
                 "required": True,
             },
@@ -107,7 +117,7 @@ def get_day_tasks(day: int, session_state=None) -> list:
             {
                 "id": "additional_interviews",
                 "label": "Conduct follow-up interviews",
-                "done": len(_get_val(ss, "interview_history", {}) or {}) >= 4,
+                "done": _count_real_interviews(ss) >= 4,
                 "view_link": "interviews",
                 "required": False,
             },

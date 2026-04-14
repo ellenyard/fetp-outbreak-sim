@@ -185,7 +185,8 @@ def view_interviews():
             if budget_cost > 0:
                 spend_budget(budget_cost, f"Interview: {npc['name']}")
             st.session_state.current_npc = npc_key
-            st.session_state.interview_history.setdefault(npc_key, [])
+            # Don't add to interview_history yet — wait until
+            # the user actually sends a message.
             st.session_state.action_modal = "interview"
             # Clear context after auto-selecting
             st.session_state.interview_context_location = None
@@ -199,7 +200,7 @@ def view_interviews():
         time_color = "normal" if st.session_state.time_remaining >= 0 else "inverse"
         st.metric("⏱️ Time Remaining", f"{st.session_state.time_remaining}h", delta_color=time_color)
     with col3:
-        st.metric("Interviews Completed", len(st.session_state.interview_history))
+        st.metric("Interviews Completed", sum(1 for msgs in st.session_state.interview_history.values() if msgs))
 
     st.caption("Each new interview costs time. Follow-up questions with the same person are quicker.")
 
@@ -251,7 +252,8 @@ def view_interviews():
                     )
 
                     st.session_state.current_npc = npc_key
-                    st.session_state.interview_history.setdefault(npc_key, [])
+                    # Don't add to interview_history yet — wait until
+                    # the user actually sends a message.
                     st.session_state.action_modal = "interview"
                     st.rerun()
                 else:
