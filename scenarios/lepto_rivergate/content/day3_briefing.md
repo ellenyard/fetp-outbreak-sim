@@ -10,7 +10,7 @@
 
 ## Your Tasks Today
 1. **Analyze study data** - Calculate measures of association (OR, RR)
-2. **Interpret laboratory results** - Confirm leptospirosis diagnosis
+2. **Interpret laboratory results** - Confirm or refine your working diagnosis
 3. **Refine case definition** - Update based on clinical and lab findings
 4. **Assess environmental data** - Water quality, rodent burden, sanitation status
 5. **Review intervention options** - Identify evidence-based control measures

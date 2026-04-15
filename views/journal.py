@@ -180,7 +180,7 @@ def sync_evidence_board_from_log():
             st.session_state.evidence_board.append({
                 "clue": clue,
                 "type": clue_type,
-                "day_added": event.get("game_day", st.session_state.current_day),
+                "day_added": event.get("game_day", st.session_state.get("current_day", 1)),
                 "source": source,
             })
             st.session_state.evidence_event_ids.add(event_id)
@@ -213,7 +213,7 @@ def view_evidence_board():
                 st.session_state.evidence_board.append({
                     "clue": new_clue,
                     "type": clue_type,
-                    "day_added": st.session_state.current_day,
+                    "day_added": st.session_state.get("current_day", 1),
                     "source": clue_source or "Investigation team"
                 })
                 st.success("Added to evidence board!")

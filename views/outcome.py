@@ -170,13 +170,21 @@ def view_interventions_and_outcome():
     ]
 
     st.markdown("### Final Conclusion")
+    # Build scenario-aware conclusion options
+    scenario_type = st.session_state.get("current_scenario_type", "je")
+    if scenario_type == "lepto":
+        _confirmed_label = "Leptospirosis outbreak confirmed"
+        _alt_label = "Other post-flood febrile illness - further testing required"
+    else:
+        _confirmed_label = "Japanese Encephalitis outbreak confirmed"
+        _alt_label = "Other arboviral disease - further testing required"
     conclusion_options = [
         "Investigation ongoing - more data needed",
-        "Japanese Encephalitis outbreak confirmed",
-        "Other arboviral disease - further testing required",
+        _confirmed_label,
+        _alt_label,
         "Environmental exposure identified and mitigated",
         "Outbreak contained - surveillance continuing",
-        "Custom conclusion"
+        "Custom conclusion",
     ]
     conclusion_choice = st.selectbox(
         "Select your final conclusion:",
@@ -212,7 +220,7 @@ def view_interventions_and_outcome():
         st.download_button(
             label="Download Field Briefing Note (.md)",
             data=st.session_state.field_briefing_note,
-            file_name=f"field_briefing_{scenario_id}_day{st.session_state.current_day}.md",
+            file_name=f"field_briefing_{scenario_id}_day{st.session_state.get('current_day', 1)}.md",
             mime="text/markdown",
             help="Download the field briefing as a Markdown file"
         )
@@ -405,7 +413,7 @@ def _render_timeline_tab():
         time_spent = sum(e.get("cost_time", 0) for e in day_events)
         budget_spent = sum(e.get("cost_budget", 0) for e in day_events)
 
-        with st.expander(f"Day {day} ({len(day_events)} actions, {time_spent}h, ${budget_spent})", expanded=(day == st.session_state.current_day)):
+        with st.expander(f"Day {day} ({len(day_events)} actions, {time_spent}h, ${budget_spent})", expanded=(day == st.session_state.get("current_day", 1))):
             for event in day_events:
                 event_type = event.get("type", "unknown")
                 details = event.get("details", {})

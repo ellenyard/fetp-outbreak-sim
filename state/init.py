@@ -212,8 +212,23 @@ def init_session_state():
     st.session_state.setdefault("hints_shown", set())
     st.session_state.setdefault("hints_enabled", True)
 
+    # Case finding state
+    st.session_state.setdefault("found_case_individuals", [])
+    st.session_state.setdefault("found_case_households", [])
+
+    # Nurse Joy rapport mechanic
+    st.session_state.setdefault("nurse_rapport", 0)
+    st.session_state.setdefault("nurse_initial_dialogue_shown", False)
+    st.session_state.setdefault("nurse_pig_clue_shown", False)
+    st.session_state.setdefault("nurse_animal_questions", 0)
+
+    # Medical records navigation
+    st.session_state.setdefault("current_chart", None)
+    st.session_state.setdefault("unlocked_nalu_charts", [])
+
     # SITREP and Evidence Board
     st.session_state.setdefault("sitrep_viewed", True)  # Don't show SITREP on Day 1 start
+    st.session_state.setdefault("evidence_board", [])
     _init_evidence_board()
     st.session_state.setdefault("questions_asked_about", set())
 

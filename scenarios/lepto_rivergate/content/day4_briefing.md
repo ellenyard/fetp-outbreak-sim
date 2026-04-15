@@ -3,7 +3,7 @@
 **Focus:** Implementing evidence-based interventions and monitoring their effectiveness.
 
 ## Situation Update
-- Leptospirosis etiology confirmed
+- Laboratory results confirm the etiology
 - Risk factors clearly identified (flood exposure, barefoot cleanup work)
 - Resources mobilized for intervention
 - Ongoing cleanup activities continue to put workers at risk
