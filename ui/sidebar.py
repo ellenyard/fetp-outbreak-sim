@@ -13,6 +13,26 @@ from npc.engine import refresh_lab_queue_for_day
 from state.progress import get_day_tasks, get_completion_summary
 
 
+def _unlock_locations_for_day(day: int) -> None:
+    """Progressively unlock locations as the investigation advances."""
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    unlocked = st.session_state.get("locations_unlocked", [])
+
+    if scenario_id == "lepto_rivergate":
+        # Day 2: unlock wards that reported secondary cases
+        if day >= 2:
+            for loc in ["East Terrace", "Southshore", "DRRM Office"]:
+                if loc not in unlocked:
+                    unlocked.append(loc)
+        # Day 3: unlock remaining wards and investigation sites
+        if day >= 3:
+            for loc in ["Highridge", "Mining Area"]:
+                if loc not in unlocked:
+                    unlocked.append(loc)
+
+    st.session_state.locations_unlocked = unlocked
+
+
 def _scenario_config_label(scenario_type: str) -> str:
     """Return a human-readable label for the scenario type.
 
@@ -223,6 +243,10 @@ def adventure_sidebar():
                 st.session_state.time_remaining = 8
                 refresh_lab_queue_for_day(int(st.session_state.current_day))
                 st.session_state.advance_missing_tasks = []
+
+                # Unlock new locations based on the new day
+                _unlock_locations_for_day(st.session_state.current_day)
+
                 # Show SITREP view for new day
                 st.session_state.current_view = "sitrep"
                 st.session_state.sitrep_viewed = False

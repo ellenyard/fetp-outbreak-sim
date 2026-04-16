@@ -95,6 +95,13 @@ def view_overview():
             scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
             with st.expander("📋 Case Definition Guidelines", expanded=False):
                 template_content = load_scenario_content(scenario_id, "case_definition_template")
+                # Redact the disease name until lab confirmation to avoid
+                # spoiling the diagnosis for trainees still investigating.
+                if not st.session_state.get("etiology_revealed", False):
+                    disease_name = (st.session_state.get("scenario_config") or {}).get("disease_name", "")
+                    if disease_name:
+                        template_content = template_content.replace(disease_name, "the outbreak illness")
+                        template_content = template_content.replace(disease_name.lower(), "the outbreak illness")
                 st.markdown(template_content)
             template_sections = day1_utils.parse_case_definition_template(template_content)
             if st.button("Load WHO-style template", key="load_who_template"):
@@ -343,6 +350,12 @@ probable cases add an epidemiological link, and confirmed cases require laborato
             # Show scenario-specific hypothesis examples
             with st.expander("💡 Hypothesis Development Guide", expanded=False):
                 hypothesis_content = load_scenario_content(scenario_id, "hypothesis_examples")
+                # Redact disease name before lab confirmation
+                if not st.session_state.get("etiology_revealed", False):
+                    disease_name = (st.session_state.get("scenario_config") or {}).get("disease_name", "")
+                    if disease_name:
+                        hypothesis_content = hypothesis_content.replace(disease_name, "the suspected illness")
+                        hypothesis_content = hypothesis_content.replace(disease_name.lower(), "the suspected illness")
                 st.markdown(hypothesis_content)
 
             with st.form("hypotheses_form"):

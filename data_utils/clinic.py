@@ -924,6 +924,9 @@ Day 5: Declared dead at 06:45. Family declined autopsy.
 
 def render_hospital_record(record: dict):
     """Render a detailed hospital medical record."""
+    # Use the scenario setting name for the hospital header
+    scenario_cfg = st.session_state.get("scenario_config", {}) or {}
+    hospital_name = scenario_cfg.get("setting_name", "District") + " District Hospital"
 
     st.markdown(f"""
     <div style="
@@ -936,7 +939,7 @@ def render_hospital_record(record: dict):
         margin-bottom: 20px;
     ">
     <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
-        <strong style="font-size: 14px;">SIDERO VALLEY DISTRICT HOSPITAL</strong><br>
+        <strong style="font-size: 14px;">{hospital_name.upper()}</strong><br>
         <em>Medical Records Department</em>
     </div>
     </div>

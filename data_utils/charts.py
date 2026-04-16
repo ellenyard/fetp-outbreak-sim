@@ -33,7 +33,7 @@ def make_village_map(truth: dict) -> go.Figure:
     fig = go.Figure()
 
     if scenario_type == "lepto":
-        color_map = {"very_high": "#d73027", "high": "#fc8d59", "medium": "#fee08b", "low": "#91bfdb"}
+        color_map = {"very_high": "#d73027", "high": "#fc8d59", "medium": "#fee08b", "low": "#91bfdb", "minimal": "#e0f3f8"}
         symbol_map = {"very_high": "diamond", "high": "square", "medium": "circle", "low": "triangle-up", "minimal": "x"}
         for risk_level, group in villages.groupby("flood_risk"):
             fig.add_trace(
