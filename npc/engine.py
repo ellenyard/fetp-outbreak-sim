@@ -344,10 +344,11 @@ INFORMATION RULES:
             st.session_state.unlock_flags["records_access"] = True
 
     # SPECIAL LOGIC: Permission granting for hospital records access
-    if npc_key == "dr_chen" and permission_requested:
+    # Trigger for any NPC whose unlock flag grants records access
+    if permission_requested and unlock_flag and should_unlock_hospital_records(unlock_flag):
         st.session_state.unlock_flags["records_access"] = True
-        st.session_state.unlock_flags["tran_permission_granted"] = True
-        st.rerun()  # Force refresh to unlock the buttons immediately
+        if unlock_flag == "tran_permission_granted":
+            st.session_state.unlock_flags["tran_permission_granted"] = True
 
     # SPECIAL LOGIC: Ward Parent livestock question counter
     if npc_key == "ward_parent":
@@ -459,6 +460,23 @@ UNKNOWN (say you don't know): {npc_truth_safe['unknowns']}
     msgs = [{"role": m["role"], "content": m["content"]} for m in recent_history]
     msgs.append({"role": "user", "content": user_input})
 
+    # ── Unlock flags (mirrored from get_npc_response) ──
+    unlock_flag = npc_truth.get("unlocks")
+    permission_keywords = ["permission", "access", "records", "investigate", "allow"]
+    permission_requested = any(kw in lower_q for kw in permission_keywords)
+
+    if unlock_flag:
+        if unlock_flag == "tran_permission_granted":
+            if permission_requested:
+                st.session_state.unlock_flags[unlock_flag] = True
+        else:
+            st.session_state.unlock_flags[unlock_flag] = True
+
+        if should_unlock_hospital_records(unlock_flag) and (
+            unlock_flag != "tran_permission_granted" or permission_requested
+        ):
+            st.session_state.unlock_flags["records_access"] = True
+
     try:
         with client.messages.stream(
             model="claude-haiku-4-5-20251001",
@@ -473,8 +491,6 @@ UNKNOWN (say you don't know): {npc_truth_safe['unknowns']}
     except anthropic.APIConnectionError:
         yield _npc_fallback_message(npc_key, "network")
     except anthropic.AuthenticationError:
-        logger.error("Anthropic API authentication failed — check ANTHROPIC_API_KEY")
         yield _npc_fallback_message(npc_key, "config")
     except Exception as e:
-        logger.error("Streaming NPC error: %s", e)
         yield _npc_fallback_message(npc_key, "unknown")

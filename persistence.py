@@ -54,6 +54,7 @@ PERSISTENT_KEYS = {
     'locations_unlocked',    # Which map locations are accessible
     'npcs_unlocked',         # Which NPCs can be interviewed
     'npc_state',             # Current state/mood of each NPC
+    'npc_trust',             # Trust level per NPC (affects responses)
     'current_npc',           # NPC currently being interviewed
 
     # === Investigation Data ===

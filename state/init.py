@@ -181,6 +181,7 @@ def init_session_state():
     #   "polite_count": int,
     # }
     st.session_state.setdefault("npc_state", {})
+    st.session_state.setdefault("npc_trust", {})
 
     # Flags used for day progression
     st.session_state.setdefault("case_definition_written", False)

@@ -756,7 +756,7 @@ def render_location_card(loc_key: str, loc: dict, npcs_here: list, npc_truth: di
 
 
 def render_area_hero_image(area: str) -> bool:
-    """Render the hero/exterior image for an area if available."""
+    """Render a compact hero/exterior image for an area if available."""
     area_meta = get_area_metadata().get(area, {})
     image_path = area_meta.get("image_exterior")
 
@@ -765,15 +765,22 @@ def render_area_hero_image(area: str) -> bool:
 
     path = Path(image_path)
 
+    def _show(img_path):
+        # Constrain the hero image so it doesn't dominate the viewport.
+        # Use a centred column to limit width to ~60% of the page.
+        spacer_l, img_col, spacer_r = st.columns([1, 3, 1])
+        with img_col:
+            st.image(str(img_path), use_container_width=True)
+
     # Try with common extensions if no extension
     if not path.suffix:
         for ext in ['.png', '.jpg', '.jpeg']:
             test_path = Path(str(path) + ext)
             if test_path.exists():
-                st.image(str(test_path), use_container_width=True)
+                _show(test_path)
                 return True
     elif path.exists():
-        st.image(str(path), use_container_width=True)
+        _show(path)
         return True
 
     return False
@@ -843,7 +850,6 @@ def view_area_visual(area: str):
         st.markdown(f"*{description}*")
 
     st.markdown("---")
-    st.markdown("### 🚪 Locations to Explore")
 
     # Get locations in this area
     location_keys = get_area_locations().get(area, [])
@@ -852,10 +858,24 @@ def view_area_visual(area: str):
         st.warning("No locations available in this area.")
         return
 
+    # If this area has only one sublocation, skip the card grid and
+    # go directly to the location view to reduce navigation friction.
+    if len(location_keys) == 1:
+        only_loc = location_keys[0]
+        if "visited_locations" not in st.session_state:
+            st.session_state.visited_locations = set()
+        st.session_state.visited_locations.add(only_loc)
+        st.session_state.current_location = only_loc
+        st.session_state.current_view = "location"
+        st.rerun()
+        return
+
+    st.markdown("### 🚪 Choose a location to explore")
+
     # Get NPC truth data
     npc_truth = st.session_state.truth.get("npc_truth", {})
 
-    # === SUB-LOCATION GRID (3 columns) ===
+    # === SUB-LOCATION GRID ===
     num_cols = min(3, len(location_keys))  # Use up to 3 columns
     cols = st.columns(num_cols)
 
