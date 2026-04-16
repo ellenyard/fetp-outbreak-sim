@@ -69,9 +69,9 @@ def load_storyline_excerpt(scenario_id: str, max_lines: int = 6) -> Optional[str
     excerpt = []
     for line in lines:
         if not line:
-            if excerpt:
-                break
-            continue
+            continue  # Skip blank lines, don't stop
+        if line == "---":
+            continue  # Skip markdown horizontal rules
         excerpt.append(line)
         if len(excerpt) >= max_lines:
             break

@@ -299,11 +299,19 @@ probable cases add an epidemiological link, and confirmed cases require laborato
             rationale = st.text_area("Revision rationale (optional)", key="case_def_rationale", height=60)
 
             if st.button("Save Case Definition", type="primary"):
-                if not any(
-                    value.strip()
-                    for tier in current_case_def.values()
-                    for value in tier.values()
-                ):
+                # Check that at least one field has content.  The dict has
+                # mixed value types (dicts, lists, strings) so we flatten
+                # carefully before checking.
+                def _has_content(obj):
+                    if isinstance(obj, str):
+                        return bool(obj.strip())
+                    if isinstance(obj, dict):
+                        return any(_has_content(v) for v in obj.values())
+                    if isinstance(obj, (list, tuple)):
+                        return any(_has_content(v) for v in obj)
+                    return bool(obj)
+
+                if not _has_content(current_case_def):
                     st.error("Please enter at least one case definition element before saving.")
                 else:
                     st.session_state.case_definition_builder = current_case_def

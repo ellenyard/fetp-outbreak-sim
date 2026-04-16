@@ -7,6 +7,34 @@ hospital records access permissions.
 import streamlit as st
 
 
+# Scenario-specific One Health NPC mappings
+_ONE_HEALTH_NPCS = {
+    "lepto_rivergate": {
+        "vet_key": "dr_villareal",
+        "vet_name": "Dr. Ernesto Villareal (Private Veterinarian)",
+        "env_key": "engr_ramon",
+        "env_name": "Engr. Ramon Holt (DRRM Officer)",
+        "healer_key": "pastor_elijah",
+        "healer_name": "Pastor Elijah Gonzales (Faith Healer)",
+    },
+    # AES / Sidero Valley scenario
+    "aes_sidero_valley": {
+        "vet_key": "vet_amina",
+        "vet_name": "Vet Supatra (District Veterinary Officer)",
+        "env_key": "mr_osei",
+        "env_name": "Mr. Nguyen (Environmental Health Officer)",
+        "healer_key": "healer_marcus",
+        "healer_name": "Healer Somchai (Private Clinic)",
+    },
+}
+
+
+def _get_one_health_npcs() -> dict:
+    """Return the One Health NPC mapping for the current scenario."""
+    scenario_id = st.session_state.get("current_scenario", "aes_sidero_valley")
+    return _ONE_HEALTH_NPCS.get(scenario_id, _ONE_HEALTH_NPCS["aes_sidero_valley"])
+
+
 def check_npc_unlock_triggers(user_input: str) -> str:
     """
     Check if user's question should unlock additional NPCs.
@@ -14,36 +42,52 @@ def check_npc_unlock_triggers(user_input: str) -> str:
     """
     text = user_input.lower()
     notification = ""
+    oh = _get_one_health_npcs()
 
-    # Animal/pig triggers -> unlock Vet Amina
-    animal_triggers = ['animal', 'pig', 'livestock', 'pigs', 'swine', 'cattle', 'farm animal', 'piglet']
+    # Animal/livestock triggers -> unlock veterinarian
+    animal_triggers = ['animal', 'pig', 'livestock', 'pigs', 'swine', 'cattle',
+                       'farm animal', 'piglet', 'rodent', 'rat', 'rats']
     if any(trigger in text for trigger in animal_triggers):
         st.session_state.questions_asked_about.add('animals')
         if not st.session_state.vet_unlocked:
             st.session_state.vet_unlocked = True
             st.session_state.one_health_triggered = True
-            if 'vet_amina' not in st.session_state.npcs_unlocked:
-                st.session_state.npcs_unlocked.append('vet_amina')
-            notification = "\U0001f513 **New Contact Unlocked:** Vet Supatra (District Veterinary Officer) - Your question about animals opened a One Health perspective!"
+            if oh["vet_key"] not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append(oh["vet_key"])
+            notification = (
+                f"\U0001f513 **New Contact Unlocked:** {oh['vet_name']} "
+                f"- Your question about animals opened a One Health perspective!"
+            )
 
-    # Mosquito/environment triggers -> unlock Mr. Osei
-    env_triggers = ['mosquito', 'mosquitoes', 'vector', 'breeding', 'standing water', 'environment', 'rice paddy', 'irrigation', 'wetland']
+    # Environment triggers -> unlock environment/DRRM officer
+    env_triggers = ['mosquito', 'mosquitoes', 'vector', 'breeding',
+                    'standing water', 'environment', 'rice paddy',
+                    'irrigation', 'wetland', 'flood', 'drainage',
+                    'water source', 'contamination']
     if any(trigger in text for trigger in env_triggers):
         st.session_state.questions_asked_about.add('environment')
         if not st.session_state.env_officer_unlocked:
             st.session_state.env_officer_unlocked = True
             st.session_state.one_health_triggered = True
-            if 'mr_osei' not in st.session_state.npcs_unlocked:
-                st.session_state.npcs_unlocked.append('mr_osei')
-            notification = "\U0001f513 **New Contact Unlocked:** Mr. Nguyen (Environmental Health Officer) - Your question about environmental factors opened a new perspective!"
+            if oh["env_key"] not in st.session_state.npcs_unlocked:
+                st.session_state.npcs_unlocked.append(oh["env_key"])
+            notification = (
+                f"\U0001f513 **New Contact Unlocked:** {oh['env_name']} "
+                f"- Your question about environmental factors opened a new perspective!"
+            )
 
-    # Healer triggers (for earlier cases)
-    healer_triggers = ['traditional', 'healer', 'clinic', 'private', 'early case', 'first case', 'before hospital']
+    # Healer/traditional medicine triggers
+    healer_triggers = ['traditional', 'healer', 'faith', 'prayer',
+                       'private clinic', 'early case', 'first case',
+                       'before hospital', 'pastor', 'minister']
     if any(trigger in text for trigger in healer_triggers):
         st.session_state.questions_asked_about.add('traditional')
-        if 'healer_marcus' not in st.session_state.npcs_unlocked:
-            st.session_state.npcs_unlocked.append('healer_marcus')
-            notification = "\U0001f513 **New Contact Unlocked:** Healer Somchai (Private Clinic) - You discovered there may be unreported cases!"
+        if oh["healer_key"] not in st.session_state.npcs_unlocked:
+            st.session_state.npcs_unlocked.append(oh["healer_key"])
+            notification = (
+                f"\U0001f513 **New Contact Unlocked:** {oh['healer_name']} "
+                f"- You discovered there may be unreported cases!"
+            )
 
     return notification
 

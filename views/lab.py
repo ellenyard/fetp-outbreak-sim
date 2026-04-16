@@ -234,7 +234,7 @@ def view_lab_and_environment():
             df["village"] = df["village_id"].map(villages_lookup).fillna(df["village_id"])
 
         if "test_display" not in df.columns:
-            df["test_display"] = df.get("test", "").map(lab_test_label) if "test" in df.columns else ""
+            df["test_display"] = df["test"].map(lab_test_label) if "test" in df.columns else ""
 
         day_now = int(st.session_state.get("current_day", 1))
         if "ready_day" in df.columns:

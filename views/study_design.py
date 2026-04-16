@@ -360,8 +360,8 @@ def view_study_design():
             pool = pool[pool["village_id"].isin(eligible_villages)].copy()
             if control_age_range:
                 pool = pool[(pool["age"] >= int(control_age_range["min"])) & (pool["age"] <= int(control_age_range["max"]))].copy()
-            if control_source == "clinic":
-                pool = pool[pool.get("reported_to_hospital", False).astype(bool) == True].copy()
+            if control_source == "clinic" and "reported_to_hospital" in pool.columns:
+                pool = pool[pool["reported_to_hospital"].fillna(False).astype(bool)].copy()
             # neighborhood handled in outbreak_logic with weights; here we just show same-village candidates
             return pool
 
